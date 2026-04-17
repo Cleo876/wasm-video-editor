@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Editor - Pro Workflow</title>
-    <script>const TOOL_VERSION = '2.6.14';</script>
+    <script>const TOOL_VERSION = '2.6.15';</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -131,7 +131,7 @@
             <div class="flex items-center gap-4 h-full flex-1 min-w-0">
                 <div class="flex items-center gap-2 mr-4 flex-shrink-0">
                     <i class="fa-solid fa-layer-group text-teal-400"></i>
-                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.14</span>
+                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.15</span>
                 </div>
                 
                 <div class="menu-wrapper relative h-full flex-shrink-0">
@@ -346,6 +346,7 @@
         </div>
     </div>
 
+    <!-- Modules Modal / Extension Manager -->
     <div id="modulesModal" class="modal-overlay hidden">
         <div class="bg-[#1e1e1e] rounded-lg w-[600px] border border-[#333] shadow-2xl flex flex-col max-h-[80vh]">
             <div class="flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#1a1a1a] rounded-t-lg">
@@ -366,6 +367,7 @@
         </div>
     </div>
 
+    <!-- Project Manager Modal -->
     <div id="projectModal" class="modal-overlay hidden">
         <div class="bg-[#1e1e1e] rounded-lg w-[600px] border border-[#333] shadow-2xl flex flex-col max-h-[80vh]">
             <div class="flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#1a1a1a] rounded-t-lg">
@@ -382,6 +384,7 @@
         </div>
     </div>
 
+    <!-- Engine Network Error Modal -->
     <div id="manualCoreModal" class="modal-overlay hidden">
         <div class="bg-gray-800 p-6 rounded-xl w-[500px] border border-gray-700 shadow-2xl">
             <div class="flex items-center gap-3 mb-4">
@@ -433,7 +436,8 @@
             db: null,
             init() {
                 return new Promise((resolve, reject) => {
-                    const req = indexedDB.open('WasmEditorDB', 3); 
+                    // CRITICAL FIX: DB version bumped from 3 to 4 to force 'system' table creation on old profiles
+                    const req = indexedDB.open('WasmEditorDB', 4); 
                     req.onupgradeneeded = (e) => {
                         const db = e.target.result;
                         if (!db.objectStoreNames.contains('assets')) {
@@ -729,7 +733,6 @@
                 this.projectId = project.id;
                 this.projectName = project.name;
                 
-                // DEEP MIGRATION: Load Assets First
                 const allAssets = await DB.getAll('assets');
                 this.assets = [];
                 for(const assetRecord of allAssets) {
@@ -739,7 +742,6 @@
                     }
                 }
 
-                // Restore Track Config
                 let loadedConfig = project.trackConfig;
                 if (!loadedConfig || !Array.isArray(loadedConfig) || loadedConfig.length === 0) {
                     loadedConfig = [
@@ -761,13 +763,11 @@
                 }
                 this.trackConfig = loadedConfig;
 
-                // Restore & Sanitize Tracks against loaded Assets
                 this.tracks = project.tracks || {};
                 this.trackConfig.forEach(t => {
                     if (!this.tracks[t.id] || !Array.isArray(this.tracks[t.id])) {
                         this.tracks[t.id] = [];
                     } else {
-                        // Kill Orphaned Clips & Parse Numbers
                         this.tracks[t.id] = this.tracks[t.id]
                             .filter(c => this.assets.some(a => a.id === c.assetId))
                             .map(c => ({
@@ -812,7 +812,6 @@
 
             async saveState() {
                 if(!this.projectId) return;
-                // Double check current time is sanitized before saving
                 this.currentTime = Number(this.currentTime) || 0;
                 
                 const state = {
@@ -1048,6 +1047,16 @@
             modules: [],
             async init() {
                 this.modules = await DB.getAll('modules');
+                
+                // CRITICAL HOTFIX: Auto-purge legacy Text Editor extension which conflicts with new Native Text Engine
+                const legacyIdx = this.modules.findIndex(m => m.name === 'Text Editor Engine' || m.name === 'text_editor_core');
+                if (legacyIdx !== -1) {
+                    const mName = this.modules[legacyIdx].name;
+                    await DB.delete('modules', mName);
+                    this.modules.splice(legacyIdx, 1);
+                    console.warn(`🧹 Purged deprecated [${mName}] extension to prevent Native Text Engine conflicts.`);
+                }
+
                 this.runActiveModules(); 
             },
             async runActiveModules() {
@@ -1859,13 +1868,18 @@
                 
                 TimelineModule.updatePlayhead(t);
                 const fmt = n => Math.floor(Math.max(0, n)).toString().padStart(2,'0');
-                document.getElementById('timecode').innerText = `00:${fmt(t/60)}:${fmt(t%60)}:${fmt((t%1)*30)}`;
+                const timecodeEl = document.getElementById('timecode');
+                if(timecodeEl) timecodeEl.innerText = `00:${fmt(t/60)}:${fmt(t%60)}:${fmt((t%1)*30)}`;
+                
                 const container = document.getElementById('tracksScrollArea');
-                const headPos = t * Store.zoom;
-                if (!this.playing && headPos > container.scrollLeft + container.clientWidth) { container.scrollLeft = headPos - 100; TimelineModule.renderMinimap(); TimelineModule.triggerMinimap(); }
+                if (container) {
+                    const headPos = t * Store.zoom;
+                    if (!this.playing && headPos > container.scrollLeft + container.clientWidth) { container.scrollLeft = headPos - 100; TimelineModule.renderMinimap(); TimelineModule.triggerMinimap(); }
+                }
 
                 const pv = document.querySelector('.player-view');
                 const vp = document.getElementById('viewportContainer');
+                let viewportRect = { width: 0, height: 0 };
                 if (pv && vp) {
                     const rect = pv.getBoundingClientRect();
                     let w = rect.width;
@@ -1876,8 +1890,8 @@
                     }
                     vp.style.width = w + 'px';
                     vp.style.height = h + 'px';
+                    viewportRect = vp.getBoundingClientRect();
                 }
-                const viewportRect = vp.getBoundingClientRect();
 
                 const activeVideoClips = [];
                 const activeTextClips = [];
@@ -1947,53 +1961,56 @@
                     }
                 });
 
-                const existingOverlays = vp.querySelectorAll('.text-overlay-item');
-                existingOverlays.forEach(el => el.dataset.used = 'false');
+                if (vp) {
+                    const existingOverlays = vp.querySelectorAll('.text-overlay-item');
+                    existingOverlays.forEach(el => el.dataset.used = 'false');
 
-                activeTextClips.forEach(tClip => {
-                    const asset = Store.assets.find(a => a.id === tClip.assetId);
-                    if (!asset) return; // ORPHAN SHIELD
-                    
-                    let txtEl = document.getElementById('text_overlay_' + tClip.id);
-                    if (!txtEl) {
-                        txtEl = document.createElement('div');
-                        txtEl.id = 'text_overlay_' + tClip.id;
-                        txtEl.className = 'text-overlay-item absolute pointer-events-auto cursor-grab text-center whitespace-pre leading-none z-50 font-bold drop-shadow-lg';
-                        txtEl.style.transform = 'translate(-50%, -50%)';
-                        txtEl.dataset.clipId = tClip.id;
-                        vp.appendChild(txtEl);
-                    }
-                    txtEl.dataset.used = 'true';
-                    
-                    txtEl.innerText = asset.name;
-                    txtEl.style.color = asset.color || '#ffffff';
-                    
-                    const baseFontSize = tClip.fontSize || 60;
-                    const scaledFontSize = (baseFontSize / 1080) * viewportRect.height;
-                    txtEl.style.fontSize = scaledFontSize + 'px';
+                    activeTextClips.forEach(tClip => {
+                        const asset = Store.assets.find(a => a.id === tClip.assetId);
+                        if (!asset) return; // ORPHAN SHIELD
+                        
+                        let txtEl = document.getElementById('text_overlay_' + tClip.id);
+                        if (!txtEl) {
+                            txtEl = document.createElement('div');
+                            txtEl.id = 'text_overlay_' + tClip.id;
+                            txtEl.className = 'text-overlay-item absolute pointer-events-auto cursor-grab text-center whitespace-pre leading-none z-50 font-bold drop-shadow-lg';
+                            txtEl.style.transform = 'translate(-50%, -50%)';
+                            txtEl.dataset.clipId = tClip.id;
+                            vp.appendChild(txtEl);
+                        }
+                        txtEl.dataset.used = 'true';
+                        
+                        txtEl.innerText = asset.name;
+                        txtEl.style.color = asset.color || '#ffffff';
+                        
+                        const baseFontSize = tClip.fontSize || 60;
+                        const scaledFontSize = (baseFontSize / 1080) * viewportRect.height;
+                        txtEl.style.fontSize = scaledFontSize + 'px';
 
-                    const x = tClip.x !== undefined ? tClip.x : 50;
-                    const y = tClip.y !== undefined ? tClip.y : 50;
-                    txtEl.style.left = x + '%';
-                    txtEl.style.top = y + '%';
+                        const x = tClip.x !== undefined ? tClip.x : 50;
+                        const y = tClip.y !== undefined ? tClip.y : 50;
+                        txtEl.style.left = x + '%';
+                        txtEl.style.top = y + '%';
 
-                    if (Store.selectedClipId === tClip.id) {
-                        txtEl.style.border = '2px dashed #00d2be';
-                        txtEl.style.padding = '8px';
-                        txtEl.style.background = 'rgba(0,0,0,0.3)';
-                        txtEl.style.borderRadius = '4px';
-                        txtEl.style.zIndex = '51';
-                    } else {
-                        txtEl.style.border = 'none';
-                        txtEl.style.padding = '0';
-                        txtEl.style.background = 'transparent';
-                        txtEl.style.zIndex = '50';
-                    }
-                });
+                        if (Store.selectedClipId === tClip.id) {
+                            txtEl.style.border = '2px dashed #00d2be';
+                            txtEl.style.padding = '8px';
+                            txtEl.style.background = 'rgba(0,0,0,0.3)';
+                            txtEl.style.borderRadius = '4px';
+                            txtEl.style.zIndex = '51';
+                        } else {
+                            txtEl.style.border = 'none';
+                            txtEl.style.padding = '0';
+                            txtEl.style.background = 'transparent';
+                            txtEl.style.zIndex = '50';
+                        }
+                    });
 
-                vp.querySelectorAll('.text-overlay-item[data-used="false"]').forEach(el => el.remove());
+                    vp.querySelectorAll('.text-overlay-item[data-used="false"]').forEach(el => el.remove());
+                }
 
-                document.getElementById('playerPlaceholder').style.display = (activeVideoClips.length || activeTextClips.length) ? 'none' : 'block';
+                const playerPlaceholder = document.getElementById('playerPlaceholder');
+                if(playerPlaceholder) playerPlaceholder.style.display = (activeVideoClips.length || activeTextClips.length) ? 'none' : 'block';
 
                 this.drawToCanvas(activeVideoClips, this.isRecording ? activeTextClips : []);
             },
