@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Editor - Pro Workflow</title>
-    <script>const TOOL_VERSION = '2.6.15';</script>
+    <script>const TOOL_VERSION = '2.6.16';</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -77,7 +77,8 @@
         .timeline-overlay { position: absolute; top: 28px; bottom: 0; left: 100px; right: 0; pointer-events: none; z-index: 999; overflow: hidden; }
         .playhead-marker { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--playhead); pointer-events: none; left: 0; will-change: transform; }
         .playhead-head { position: absolute; top: -12px; left: -6px; width: 13px; height: 15px; background: var(--playhead); clip-path: polygon(0 0, 100% 0, 50% 100%); pointer-events: auto; cursor: ew-resize; }
-        .t-clip { position: absolute; height: 40px; top: 5px; border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); cursor: grab; display: flex; align-items: center; padding: 0 8px; font-size: 0.7rem; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: border-color 0.1s; user-select: none; }
+        .t-clip { position: absolute !important; height: 40px; top: 5px; border-radius: 4px; overflow: visible; border: 1px solid rgba(255,255,255,0.2); cursor: grab; display: flex; align-items: center; padding: 0 8px; font-size: 0.7rem; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: border-color 0.1s; user-select: none; }
+        .t-clip > span { overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
         .t-clip:active { cursor: grabbing; }
         .t-clip.video { background: #3b82f6; }
         .t-clip.image { background: #60a5fa; }
@@ -131,7 +132,7 @@
             <div class="flex items-center gap-4 h-full flex-1 min-w-0">
                 <div class="flex items-center gap-2 mr-4 flex-shrink-0">
                     <i class="fa-solid fa-layer-group text-teal-400"></i>
-                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.15</span>
+                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.16</span>
                 </div>
                 
                 <div class="menu-wrapper relative h-full flex-shrink-0">
@@ -352,7 +353,7 @@
             <div class="flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#1a1a1a] rounded-t-lg">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded bg-[#252525] flex items-center justify-center text-[#00d2be]"><i class="fa-solid fa-puzzle-piece"></i></div>
-                    <div><h2 class="text-lg font-bold text-white">Extension Manager</h2><p class="text-xs text-gray-500">Manage your integrated modules</p></div>
+                    <div><h2 class="text-lg font-bold text-white">Extension Manager</h2><p class="text-xs text-gray-500">Manage your integrated modules || <a href="https://github.com/Cleo876/wasm-video-editor/tree/main/Extensions"><b>GET MORE</b></a></p></div>
                 </div>
                 <button onclick="ModuleManager.close()" class="text-gray-400 hover:text-white transition w-8 h-8 flex items-center justify-center rounded hover:bg-[#333]"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
@@ -418,6 +419,16 @@
     <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
 
     <script>
+        // --- GLOBAL SHIELD: Prevent Uncaught Extensions from Crashing Editor ---
+        window.addEventListener('error', (e) => {
+            console.warn("🛡️ Engine Shield Caught Error:", e.message);
+            // Ignore cross-origin Chrome extension noises
+            if (e.filename && e.filename.includes('extension')) return; 
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+            console.warn("🛡️ Engine Shield Caught Promise Rejection:", e.reason);
+        });
+
         window.isEngineReady = false;
         window.wasmEngineAvailable = false;
 
@@ -436,7 +447,6 @@
             db: null,
             init() {
                 return new Promise((resolve, reject) => {
-                    // CRITICAL FIX: DB version bumped from 3 to 4 to force 'system' table creation on old profiles
                     const req = indexedDB.open('WasmEditorDB', 4); 
                     req.onupgradeneeded = (e) => {
                         const db = e.target.result;
@@ -517,13 +527,13 @@
                 if(prop === 'brightness') document.getElementById('valBright').innerText = (val/100).toFixed(1);
                 if(prop === 'contrast') document.getElementById('valContrast').innerText = (val/100).toFixed(1);
                 if(prop === 'saturate') document.getElementById('valSat').innerText = (val/100).toFixed(1);
-                Player.renderFrame();
+                Player.safeRenderFrame();
                 Store.saveState(); 
             },
             reset() {
                 this.values = { brightness: 100, contrast: 100, saturate: 100 };
                 document.querySelectorAll('.effect-slider').forEach(i => i.value = 100);
-                Player.renderFrame();
+                Player.safeRenderFrame();
                 Store.saveState();
             }
         };
@@ -565,7 +575,7 @@
                         if(prop === 'color') { asset.color = val; Store.updateAssetMeta(asset.id, { color: val }); }
                         if(prop === 'fontSize') { clip.fontSize = parseInt(val) || 10; }
                     }
-                    Player.renderFrame();
+                    Player.safeRenderFrame();
                     Store.saveState();
                 }
             },
@@ -798,7 +808,7 @@
                     const grid = a.type === 'video' || a.type === 'image' ? 'mediaGrid' : (a.type === 'audio' ? 'audioGrid' : 'titleGrid');
                     UI.renderAssetCard(grid, a);
                 });
-                Player.renderFrame();
+                Player.safeRenderFrame();
                 UI.refreshTimeline();
                 UI.checkExportButton();
             },
@@ -894,7 +904,7 @@
                 if (targetTrackId) {
                     this.addClip(targetTrackId, assetId, this.currentTime);
                     UI.refreshTimeline();
-                    Player.renderFrame();
+                    Player.safeRenderFrame();
                 }
             },
             resolveResizeCollision(trackId, activeClip, ignoreClipId = null) {
@@ -1048,13 +1058,15 @@
             async init() {
                 this.modules = await DB.getAll('modules');
                 
-                // CRITICAL HOTFIX: Auto-purge legacy Text Editor extension which conflicts with new Native Text Engine
-                const legacyIdx = this.modules.findIndex(m => m.name === 'Text Editor Engine' || m.name === 'text_editor_core');
-                if (legacyIdx !== -1) {
-                    const mName = this.modules[legacyIdx].name;
-                    await DB.delete('modules', mName);
-                    this.modules.splice(legacyIdx, 1);
-                    console.warn(`🧹 Purged deprecated [${mName}] extension to prevent Native Text Engine conflicts.`);
+                // CRITICAL HOTFIX: Broadened Auto-purge to aggressively hunt down any corrupted legacy text editor extensions
+                for (let i = this.modules.length - 1; i >= 0; i--) {
+                    const mName = this.modules[i].name.toLowerCase();
+                    if (mName.includes('text') && (mName.includes('editor') || mName.includes('module') || mName.includes('engine'))) {
+                        const originalName = this.modules[i].name;
+                        await DB.delete('modules', originalName);
+                        this.modules.splice(i, 1);
+                        console.warn(`🧹 Purged deprecated [${originalName}] extension to prevent architectural conflicts.`);
+                    }
                 }
 
                 this.runActiveModules(); 
@@ -1064,7 +1076,14 @@
                     if (m.active && m.content) {
                         try {
                             const script = document.createElement('script');
-                            script.textContent = m.content;
+                            // Injecting Extension Boot Shield
+                            script.textContent = `
+                                try {
+                                    ${m.content}
+                                } catch(extErr) {
+                                    console.warn("🛡️ Extension [${m.name}] crashed during boot:", extErr);
+                                }
+                            `;
                             document.body.appendChild(script);
                             console.log(`✅ Loaded Module: ${m.name}`);
                         } catch (e) {
@@ -1194,7 +1213,7 @@
                 document.getElementById('timelineRuler').addEventListener('click', e => {
                     const rect = tracksContainer.getBoundingClientRect();
                     const x = e.clientX - rect.left + tracksContainer.scrollLeft - 100; 
-                    Store.currentTime = Math.max(0, x / Store.zoom); Player.renderFrame();
+                    Store.currentTime = Math.max(0, x / Store.zoom); Player.safeRenderFrame();
                 });
                 document.getElementById('tracksScrollArea').addEventListener('scroll', (e) => {
                     const scrollX = e.target.scrollLeft;
@@ -1206,7 +1225,7 @@
                 wrapper.addEventListener('dragover', (e) => { e.preventDefault(); });
                 wrapper.addEventListener('drop', (e) => TimelineModule.handleGlobalDrop(e));
 
-                window.addEventListener('resize', () => { Player.renderFrame(); });
+                window.addEventListener('resize', () => { Player.safeRenderFrame(); });
 
                 setTimeout(() => ExportManager.initFFmpeg(), 100);
             },
@@ -1236,7 +1255,7 @@
                     if (newWidth < 220) newWidth = 220; 
                     if (newWidth > window.innerWidth * 0.4) newWidth = window.innerWidth * 0.4; 
                     document.documentElement.style.setProperty('--inspector-width', `${newWidth}px`);
-                    Player.renderFrame();
+                    Player.safeRenderFrame();
                 });
                 
                 window.addEventListener('mouseup', () => {
@@ -1282,7 +1301,7 @@
                         }
                         UI.refreshTimeline();
                         NativeInspector.render();
-                        Player.renderFrame();
+                        Player.safeRenderFrame();
                     }
                 });
 
@@ -1306,7 +1325,7 @@
                     if (clip) {
                         clip.x = textInitialX + pctX;
                         clip.y = textInitialY + pctY;
-                        Player.renderFrame();
+                        Player.safeRenderFrame();
                     }
                 });
 
@@ -1339,7 +1358,7 @@
                 
                 let start = performance.now();
                 const anim = (time) => {
-                    Player.renderFrame();
+                    Player.safeRenderFrame();
                     if (time - start < 350) requestAnimationFrame(anim);
                 };
                 requestAnimationFrame(anim);
@@ -1557,7 +1576,7 @@
                          const time = Math.max(0, x / Store.zoom);
                          Store.addClip(targetTrack.id, assetId, time);
                          UI.refreshTimeline();
-                         Player.renderFrame();
+                         Player.safeRenderFrame();
                     } else {
                         alert(`Cannot drop ${asset.type} onto ${targetTrack.label} track.`);
                     }
@@ -1624,7 +1643,7 @@
             deleteSelected() {
                 Store.deleteSelected(); Store.trackConfig.forEach(t => this.renderTrack(t.id));
                 document.getElementById('deleteBtn').disabled = true; document.getElementById('splitBtn').disabled = true;
-                Player.renderFrame(); this.renderMinimap(); this.triggerMinimap();
+                Player.safeRenderFrame(); this.renderMinimap(); this.triggerMinimap();
             },
             startDrag(e, clip, trackId) {
                 e.stopPropagation(); 
@@ -1670,7 +1689,7 @@
                     }
                     Store.resolveDragCollision(currentTrackId, clip, clip.start); 
                     this.renderTrack(currentTrackId); 
-                    Player.renderFrame();
+                    Player.safeRenderFrame();
                 };
                 const onUp = () => { 
                     document.removeEventListener('mousemove', onMove); 
@@ -1845,8 +1864,8 @@
                     Object.values(this.audioPool).forEach(item => item.el.pause());
                 }
             },
-            seekToStart() { Store.currentTime = 0; this.renderFrame(); if(this.playing) this.togglePlay(); },
-            seekRelative(s) { Store.currentTime = Math.max(0, Store.currentTime + s); this.renderFrame(); },
+            seekToStart() { Store.currentTime = 0; this.safeRenderFrame(); if(this.playing) this.togglePlay(); },
+            seekRelative(s) { Store.currentTime = Math.max(0, Store.currentTime + s); this.safeRenderFrame(); },
             gameLoop(timestamp) {
                 if(!this.playing) return;
                 let dt = (timestamp - this.lastFrame) / 1000; 
@@ -1857,9 +1876,21 @@
                 if (dt > 0.1) dt = 0.1; 
                 
                 Store.currentTime += dt; 
-                this.renderFrame();
+                this.safeRenderFrame();
                 requestAnimationFrame((ts) => this.gameLoop(ts));
             },
+            
+            // --- GLOBAL RENDER SHIELD ---
+            // Wraps the entire render flow. If a legacy extension attempts to overwrite this 
+            // and fails due to missing DOM objects, it is caught here, keeping the engine alive.
+            safeRenderFrame() {
+                try {
+                    this.renderFrame();
+                } catch (e) {
+                    console.warn("🛡️ Render Shield intercepted a frame crash:", e.message);
+                }
+            },
+
             renderFrame() {
                 // CRITICAL TIME SANITIZER: Prevent math failure/NaN drift causing "00:-1:-1:-1"
                 Store.currentTime = Number(Store.currentTime) || 0;
@@ -1900,7 +1931,15 @@
                 for(let i = Store.trackConfig.length - 1; i >= 0; i--) {
                     const track = Store.trackConfig[i];
                     const trackData = Store.tracks[track.id] || [];
-                    const clips = trackData.filter(c => t >= c.start && t < (c.start + c.duration));
+                    const clips = trackData.filter(c => {
+                        let s = c.start;
+                        let e = c.start + c.duration;
+                        if (c.transitions) {
+                            if (c.transitions.in && c.transitions.in.alignment === 'center') s -= (c.transitions.in.duration / 2);
+                            if (c.transitions.out && c.transitions.out.alignment === 'center') e += (c.transitions.out.duration / 2);
+                        }
+                        return t >= s && t < e;
+                    });
                     
                     if (track.type === 'video' || track.type === 'fx') {
                         activeVideoClips.push(...clips);
@@ -1920,7 +1959,7 @@
                     if (!audioItem) return;
                     
                     usedClipIds.add(clip.id);
-                    const internalTime = clip.offset + (t - clip.start);
+                    const internalTime = Math.max(0, Math.min(asset.duration || 9999, clip.offset + (t - clip.start)));
                     if(Math.abs(audioItem.el.currentTime - internalTime) > 0.3) audioItem.el.currentTime = internalTime;
                     if(this.playing && audioItem.el.paused) audioItem.el.play().catch(e => {});
                     if(!this.playing && !audioItem.el.paused) audioItem.el.pause();
@@ -1944,7 +1983,7 @@
                         if (!vEl) return;
                         
                         vEl.muted = !!clip.muted; // Apply the clip's muted state
-                        const internalTime = clip.offset + (t - clip.start);
+                        const internalTime = Math.max(0, Math.min(asset.duration || 9999, clip.offset + (t - clip.start)));
                         if(vEl.readyState >= 2) {
                             if(Math.abs(vEl.currentTime - internalTime) > 0.2) vEl.currentTime = internalTime;
                             if(this.playing && vEl.paused) vEl.play().catch(()=>{});
@@ -2293,7 +2332,7 @@
                 status.innerText = "Recording... Do not switch tabs.";
                 Store.currentTime = 0; 
                 Player.isRecording = true; 
-                Player.renderFrame(); 
+                Player.safeRenderFrame(); 
                 this.mediaRecorder.start(); 
                 Player.togglePlay();
                 this.recordInterval = setInterval(() => {
