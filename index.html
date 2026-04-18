@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Editor - Pro Workflow</title>
-    <script>const TOOL_VERSION = '2.6.16';</script>
+    <script>const TOOL_VERSION = '2.6.18';</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -132,7 +132,7 @@
             <div class="flex items-center gap-4 h-full flex-1 min-w-0">
                 <div class="flex items-center gap-2 mr-4 flex-shrink-0">
                     <i class="fa-solid fa-layer-group text-teal-400"></i>
-                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.16</span>
+                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.18</span>
                 </div>
                 
                 <div class="menu-wrapper relative h-full flex-shrink-0">
@@ -353,7 +353,7 @@
             <div class="flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#1a1a1a] rounded-t-lg">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded bg-[#252525] flex items-center justify-center text-[#00d2be]"><i class="fa-solid fa-puzzle-piece"></i></div>
-                    <div><h2 class="text-lg font-bold text-white">Extension Manager</h2><p class="text-xs text-gray-500">Manage your integrated modules || <a href="https://github.com/Cleo876/wasm-video-editor/tree/main/Extensions"><b>GET MORE</b></a></p></div>
+                    <div><h2 class="text-lg font-bold text-white">Extension Manager</h2><p class="text-xs text-gray-500">Manage your integrated modules || <a href="https://github.com/Cleo876/wasm-video-editor/tree/main/Extensions" target="_blank" class="hover:text-teal-400 underline"><b>GET MORE</b></a></p></div>
                 </div>
                 <button onclick="ModuleManager.close()" class="text-gray-400 hover:text-white transition w-8 h-8 flex items-center justify-center rounded hover:bg-[#333]"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
@@ -1058,7 +1058,6 @@
             async init() {
                 this.modules = await DB.getAll('modules');
                 
-                // CRITICAL HOTFIX: Broadened Auto-purge to aggressively hunt down any corrupted legacy text editor extensions
                 for (let i = this.modules.length - 1; i >= 0; i--) {
                     const mName = this.modules[i].name.toLowerCase();
                     if (mName.includes('text') && (mName.includes('editor') || mName.includes('module') || mName.includes('engine'))) {
@@ -1076,7 +1075,6 @@
                     if (m.active && m.content) {
                         try {
                             const script = document.createElement('script');
-                            // Injecting Extension Boot Shield
                             script.textContent = `
                                 try {
                                     ${m.content}
@@ -1440,7 +1438,58 @@
                 else if(asset.type === 'image') icon = 'fa-image';
                 else if(asset.type === 'audio') icon = 'fa-music';
                 else if(asset.type === 'title') icon = 'fa-font';
-                div.innerHTML = `<div class="flex-1 flex items-center justify-center bg-[#222]"><i class="fa-solid ${icon}" style="color:${asset.color}"></i><div class="add-overlay"><i class="fa-solid fa-plus text-white"></i></div></div><div class="bg-[#2a2a2a] p-1 px-2 text-[10px] text-gray-300 truncate">${asset.name}</div>`;
+                
+                const hasThumb = asset.type === 'image' || (asset.type === 'video' && asset.thumbnail);
+                const bgStyle = asset.type === 'image' ? `background-image: url(${asset.url});` : (asset.thumbnail ? `background-image: url(${asset.thumbnail});` : '');
+                
+                div.innerHTML = `
+                    <div class="flex-1 flex items-center justify-center bg-[#222] bg-cover bg-center relative group" style="${bgStyle}" id="thumb_container_${asset.id}">
+                        <i class="fa-solid ${icon} drop-shadow-md text-2xl ${hasThumb ? 'hidden' : ''}" id="icon_${asset.id}" style="color:${asset.color}"></i>
+                        <div class="add-overlay"><i class="fa-solid fa-plus text-white text-xl"></i></div>
+                    </div>
+                    <div class="bg-[#2a2a2a] p-1 px-2 text-[10px] text-gray-300 truncate" title="${asset.name}">${asset.name}</div>
+                `;
+                
+                // Asynchronous Video Thumbnail Extractor
+                if (asset.type === 'video' && !asset.thumbnail && asset.url) {
+                    const video = document.createElement('video');
+                    video.src = asset.url;
+                    video.muted = true;
+                    video.playsInline = true;
+                    video.crossOrigin = 'anonymous';
+                    
+                    // Wait for metadata to safely calculate duration
+                    video.onloadeddata = () => {
+                        // Safely seek to a non-black frame (e.g. 1.5s or halfway)
+                        video.currentTime = Math.min(1.5, video.duration / 2 || 0);
+                    };
+                    
+                    video.onseeked = () => {
+                        try {
+                            const canvas = document.createElement('canvas');
+                            const aspectRatio = video.videoWidth / video.videoHeight || 16/9;
+                            canvas.height = 90; // Optimized size for IndexedDB
+                            canvas.width = 90 * aspectRatio;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            const thumbData = canvas.toDataURL('image/jpeg', 0.6); // Aggressive compression
+                            
+                            asset.thumbnail = thumbData;
+                            Store.updateAssetMeta(asset.id, { thumbnail: thumbData });
+                            
+                            const tc = div.querySelector(`#thumb_container_${asset.id}`);
+                            const ic = div.querySelector(`#icon_${asset.id}`);
+                            if (tc && ic) {
+                                tc.style.backgroundImage = `url(${thumbData})`;
+                                ic.classList.add('hidden');
+                            }
+                        } catch(e) {
+                            console.warn("Could not extract video thumbnail.", e);
+                        }
+                    };
+                    video.load();
+                }
+
                 div.addEventListener('dragstart', e => { 
                     e.dataTransfer.setData('assetId', asset.id); 
                     const ghost = document.getElementById('dragGhost'); 
