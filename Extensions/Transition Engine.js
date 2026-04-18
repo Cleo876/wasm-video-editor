@@ -1,8 +1,8 @@
 /**
  * @name Advanced Transitions Engine
- * @version 3.5.0
+ * @version 6.2.0
  * @developer Forge™
- * @description A highly scalable ecosystem for transitions. Features reactive single-click inspector routing, drag interception, Filmora-style blocks, and automated GitHub syncing.
+ * @description A highly scalable ecosystem for transitions. Features True-Facilitator linear rendering, maxDuration limits, isolated click-to-edit interactions, and zero-cascade timeline alignment.
  */
 (function() {
     const MODULE_ID = 'advanced_transitions_engine';
@@ -18,16 +18,18 @@
             name: 'Cross Dissolve',
             description: 'Smoothly blends the transparency of the clip from 0% to 100%.',
             defaultDuration: 1.0,
+            maxDuration: 5.0, // Hard limit to prevent timeline breaking
             autoReverse: true,
             getUI: (params) => `<div class="text-xs text-gray-500 italic mt-2">Smoothly blends transparency.</div>`,
             getParams: () => ({}),
             onRender: null, 
-            getFFmpeg: (edge, duration, params) => `fade=t=${edge}:st=0:d=${duration}:alpha=1`
+            getFFmpeg: (edge, duration, params, align) => `fade=t=${edge}:st=0:d=${duration}:alpha=1`
         },
         'fade': {
             name: 'Fade to Color',
             description: 'Fades the video into a solid color block. Great for fading to black or white.',
             defaultDuration: 1.0,
+            maxDuration: 10.0,
             autoReverse: true, 
             getUI: (params) => `
                 <div class="mt-3">
@@ -38,11 +40,12 @@
             getParams: () => ({ color: document.getElementById('trans_color_picker').value }),
             onRender: (ctx, canvas, progress, params) => {
                 ctx.fillStyle = params.color || '#000000';
+                // Progress is provided dynamically by the editor (0.0 to 1.0) regardless of the duration length
                 ctx.globalAlpha = 1 - progress; 
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.globalAlpha = 1.0;
             },
-            getFFmpeg: (edge, duration, params) => {
+            getFFmpeg: (edge, duration, params, align) => {
                 const c = (params.color || '#000000').replace('#', '0x');
                 return `fade=t=${edge}:st=0:d=${duration}:c=${c}`;
             }
@@ -58,7 +61,6 @@
         // Native Host Hooks
         originalDrawToCanvas: null,
         originalRenderTrack: null,
-        originalStartDrag: null,
         originalSelectClip: null,
         globalClickHandler: null,
 
@@ -80,12 +82,13 @@ Create a new \`.js\` file and include these mandatory headers at the top so the 
 \`\`\`
 
 ### Step 2: Register the Engine
-Add your logic to the global registry object.
+Add your logic to the global registry object. You can now define a **maxDuration** to protect your animation from being stretched too far by the user!
 \`\`\`javascript
 window.TRANSITION_REGISTRY['color_wipe'] = {
     name: 'Color Wipe',
     description: 'Swipes a solid color block across the screen.',
     defaultDuration: 1.0,
+    maxDuration: 3.0, // Limits how long the user can stretch this transition
     
     // Auto-Reverse Magic:
     // By default, the engine runs your animation backward if placed at the END of a clip.
@@ -108,7 +111,7 @@ Let users customize it in the inspector!
 
 ### Step 4: The Canvas Render (Preview)
 This is the visual magic! It runs 60 times a second during preview playback. 
-\`progress\` is a decimal that goes from \`0.0\` (start) to \`1.0\` (end).
+The Editor handles dynamic time scaling for you: \`progress\` is a decimal that always goes from \`0.0\` (start) to \`1.0\` (end) exactly over the duration of the transition block.
 \`\`\`javascript
     onRender: (ctx, canvas, progress, params) => {
         ctx.fillStyle = params.color || '#ffffff';
@@ -120,7 +123,7 @@ This is the visual magic! It runs 60 times a second during preview playback.
 ### Step 5: FFmpeg Export
 Translate your effect into FFmpeg string format for the final MP4 render.
 \`\`\`javascript
-    getFFmpeg: (edge, duration, params) => {
+    getFFmpeg: (edge, duration, params, alignment) => {
         // Example: Using standard fade as a fallback
         const hexColor = (params.color || '#ffffff').replace('#', '0x');
         return "fade=t=" + edge + ":st=0:d=" + duration + ":c=" + hexColor; 
@@ -145,7 +148,6 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             if (typeof UI !== 'undefined') UI.refreshTimeline();
         },
 
-        // --- 1. PERSISTENCE & GITHUB SYNC ENGINE ---
         async loadPersistentTransitions() {
             try {
                 const saved = await DB.get('system', 'custom_transitions_registry');
@@ -154,9 +156,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                         try { eval(script); } catch(e) {}
                     });
                 }
-            } catch (e) {
-                console.warn("Could not load persistent transitions.");
-            }
+            } catch (e) {}
         },
 
         async saveCustomTransition(scriptString) {
@@ -244,27 +244,32 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             return 0;
         },
 
-        // --- 2. UI & PANEL ENGINE ---
         injectStyles() {
             const style = document.createElement('style');
             style.id = `${MODULE_ID}_styles`;
             style.innerHTML = `
-                .t-clip { position: relative; overflow: hidden; }
+                .t-clip { overflow: visible !important; }
+                .t-clip > span { overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
+                
                 .trans-block {
                     position: absolute;
                     top: 0; bottom: 0;
                     background: repeating-linear-gradient(45deg, rgba(0,210,190,0.2), rgba(0,210,190,0.2) 5px, rgba(0,0,0,0.5) 5px, rgba(0,0,0,0.5) 10px);
                     border: 1px solid rgba(0,210,190,0.8);
-                    z-index: 5; /* Sat safely below resize handles (z-index: 10) */
-                    cursor: pointer;
+                    z-index: 5; 
+                    cursor: grab;
                     transition: background 0.2s, border-color 0.2s;
                     pointer-events: auto;
                 }
+                .trans-block:active { cursor: grabbing; }
                 .trans-block:hover { background: rgba(0,210,190,0.4); }
                 .trans-block.active-edit { background: rgba(0,210,190,0.6); border-color: #fff; z-index: 6; }
                 
-                .trans-block.in { left: 0; border-left: none; border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
-                .trans-block.out { right: 0; border-right: none; border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+                .trans-block.in.align-edge { left: 0; border-left: none; border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
+                .trans-block.out.align-edge { right: 0; border-right: none; border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+                
+                .trans-block.in.align-center { left: 0; transform: translateX(-50%); border-radius: 4px; }
+                .trans-block.out.align-center { right: 0; transform: translateX(50%); border-radius: 4px; }
                 
                 #teTransTypeDisplay { transition: all 0.2s; }
                 #teTransTypeDisplay:hover { border-color: #00d2be; }
@@ -315,7 +320,12 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             if (!clip) return;
             
             if (!clip.transitions) clip.transitions = {};
-            clip.transitions[edge] = { type: 'dissolve', duration: window.TRANSITION_REGISTRY['dissolve'].defaultDuration, params: {} };
+            clip.transitions[edge] = { 
+                type: 'dissolve', 
+                duration: window.TRANSITION_REGISTRY['dissolve'].defaultDuration, 
+                alignment: 'edge', 
+                params: {} 
+            };
             
             Store.saveState();
             UI.refreshTimeline();
@@ -373,9 +383,18 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                         </div>
                     </div>
                     
-                    <div class="mt-2">
-                        <label class="block text-[10px] uppercase text-gray-500 font-bold mb-1">Duration (Seconds)</label>
-                        <input type="number" id="teTransDuration" step="0.1" min="0.1" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm rounded outline-none focus:border-teal-500">
+                    <div class="mt-2 flex gap-2">
+                        <div class="flex-1">
+                            <label class="block text-[10px] uppercase text-gray-500 font-bold mb-1">Duration (s)</label>
+                            <input type="number" id="teTransDuration" step="0.1" min="0.1" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm rounded outline-none focus:border-teal-500">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-[10px] uppercase text-gray-500 font-bold mb-1">Position</label>
+                            <select id="teTransAlignment" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm rounded outline-none focus:border-teal-500">
+                                <option value="edge">Edge Snap</option>
+                                <option value="center">Half-n-Half</option>
+                            </select>
+                        </div>
                     </div>
                     
                     <div id="teTransDynamicUI" class="border-t border-[#333] mt-1 pt-1 empty:hidden"></div>
@@ -411,13 +430,31 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             document.getElementById('teTransRemove').onclick = () => this.removeTransition();
             document.getElementById('teTransPreview').onclick = () => this.playSmartPreview();
             document.getElementById('teDownloadGuide').onclick = () => this.downloadGuide();
+            
             document.getElementById('teTransDuration').onchange = () => this.commitModifications();
+            document.getElementById('teTransAlignment').onchange = () => this.commitModifications();
             
             const displayBtn = document.getElementById('teTransTypeDisplay');
             const typeList = document.getElementById('teTransTypeList');
             displayBtn.onclick = () => typeList.classList.toggle('hidden');
 
             this.makeDraggable(p, document.getElementById('teTransHeader'));
+        },
+
+        makeDraggable(elm, handle) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            handle.onmousedown = (e) => {
+                e.preventDefault();
+                pos3 = e.clientX; pos4 = e.clientY;
+                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
+                document.onmousemove = (e) => {
+                    e.preventDefault();
+                    pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
+                    pos3 = e.clientX; pos4 = e.clientY;
+                    elm.style.top = (elm.offsetTop - pos2) + "px";
+                    elm.style.left = (elm.offsetLeft - pos1) + "px";
+                };
+            };
         },
 
         handleTypeChange(type) {
@@ -428,6 +465,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             clip.transitions[this.activeSelection.edge] = {
                 type: type,
                 duration: reg.defaultDuration || 1.0,
+                alignment: clip.transitions[this.activeSelection.edge].alignment || 'edge',
                 params: {}
             };
             
@@ -508,7 +546,6 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             this.updatePanelUI();
             this.panel.style.display = 'block';
             
-            // Highlight the block structurally
             if (typeof UI !== 'undefined') UI.refreshTimeline();
         },
 
@@ -522,6 +559,8 @@ Translate your effect into FFmpeg string format for the final MP4 render.
         updatePanelUI() {
             if (!this.activeSelection) return;
             const clip = this.getClipById(this.activeSelection.clipId);
+            if (!clip || !clip.transitions || !clip.transitions[this.activeSelection.edge]) return;
+            
             const trans = clip.transitions[this.activeSelection.edge];
             const asset = Store.assets.find(a => a.id === clip.assetId);
 
@@ -547,6 +586,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             document.getElementById('teTransTypeName').innerText = currentReg ? currentReg.name : 'Select...';
 
             document.getElementById('teTransDuration').value = trans.duration.toFixed(2);
+            document.getElementById('teTransAlignment').value = trans.alignment || 'edge';
 
             this.renderDynamicUI(trans);
         },
@@ -573,10 +613,15 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             const reg = window.TRANSITION_REGISTRY[trans.type];
 
             let dur = parseFloat(document.getElementById('teTransDuration').value);
-            dur = Math.max(0.1, Math.min(dur, clip.duration)); 
+            
+            // DYNAMIC CAP LOGIC: Respect maxDuration from Registry
+            let maxAllowed = reg.maxDuration ? Math.min(clip.duration, reg.maxDuration) : clip.duration;
+            dur = Math.max(0.1, Math.min(dur, maxAllowed)); 
+            
             document.getElementById('teTransDuration').value = dur.toFixed(2);
 
             trans.duration = dur;
+            trans.alignment = document.getElementById('teTransAlignment').value;
             
             if (reg && reg.getParams) {
                 trans.params = reg.getParams();
@@ -604,8 +649,15 @@ Translate your effect into FFmpeg string format for the final MP4 render.
 
             const clip = this.getClipById(this.activeSelection.clipId);
             const trans = clip.transitions[this.activeSelection.edge];
+            const alignment = trans.alignment || 'edge';
 
-            const startTime = this.activeSelection.edge === 'in' ? clip.start : (clip.start + clip.duration - trans.duration);
+            let startTime = clip.start;
+            if (this.activeSelection.edge === 'in') {
+                startTime = alignment === 'center' ? clip.start - (trans.duration / 2) : clip.start;
+            } else {
+                startTime = alignment === 'center' ? (clip.start + clip.duration) - (trans.duration / 2) : (clip.start + clip.duration - trans.duration);
+            }
+            
             const stopTime = startTime + trans.duration + 0.5;
 
             Store.currentTime = startTime;
@@ -620,23 +672,6 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             }, 50);
         },
 
-        makeDraggable(elm, handle) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            handle.onmousedown = (e) => {
-                e.preventDefault();
-                pos3 = e.clientX; pos4 = e.clientY;
-                document.onmouseup = () => { document.onmouseup = null; document.onmousemove = null; };
-                document.onmousemove = (e) => {
-                    e.preventDefault();
-                    pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY;
-                    pos3 = e.clientX; pos4 = e.clientY;
-                    elm.style.top = (elm.offsetTop - pos2) + "px";
-                    elm.style.left = (elm.offsetLeft - pos1) + "px";
-                };
-            };
-        },
-
-        // --- 3. CORE LIFECYCLE HOOKS ---
         hijackCoreLifecycles() {
             this.originalDrawToCanvas = Player.drawToCanvas.bind(Player);
             
@@ -646,21 +681,29 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 const t = Store.currentTime;
                 const opacityBackups = new Map();
                 
+                // 1. Resolve localized Clip Opacity edits first
                 vClips.forEach(clip => {
                     opacityBackups.set(clip.id, clip.opacity);
                     if (clip.transitions) {
                         let currentOpacity = clip.opacity !== undefined ? clip.opacity : 100;
                         
                         if (clip.transitions.in && clip.transitions.in.type === 'dissolve') {
-                            if (t >= clip.start && t <= clip.start + clip.transitions.in.duration) {
-                                const prog = (t - clip.start) / clip.transitions.in.duration;
+                            const dur = clip.transitions.in.duration;
+                            const align = clip.transitions.in.alignment || 'edge';
+                            const start = align === 'center' ? clip.start - dur/2 : clip.start;
+                            
+                            if (t >= start && t <= start + dur) {
+                                const prog = (t - start) / dur;
                                 currentOpacity *= prog;
                             }
                         }
                         if (clip.transitions.out && clip.transitions.out.type === 'dissolve') {
-                            const outStart = clip.start + clip.duration - clip.transitions.out.duration;
-                            if (t >= outStart && t <= clip.start + clip.duration) {
-                                const prog = (clip.start + clip.duration - t) / clip.transitions.out.duration;
+                            const dur = clip.transitions.out.duration;
+                            const align = clip.transitions.out.alignment || 'edge';
+                            const start = align === 'center' ? (clip.start + clip.duration) - dur/2 : clip.start + clip.duration - dur;
+                            
+                            if (t >= start && t <= start + dur) {
+                                const prog = (start + dur - t) / dur;
                                 currentOpacity *= prog;
                             }
                         }
@@ -668,43 +711,54 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                     }
                 });
                 
+                // Draw Base Layer
                 this.originalDrawToCanvas(vClips, tClips);
-                
                 vClips.forEach(clip => clip.opacity = opacityBackups.get(clip.id));
                 
                 const ctx = Player.compositorCanvas.getContext('2d');
                 const canvas = Player.compositorCanvas;
                 
-                vClips.forEach(clip => {
-                    if (!clip.transitions) return;
-                    
-                    const drawOverlay = (transObj, edge) => {
-                        const reg = window.TRANSITION_REGISTRY[transObj.type];
-                        if (reg && reg.onRender) {
-                            let prog = 0;
-                            if (edge === 'in' && t >= clip.start && t <= clip.start + transObj.duration) {
-                                prog = (t - clip.start) / transObj.duration; 
-                            } else if (edge === 'out') {
-                                const outStart = clip.start + clip.duration - transObj.duration;
-                                if (t >= outStart && t <= clip.start + clip.duration) {
-                                    prog = (t - outStart) / transObj.duration; 
-                                    
-                                    if (reg.autoReverse !== false) {
-                                        prog = 1.0 - prog; 
-                                    }
-                                }
-                            }
-                            
-                            if (prog > 0 && prog <= 1) {
-                                ctx.save();
-                                reg.onRender(ctx, canvas, prog, transObj.params || {});
-                                ctx.restore();
+                // 2. Global Render Scan
+                let activeTrans = [];
+                Store.trackConfig.forEach(track => {
+                    (Store.tracks[track.id] || []).forEach(clip => {
+                        if (!clip.transitions) return;
+                        
+                        if (clip.transitions.in) {
+                            const dur = clip.transitions.in.duration;
+                            const align = clip.transitions.in.alignment || 'edge';
+                            const start = align === 'center' ? clip.start - dur/2 : clip.start;
+                            if (t >= start && t <= start + dur) {
+                                activeTrans.push({ clip, edge: 'in', trans: clip.transitions.in, start, dur });
                             }
                         }
-                    };
+                        if (clip.transitions.out) {
+                            const dur = clip.transitions.out.duration;
+                            const align = clip.transitions.out.alignment || 'edge';
+                            const start = align === 'center' ? (clip.start + clip.duration) - dur/2 : clip.start + clip.duration - dur;
+                            if (t >= start && t <= start + dur) {
+                                activeTrans.push({ clip, edge: 'out', trans: clip.transitions.out, start, dur });
+                            }
+                        }
+                    });
+                });
 
-                    if (clip.transitions.in) drawOverlay(clip.transitions.in, 'in');
-                    if (clip.transitions.out) drawOverlay(clip.transitions.out, 'out');
+                // Apply dynamic overlays (Colors, Wipes, Leaks)
+                activeTrans.forEach(item => {
+                    const reg = window.TRANSITION_REGISTRY[item.trans.type];
+                    if (reg && reg.onRender) {
+                        let prog = (t - item.start) / item.dur; 
+                        
+                        if (item.edge === 'out' && reg.autoReverse !== false) {
+                            prog = 1.0 - prog; 
+                        }
+                        
+                        if (prog >= 0 && prog <= 1) {
+                            ctx.save();
+                            reg.onRender(ctx, canvas, prog, item.trans.params || {});
+                            ctx.restore();
+                        }
+                    }
                 });
             };
 
@@ -714,31 +768,6 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 if (this.isActive) this.injectTimelineBlocks(trackId);
             };
 
-            // CRITICAL INTERCEPT: "Either Or" Logic for Drag vs Select
-            this.originalStartDrag = TimelineModule.startDrag.bind(TimelineModule);
-            TimelineModule.startDrag = (e, clip, trackId) => {
-                if (!this.isActive) return this.originalStartDrag(e, clip, trackId);
-                
-                const transBlock = e.target.closest('.trans-block');
-                if (transBlock) {
-                    // It's a transition block! Cancel normal clip dragging.
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // Select the underlying clip in the editor
-                    TimelineModule.selectClip(clip.id, trackId);
-                    
-                    // Open the specific transition editor
-                    const edge = transBlock.dataset.edge;
-                    this.openEditor(clip.id, edge);
-                    return; // "Either or, never both"
-                }
-                
-                // Normal drag
-                this.originalStartDrag(e, clip, trackId);
-            };
-
-            // CRITICAL INTERCEPT: Sync Panel when a clip is selected natively
             this.originalSelectClip = TimelineModule.selectClip.bind(TimelineModule);
             TimelineModule.selectClip = (clipId, trackId) => {
                 this.originalSelectClip(clipId, trackId);
@@ -746,7 +775,6 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 if (this.isActive && this.panel && this.panel.style.display !== 'none') {
                     const clip = this.getClipById(clipId);
                     if (clip && clip.transitions) {
-                        // Prioritize 'in', fallback to 'out'
                         const edge = clip.transitions.in ? 'in' : (clip.transitions.out ? 'out' : null);
                         if (edge) {
                             this.activeSelection = { clipId, edge };
@@ -769,9 +797,9 @@ Translate your effect into FFmpeg string format for the final MP4 render.
 
                 const renderBlock = (transObj, edge) => {
                     const block = document.createElement('div');
-                    block.className = `trans-block ${edge}`;
+                    const align = transObj.alignment || 'edge';
+                    block.className = `trans-block ${edge} align-${align}`;
                     
-                    // Add active highlight if this transition is currently open in the editor
                     if (this.activeSelection && this.activeSelection.clipId === clipData.id && this.activeSelection.edge === edge) {
                         block.classList.add('active-edit');
                     }
@@ -779,9 +807,68 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                     block.dataset.clipId = clipData.id;
                     block.dataset.edge = edge;
                     block.style.width = `${transObj.duration * Store.zoom}px`;
-                    block.title = `Click to Edit ${window.TRANSITION_REGISTRY[transObj.type]?.name || 'Transition'}`;
+                    block.title = `Drag to snap. Dbl-Click to edit ${window.TRANSITION_REGISTRY[transObj.type]?.name || 'Transition'}.`;
                     
-                    // No event bindings here! The startDrag interceptor handles it flawlessly at the parent level.
+                    let clickCount = 0;
+                    let clickTimer = null;
+                    
+                    block.onmousedown = (e) => {
+                        e.stopPropagation(); 
+                        e.preventDefault();
+                        
+                        let startX = e.clientX;
+                        let isDragging = false;
+                        let initialAlign = transObj.alignment || 'edge';
+                        
+                        const onMove = (ev) => {
+                            let deltaX = ev.clientX - startX;
+                            if (Math.abs(deltaX) > 5) {
+                                isDragging = true;
+                                let newAlign = initialAlign;
+                                
+                                if (edge === 'out') {
+                                    newAlign = deltaX > 0 ? 'center' : 'edge';
+                                } else {
+                                    newAlign = deltaX < 0 ? 'center' : 'edge';
+                                }
+                                
+                                if (newAlign !== transObj.alignment) {
+                                    transObj.alignment = newAlign;
+                                    UI.refreshTimeline();
+                                    this.updatePanelUI();
+                                }
+                            }
+                        };
+                        
+                        const onUp = (ev) => {
+                            document.removeEventListener('mousemove', onMove);
+                            document.removeEventListener('mouseup', onUp);
+                            
+                            if (isDragging) {
+                                Store.saveState();
+                            } else {
+                                clickCount++;
+                                if (clickCount === 1) {
+                                    clickTimer = setTimeout(() => {
+                                        clickCount = 0;
+                                        TimelineModule.selectClip(clipData.id, trackId);
+                                        if (this.panel && this.panel.style.display !== 'none') {
+                                            this.openEditor(clipData.id, edge);
+                                        }
+                                    }, 250);
+                                } else if (clickCount >= 2) {
+                                    clearTimeout(clickTimer);
+                                    clickCount = 0;
+                                    TimelineModule.selectClip(clipData.id, trackId);
+                                    this.openEditor(clipData.id, edge);
+                                }
+                            }
+                        };
+                        
+                        document.addEventListener('mousemove', onMove);
+                        document.addEventListener('mouseup', onUp);
+                    };
+                    
                     clipEl.appendChild(block);
                 };
 
@@ -790,7 +877,6 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             });
         },
 
-        // --- 4. FFMPEG EXPORT INTEGRATION ---
         registerExportMiddleware() {
             if (typeof Store !== 'undefined' && Store.middleware) {
                 Store.middleware.push((clip) => {
@@ -801,7 +887,8 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                     const processEdge = (transObj, edge) => {
                         const reg = window.TRANSITION_REGISTRY[transObj.type];
                         if (reg && reg.getFFmpeg) {
-                            filters.push(reg.getFFmpeg(edge, transObj.duration, transObj.params || {}));
+                            const align = transObj.alignment || 'edge';
+                            filters.push(reg.getFFmpeg(edge, transObj.duration, transObj.params || {}, align));
                         }
                     };
 
@@ -828,7 +915,6 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             
             if (this.originalDrawToCanvas) Player.drawToCanvas = this.originalDrawToCanvas;
             if (this.originalRenderTrack) TimelineModule.renderTrack = this.originalRenderTrack;
-            if (this.originalStartDrag) TimelineModule.startDrag = this.originalStartDrag;
             if (this.originalSelectClip) TimelineModule.selectClip = this.originalSelectClip;
             
             if (this.globalClickHandler) document.removeEventListener('click', this.globalClickHandler);
