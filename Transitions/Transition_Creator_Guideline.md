@@ -16,12 +16,13 @@ Create a new `.js` file and include these mandatory headers at the top so the au
 ```
 
 ### Step 2: Register the Engine
-Add your logic to the global registry object.
+Add your logic to the global registry object. You can now define a **maxDuration** to protect your animation from being stretched too far by the user!
 ```javascript
 window.TRANSITION_REGISTRY['color_wipe'] = {
     name: 'Color Wipe',
     description: 'Swipes a solid color block across the screen.',
     defaultDuration: 1.0,
+    maxDuration: 3.0, // Limits how long the user can stretch this transition
     
     // Auto-Reverse Magic:
     // By default, the engine runs your animation backward if placed at the END of a clip.
@@ -44,7 +45,7 @@ Let users customize it in the inspector!
 
 ### Step 4: The Canvas Render (Preview)
 This is the visual magic! It runs 60 times a second during preview playback. 
-`progress` is a decimal that goes from `0.0` (start) to `1.0` (end).
+The Editor handles dynamic time scaling for you: `progress` is a decimal that always goes from `0.0` (start) to `1.0` (end) exactly over the duration of the transition block.
 ```javascript
     onRender: (ctx, canvas, progress, params) => {
         ctx.fillStyle = params.color || '#ffffff';
@@ -56,7 +57,7 @@ This is the visual magic! It runs 60 times a second during preview playback.
 ### Step 5: FFmpeg Export
 Translate your effect into FFmpeg string format for the final MP4 render.
 ```javascript
-    getFFmpeg: (edge, duration, params) => {
+    getFFmpeg: (edge, duration, params, alignment) => {
         // Example: Using standard fade as a fallback
         const hexColor = (params.color || '#ffffff').replace('#', '0x');
         return "fade=t=" + edge + ":st=0:d=" + duration + ":c=" + hexColor; 
