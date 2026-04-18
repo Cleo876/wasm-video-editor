@@ -1,69 +1,65 @@
-# Transition Creator Guideline
+# The Transition Creator Guide
 
-Welcome to the **Advanced Transitions Engine** ecosystem!
+Welcome to the Transition Ecosystem! You can easily add custom transitions to the editor by uploading a `.js` file.
 
-You can create powerful custom transitions and install them via the **Import Custom Transition (.js)** button. Once installed, they persist in your local database automatically.
+Here is the exact step-by-step blueprint to create your own:
 
-## The Registry API
-
-To register a transition, inject a new object into `window.TRANSITION_REGISTRY`:
-
+### Step 1: The File Setup
+Create a new `.js` file and include these mandatory headers at the top so the automated GitHub updater can track versions:
 ```javascript
-// Example 1: Custom Fade
-window.TRANSITION_REGISTRY['my_custom_fade'] = {
-    name: 'My Custom Fade',
-    defaultDuration: 1.0,
-
-    // 1. UI Generator (Optional)
-    // Return an HTML string for custom Inspector settings
-    getUI: (params) => `<input type="color" id="my_color">`,
-
-    // 2. State Extractor (Optional)
-    // Extract values from your UI when the user makes changes
-    getParams: () => ({ color: document.getElementById('my_color').value }),
-
-    // 3. Canvas Render Hook (For Realtime Preview)
-    // progress: 0.0 (start) to 1.0 (end)
-    onRender: (ctx, canvas, progress, params) => {
-        ctx.fillStyle = params.color || '#000';
-        ctx.globalAlpha = progress;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    },
-
-    // 4. FFmpeg Filter Hook (For Export)
-    // edge: 'in' or 'out'
-    getFFmpeg: (edge, duration, params) => {
-        return "fade=t=" + edge + ":st=0:d=" + duration + ":c=" + params.color;
-    }
-};
+/**
+ * @name Color Wipe
+ * @version 1.0.0
+ * @developer Your Name
+ * @description Swipes a solid color block across the screen.
+ */
 ```
 
-## Example 2: Color Wipe
-
+### Step 2: Register the Engine
+Add your logic to the global registry object.
 ```javascript
 window.TRANSITION_REGISTRY['color_wipe'] = {
     name: 'Color Wipe',
+    description: 'Swipes a solid color block across the screen.',
     defaultDuration: 1.0,
-    getUI: (params) => `
-        <div class="mt-3">
-            <label class="block text-[10px] text-gray-500 font-bold mb-1 uppercase">Wipe Color</label>
-            <input type="color" id="wipe_color" value="${params.color || '#ffffff'}" class="w-full h-8 bg-transparent cursor-pointer rounded border border-[#333]">
-        </div>
-    `,
-    getParams: () => ({ color: document.getElementById('wipe_color').value }),
-    onRender: (ctx, canvas, progress, params) => {
-        ctx.fillStyle = params.color || '#ffffff';
-        // Creates a cinematic wipe from left to right
-        ctx.fillRect(0, 0, canvas.width * progress, canvas.height);
-    },
-    getFFmpeg: (edge, duration, params) => {
-        // Fallback or complex overlay filters can be constructed here
-        const c = (params.color || '#ffffff').replace('#', '0x');
-        return "fade=t=" + edge + ":st=0:d=" + duration + ":c=" + c; 
-    }
-};
+    
+    // Auto-Reverse Magic:
+    // By default, the engine runs your animation backward if placed at the END of a clip.
+    // Set to false if your transition should always play the exact same way.
+    autoReverse: true, 
 ```
 
-## Lifecycle Architecture
-- **onRender** executes 60 times a second during preview. Keep canvas math lightweight!
-- **getFFmpeg** fires only during export compilation. Ensure your syntax perfectly matches valid FFmpeg filters.
+### Step 3: Build the UI (Optional)
+Let users customize it in the inspector!
+```javascript
+    getUI: (params) => `
+        <div class="mt-3">
+            <label style="font-size: 10px; color: gray; font-weight: bold;">WIPE COLOR</label>
+            <input type="color" id="wipe_color" value="${params.color || '#ffffff'}" style="width: 100%; height: 32px; background: transparent; cursor: pointer; border-radius: 4px; border: 1px solid #333;">
+        </div>
+    `,
+    // Extract the values when the user makes changes
+    getParams: () => ({ color: document.getElementById('wipe_color').value }),
+```
+
+### Step 4: The Canvas Render (Preview)
+This is the visual magic! It runs 60 times a second during preview playback. 
+`progress` is a decimal that goes from `0.0` (start) to `1.0` (end).
+```javascript
+    onRender: (ctx, canvas, progress, params) => {
+        ctx.fillStyle = params.color || '#ffffff';
+        // Draws a rectangle growing from width 0 to full width
+        ctx.fillRect(0, 0, canvas.width * progress, canvas.height);
+    },
+```
+
+### Step 5: FFmpeg Export
+Translate your effect into FFmpeg string format for the final MP4 render.
+```javascript
+    getFFmpeg: (edge, duration, params) => {
+        // Example: Using standard fade as a fallback
+        const hexColor = (params.color || '#ffffff').replace('#', '0x');
+        return "fade=t=" + edge + ":st=0:d=" + duration + ":c=" + hexColor; 
+    }
+}; // Close the registry object
+```
