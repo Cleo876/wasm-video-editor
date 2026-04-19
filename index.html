@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Editor - Pro Workflow</title>
-    <script>const TOOL_VERSION = '2.6.18';</script>
+    <script>const TOOL_VERSION = '2.6.19';</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -132,7 +132,8 @@
             <div class="flex items-center gap-4 h-full flex-1 min-w-0">
                 <div class="flex items-center gap-2 mr-4 flex-shrink-0">
                     <i class="fa-solid fa-layer-group text-teal-400"></i>
-                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.18</span>
+                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.19</span>
+                    <span id="safeModeBadge" class="hidden ml-2 bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider uppercase shadow-md" title="Extensions are temporarily disabled for a clean boot.">Safe Mode</span>
                 </div>
                 
                 <div class="menu-wrapper relative h-full flex-shrink-0">
@@ -361,6 +362,7 @@
             <div class="px-6 py-4 border-t border-[#333] bg-[#1a1a1a] flex justify-between items-center rounded-b-lg">
                 <span class="text-xs text-gray-500" id="moduleCount">0 extensions installed</span>
                 <div class="flex gap-3">
+                    <button id="btnInstallDefaults" onclick="ModuleManager.installDefaults()" class="px-4 py-2 bg-[#252525] hover:bg-[#333] border border-[#333] rounded text-xs text-teal-400 transition flex items-center gap-2" title="Pull recommended extensions from GitHub"><i class="fa-solid fa-cloud-arrow-down"></i> Defaults</button>
                     <button onclick="ModuleManager.loadFolder()" class="px-4 py-2 bg-[#252525] hover:bg-[#333] border border-[#333] rounded text-xs text-gray-300 transition flex items-center gap-2"><i class="fa-solid fa-folder-open"></i> Load Local</button>
                     <button onclick="ModuleManager.close()" class="px-6 py-2 bg-[#00d2be] hover:opacity-90 text-black font-bold text-xs rounded transition shadow-lg shadow-teal-900/20">Done</button>
                 </div>
@@ -1055,7 +1057,16 @@
 
         const ModuleManager = {
             modules: [],
+            isSafeMode: false,
+            
             async init() {
+                this.isSafeMode = window.location.hash.includes('safemode=true') || window.location.search.includes('safemode=true');
+                if (this.isSafeMode) {
+                    const badge = document.getElementById('safeModeBadge');
+                    if(badge) badge.classList.remove('hidden');
+                    console.warn("🛡️ SAFE MODE ACTIVE: Extensions are temporarily disabled.");
+                }
+
                 this.modules = await DB.getAll('modules');
                 
                 for (let i = this.modules.length - 1; i >= 0; i--) {
@@ -1068,7 +1079,9 @@
                     }
                 }
 
-                this.runActiveModules(); 
+                if (!this.isSafeMode) {
+                    this.runActiveModules(); 
+                }
             },
             async runActiveModules() {
                 for (const m of this.modules) {
@@ -1101,6 +1114,64 @@
             },
             close() { document.getElementById('modulesModal').classList.add('hidden'); },
             loadLocal() { this.loadFolder(); }, 
+            
+            async installDefaults() {
+                const urls = [
+                    'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Extensions/Undo%20%26%20Redo%20Engine.js',
+                    'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Extensions/Media%20Manager%20Pro.js',
+                    'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Extensions/Audio%20Mixer%20Engine.js'
+                ];
+                
+                let addedCount = 0;
+                const btn = document.getElementById('btnInstallDefaults');
+                if(btn) btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Installing...';
+                
+                for (const url of urls) {
+                    try {
+                        const res = await fetch(url);
+                        if (!res.ok) continue;
+                        const content = await res.text();
+                        
+                        const nameMatch = content.match(/@name\s+(.+)/);
+                        const name = nameMatch ? nameMatch[1].trim() : 'Unnamed Extension';
+                        
+                        if(this.modules.find(m => m.name === name)) continue;
+
+                        const versionMatch = content.match(/@version\s+([\d\.]+)/);
+                        const devMatch = content.match(/@developer\s+(.+)/);
+                        const descMatch = content.match(/@description\s+(.+)/);
+                        
+                        const newMod = { 
+                            name: name, 
+                            version: versionMatch ? versionMatch[1].trim() : '1.0.0', 
+                            developer: devMatch ? devMatch[1].trim() : 'Unknown',
+                            description: descMatch ? descMatch[1].trim() : '',
+                            active: true, 
+                            size: (content.length/1024).toFixed(1)+'KB', 
+                            date: new Date().toLocaleDateString(), 
+                            content: content 
+                        };
+                        
+                        this.modules.push(newMod);
+                        await DB.put('modules', newMod);
+                        addedCount++;
+                        
+                        if (!this.isSafeMode) {
+                            const script = document.createElement('script');
+                            script.textContent = content;
+                            document.body.appendChild(script);
+                        }
+                    } catch(e) {
+                        console.error("Failed to fetch default extension:", url, e);
+                    }
+                }
+                
+                if(btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Defaults';
+                this.render();
+                if(addedCount > 0) Notify.show(`Installed ${addedCount} default extensions`, 'fa-check');
+                else Notify.show(`Defaults are already installed`, 'fa-info-circle');
+            },
+
             loadFolder() {
                 const input = document.createElement('input'); input.type = 'file'; input.webkitdirectory = true; input.directory = true; input.multiple = true;
                 input.onchange = async (e) => {
@@ -1108,20 +1179,35 @@
                     if(files.length === 0) { alert("No .js modules found."); return; }
                     let addedCount = 0;
                     for (const f of files) {
-                        const name = f.name.replace('.js','');
                         const content = await f.text(); 
+                        
+                        const nameMatch = content.match(/@name\s+(.+)/);
+                        const name = nameMatch ? nameMatch[1].trim() : f.name.replace('.js','');
+                        
+                        const versionMatch = content.match(/@version\s+([\d\.]+)/);
+                        const devMatch = content.match(/@developer\s+(.+)/);
+                        const descMatch = content.match(/@description\s+(.+)/);
+
                         if(!this.modules.find(m => m.name === name)) {
                             const newMod = { 
-                                name, version: '1.0.0', active: true, size: (f.size/1024).toFixed(1)+'KB', 
-                                date: new Date().toLocaleDateString(), content: content 
+                                name, 
+                                version: versionMatch ? versionMatch[1].trim() : '1.0.0', 
+                                developer: devMatch ? devMatch[1].trim() : '',
+                                description: descMatch ? descMatch[1].trim() : '',
+                                active: true, 
+                                size: (f.size/1024).toFixed(1)+'KB', 
+                                date: new Date().toLocaleDateString(), 
+                                content: content 
                             };
                             this.modules.push(newMod);
                             await DB.put('modules', newMod);
                             addedCount++;
                             
-                            const script = document.createElement('script');
-                            script.textContent = content;
-                            document.body.appendChild(script);
+                            if (!this.isSafeMode) {
+                                const script = document.createElement('script');
+                                script.textContent = content;
+                                document.body.appendChild(script);
+                            }
                             Notify.show(`Module '${name}' loaded`, 'fa-puzzle-piece');
                         }
                     }
@@ -1156,12 +1242,14 @@
                     <div class="module-item group border-b border-[#222] py-4">
                         <div class="flex items-center gap-4 flex-1">
                             <div class="w-10 h-10 rounded bg-[#252525] flex items-center justify-center text-teal-500"><i class="fa-solid fa-puzzle-piece"></i></div>
-                            <div class="flex-1 min-w-0">
-                                <div class="font-bold text-sm text-gray-200 truncate flex items-center gap-2">
-                                    ${m.name} 
-                                    <span class="bg-gray-800 px-1.5 rounded text-[9px] text-gray-500 font-normal">v${m.version}</span>
+                            <div class="flex-1 min-w-0 pr-4">
+                                <div class="font-bold text-sm text-gray-200 flex flex-wrap items-center gap-2">
+                                    <span class="truncate max-w-[200px]">${m.name}</span>
+                                    <span class="bg-gray-800 px-1.5 rounded text-[9px] text-gray-500 font-normal whitespace-nowrap">v${m.version || '1.0.0'}</span>
+                                    ${m.developer ? `<span class="text-[9px] text-teal-500/70 font-normal ml-1 whitespace-nowrap truncate max-w-[150px]">by ${m.developer}</span>` : ''}
                                 </div>
-                                <div class="text-[9px] text-gray-600 mt-1 uppercase font-mono tracking-tighter">${m.size} • Added ${m.date}</div>
+                                ${m.description ? `<div class="text-[10px] text-gray-400 mt-1 whitespace-normal break-words leading-relaxed pr-2" title="${m.description}">${m.description}</div>` : ''}
+                                <div class="text-[9px] text-gray-600 mt-1.5 uppercase font-mono tracking-tighter">${m.size} • Added ${m.date}</div>
                             </div>
                         </div>
                         <div class="flex items-center gap-6 ml-4">
