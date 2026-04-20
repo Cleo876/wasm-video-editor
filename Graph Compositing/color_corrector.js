@@ -1,6 +1,6 @@
 /**
  * @name Color Corrector
- * @version 3.0.0
+ * @version 4.3.0
  * @developer Forge™
  * @description Live RGB color grading using Canvas manipulation.
  */
@@ -22,23 +22,21 @@ if (window.RUBICON) {
             </div>
         `,
         process: (context) => {
-            const { image, props, width, height } = context;
+            const { inputs, props, width, height } = context;
+            const image = inputs[0]; // Primary input
             if (!image) return null;
             
-            // Offscreen Buffer
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = width; tempCanvas.height = height;
             const tCtx = tempCanvas.getContext('2d');
             tCtx.putImageData(image, 0, 0);
             
-            // Lift Math
             if (props.lift !== 0) {
                 tCtx.fillStyle = props.lift > 0 ? `rgba(255,255,255,${props.lift/100})` : `rgba(0,0,0,${-props.lift/100})`;
                 tCtx.globalCompositeOperation = props.lift > 0 ? 'screen' : 'multiply';
                 tCtx.fillRect(0, 0, width, height);
             }
             
-            // Contrast Math
             if (props.contrast !== 100) {
                 const c2 = document.createElement('canvas');
                 c2.width = width; c2.height = height;
