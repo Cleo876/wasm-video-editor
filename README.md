@@ -87,7 +87,7 @@ Check the `Extensions/` directory in this repository for examples like the `anam
 
 ## 🤝 Contributing
 
-Pull requests are welcome! We are especially looking for developers to build new Transition Scripts, LUT/Color-grading modules, and Audio EQ tools to expand the Extension Ecosystem.
+We aren't currently accepting Pull Request, however, we are looking for developers to build new Transition Scripts, LUT/Color-grading modules, and Audio EQ tools to expand the Extension Ecosystem.
 
 ## 📄 License
 
