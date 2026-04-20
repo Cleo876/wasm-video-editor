@@ -1,6 +1,6 @@
 /**
  * @name Ellipse Mask
- * @version 3.0.0
+ * @version 4.3.0
  * @developer Forge™
  * @description Procedurally generates a soft radial gradient Alpha channel.
  */
@@ -10,7 +10,7 @@ if (window.RUBICON) {
         type: 'mask',
         inputs: [], 
         outputs: ['mask'],
-        defaultProps: { radius: 30, soft: 10 },
+        defaultProps: { radius: 50, soft: 10 },
         getUI: (props) => `
             <div class="mt-2">
                 <div class="flex justify-between text-[10px] text-gray-400 mb-1"><span>Radius</span> <span id="val_radius">${props.radius}%</span></div>
