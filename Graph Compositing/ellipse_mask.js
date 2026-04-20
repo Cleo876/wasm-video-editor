@@ -10,7 +10,7 @@ if (window.RUBICON) {
         type: 'mask',
         inputs: [], 
         outputs: ['mask'],
-        defaultProps: { radius: 50, soft: 10 },
+        defaultProps: { radius: 80, soft: 10 },
         getUI: (props) => `
             <div class="mt-2">
                 <div class="flex justify-between text-[10px] text-gray-400 mb-1"><span>Radius</span> <span id="val_radius">${props.radius}%</span></div>
@@ -28,7 +28,7 @@ if (window.RUBICON) {
             const ctx = c.getContext('2d');
             
             const cx = width/2; const cy = height/2;
-            const r = (props.radius / 100) * Math.min(width, height);
+            const r = (props.radius / 150) * Math.min(width, height);
             const s = (props.soft / 100) * r;
             
             const grad = ctx.createRadialGradient(cx, cy, Math.max(0, r - s), cx, cy, r);
