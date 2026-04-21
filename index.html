@@ -170,8 +170,7 @@
             </div>
             
             <div class="flex-shrink-0 flex items-center justify-end w-32">
-                <!-- Reserved space -->
-            </div>
+                </div>
         </header>
 
         <section class="main-section">
@@ -218,7 +217,6 @@
                     <button id="splitBtn" class="text-red-500 hover:text-red-400 disabled:opacity-30 transition" onclick="TimelineModule.splitClip()" disabled title="Split Clip"><i class="fa-solid fa-scissors"></i></button>
                     <button id="deleteBtn" class="text-gray-400 hover:text-white disabled:opacity-30 transition" onclick="TimelineModule.deleteSelected()" disabled title="Delete Selected"><i class="fa-solid fa-trash"></i></button>
                     
-                    <!-- Integrated Export Button -->
                     <div class="h-6 w-px bg-[#333] mx-2"></div>
                     <button id="exportBtn" class="text-teal-500 hover:text-white disabled:opacity-30 transition transform hover:scale-110" onclick="ExportManager.start()" title="Export Video" disabled>
                         <i class="fa-solid fa-file-export text-lg"></i>
@@ -228,7 +226,6 @@
                 </div>
             </div>
 
-            <!-- Native Inspector Tab -->
             <div class="flex flex-col bg-[#111] h-full min-h-0 overflow-hidden relative border-l border-[#222]" id="nativeInspector">
                 <div id="inspectorResizer" class="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-transparent hover:bg-teal-500 z-[100] transition-colors delay-75"></div>
                 
@@ -266,7 +263,6 @@
         </section>
     </div>
 
-    <!-- Effects Panel -->
     <div id="effectsPanel" class="effects-panel">
         <h3 class="text-white text-sm mb-3 font-bold text-teal-400"><i class="fa-solid fa-sliders mr-2"></i>Video Adjustments</h3>
         <div class="mb-4">
@@ -285,7 +281,6 @@
         <button onclick="document.getElementById('effectsPanel').style.display='none'" class="absolute top-2 right-2 text-gray-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
-    <!-- Modals -->
     <div id="inputModal" class="modal-overlay hidden">
         <div class="bg-gray-800 p-6 rounded-xl w-96 border border-gray-700 shadow-2xl">
             <h2 id="inputModalTitle" class="text-lg font-bold text-white mb-4">Input Required</h2>
@@ -348,7 +343,6 @@
         </div>
     </div>
 
-    <!-- Modules Modal / Extension Manager -->
     <div id="modulesModal" class="modal-overlay hidden">
         <div class="bg-[#1e1e1e] rounded-lg w-[600px] border border-[#333] shadow-2xl flex flex-col max-h-[80vh]">
             <div class="flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#1a1a1a] rounded-t-lg">
@@ -370,7 +364,6 @@
         </div>
     </div>
 
-    <!-- Project Manager Modal -->
     <div id="projectModal" class="modal-overlay hidden">
         <div class="bg-[#1e1e1e] rounded-lg w-[600px] border border-[#333] shadow-2xl flex flex-col max-h-[80vh]">
             <div class="flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#1a1a1a] rounded-t-lg">
@@ -387,7 +380,6 @@
         </div>
     </div>
 
-    <!-- Engine Network Error Modal -->
     <div id="manualCoreModal" class="modal-overlay hidden">
         <div class="bg-gray-800 p-6 rounded-xl w-[500px] border border-gray-700 shadow-2xl">
             <div class="flex items-center gap-3 mb-4">
@@ -558,11 +550,11 @@
                 let clip = null;
                 for (const tid in Store.tracks) {
                     const trackData = Store.tracks[tid] || [];
-                    const c = trackData.find(x => x.id === this.currentClipId);
+                    const c = trackData.find(x => x && x.id === this.currentClipId);
                     if(c) { clip = c; break; }
                 }
                 if(clip) {
-                    const asset = Store.assets.find(a => a.id === clip.assetId);
+                    const asset = Store.assets.find(a => a && a.id === clip.assetId);
                     if (!asset) return;
                     
                     if(prop === 'scale' || prop === 'opacity' || prop === 'rotation') {
@@ -596,12 +588,12 @@
                 let trackType = null;
                 for (const t of Store.trackConfig) {
                     const trackData = Store.tracks[t.id] || [];
-                    const c = trackData.find(x => x.id === this.currentClipId);
+                    const c = trackData.find(x => x && x.id === this.currentClipId);
                     if (c) { clip = c; trackType = t.type; break; }
                 }
 
                 if (!clip) return;
-                const asset = Store.assets.find(a => a.id === clip.assetId);
+                const asset = Store.assets.find(a => a && a.id === clip.assetId);
                 if (!asset) return;
 
                 let html = `
@@ -770,8 +762,8 @@
                         icon: t.icon || 'fa-film',
                         createdAt: t.createdAt || (100 - idx)
                     }));
-                    if (!loadedConfig.find(t => t.type === 'text')) loadedConfig.push({ id: 'v2', type: 'text', label: 'Text', icon: 'fa-font', createdAt: 4 });
-                    if (!loadedConfig.find(t => t.type === 'fx')) loadedConfig.push({ id: 'fx1', type: 'fx', label: 'FX Overlay', icon: 'fa-wand-magic-sparkles', createdAt: 3 });
+                    if (!loadedConfig.find(t => t && t.type === 'text')) loadedConfig.push({ id: 'v2', type: 'text', label: 'Text', icon: 'fa-font', createdAt: 4 });
+                    if (!loadedConfig.find(t => t && t.type === 'fx')) loadedConfig.push({ id: 'fx1', type: 'fx', label: 'FX Overlay', icon: 'fa-wand-magic-sparkles', createdAt: 3 });
                 }
                 this.trackConfig = loadedConfig;
 
@@ -781,7 +773,7 @@
                         this.tracks[t.id] = [];
                     } else {
                         this.tracks[t.id] = this.tracks[t.id]
-                            .filter(c => this.assets.some(a => a.id === c.assetId))
+                            .filter(c => c && this.assets.some(a => a && a.id === c.assetId))
                             .map(c => ({
                                 ...c,
                                 start: Number(c.start) || 0,
@@ -789,7 +781,8 @@
                                 offset: Number(c.offset) || 0,
                                 scale: c.scale !== undefined ? Number(c.scale) : 100,
                                 opacity: c.opacity !== undefined ? Number(c.opacity) : 100,
-                                rotation: c.rotation !== undefined ? Number(c.rotation) : 0
+                                rotation: c.rotation !== undefined ? Number(c.rotation) : 0,
+                                graphData: c.graphData || null
                             }));
                     }
                 });
@@ -855,7 +848,7 @@
             },
             
             async updateAssetMeta(id, updates) {
-                const idx = this.assets.findIndex(a => a.id === id);
+                const idx = this.assets.findIndex(a => a && a.id === id);
                 if(idx !== -1) {
                     Object.assign(this.assets[idx], updates);
                     const dbRecord = await DB.get('assets', id);
@@ -867,12 +860,12 @@
             },
 
             addClip(trackId, assetId, start) {
-                const asset = this.assets.find(a => a.id === assetId);
+                const asset = this.assets.find(a => a && a.id === assetId);
                 if (!asset) return;
                 let dur = asset.duration || 5; 
                 if(asset.type === 'image') dur = 5; 
                 
-                const clip = { id: 'clip_'+Date.now()+Math.random().toString(36).substr(2,5), assetId, start: Math.max(0, start), duration: dur, offset: 0 };
+                const clip = { id: 'clip_'+Date.now()+Math.random().toString(36).substr(2,5), assetId, start: Math.max(0, start), duration: dur, offset: 0, graphData: null };
                 this.resolveDragCollision(trackId, clip, clip.start); 
                 this.tracks[trackId].push(clip); 
                 
@@ -883,7 +876,7 @@
             moveClip(clipId, fromTrackId, toTrackId) {
                 const fromTrack = this.tracks[fromTrackId] || [];
                 const toTrack = this.tracks[toTrackId] || [];
-                const clipIdx = fromTrack.findIndex(c => c.id === clipId);
+                const clipIdx = fromTrack.findIndex(c => c && c.id === clipId);
                 if (clipIdx === -1) return;
                 const clip = fromTrack[clipIdx];
                 fromTrack.splice(clipIdx, 1);
@@ -892,16 +885,16 @@
                 this.saveState(); 
             },
             addClipToBestTrack(assetId) {
-                const asset = this.assets.find(a => a.id === assetId);
+                const asset = this.assets.find(a => a && a.id === assetId);
                 if (!asset) return;
                 let targetTrackId = null;
                 
                 if (asset.type === 'video' || asset.type === 'image') {
-                    targetTrackId = this.trackConfig.find(t => t.type === 'video')?.id;
-                    if (!targetTrackId) targetTrackId = this.trackConfig.find(t => t.type === 'fx')?.id;
+                    targetTrackId = this.trackConfig.find(t => t && t.type === 'video')?.id;
+                    if (!targetTrackId) targetTrackId = this.trackConfig.find(t => t && t.type === 'fx')?.id;
                 }
-                else if (asset.type === 'audio') targetTrackId = this.trackConfig.find(t => t.type === 'audio')?.id;
-                else if (asset.type === 'title') targetTrackId = this.trackConfig.find(t => t.type === 'text')?.id;
+                else if (asset.type === 'audio') targetTrackId = this.trackConfig.find(t => t && t.type === 'audio')?.id;
+                else if (asset.type === 'title') targetTrackId = this.trackConfig.find(t => t && t.type === 'text')?.id;
                 
                 if (targetTrackId) {
                     this.addClip(targetTrackId, assetId, this.currentTime);
@@ -913,7 +906,7 @@
                 const track = this.tracks[trackId] || []; 
                 track.sort((a, b) => a.start - b.start);
                 const end = activeClip.start + activeClip.duration;
-                const overlapIdx = track.findIndex(c => c.id !== activeClip.id && c.id !== ignoreClipId && c.start < end && (c.start + c.duration) > activeClip.start);
+                const overlapIdx = track.findIndex(c => c && c.id !== activeClip.id && c.id !== ignoreClipId && c.start < end && (c.start + c.duration) > activeClip.start);
                 if (overlapIdx !== -1) {
                     const neighbor = track[overlapIdx];
                     if (neighbor.start < end) {
@@ -927,19 +920,19 @@
                 const dur = activeClip.duration;
                 let newStart = proposedStart;
                 const newEnd = newStart + dur;
-                const overlaps = track.filter(c => c.id !== activeClip.id && c.start < newEnd && (c.start + c.duration) > newStart);
+                const overlaps = track.filter(c => c && c.id !== activeClip.id && c.start < newEnd && (c.start + c.duration) > newStart);
                 if (overlaps.length > 0) {
                     const collider = overlaps[0]; 
                     if (activeClip.start > collider.start) { newStart = collider.start + collider.duration; } 
                     else { newStart = collider.start - dur; }
                 }
-                const doubleCheck = track.find(c => c.id !== activeClip.id && c.start < (newStart + dur) && (c.start + c.duration) > newStart);
+                const doubleCheck = track.find(c => c && c.id !== activeClip.id && c.start < (newStart + dur) && (c.start + c.duration) > newStart);
                 if (!doubleCheck) { activeClip.start = Math.max(0, newStart); }
             },
             deleteSelected() {
                 if(!this.selectedClipId || !this.selectedTrackId) return;
                 const track = this.tracks[this.selectedTrackId] || [];
-                const idx = track.findIndex(c => c.id === this.selectedClipId);
+                const idx = track.findIndex(c => c && c.id === this.selectedClipId);
                 if(idx !== -1) { 
                     track.splice(idx, 1); 
                     this.selectedClipId = null; 
@@ -1280,9 +1273,13 @@
 
                 document.addEventListener('keydown', (e) => {
                     if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+                    
+                    if (document.body.classList.contains('node-mode-active')) return;
+                    
                     if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) Player.togglePlay(); if (e.repeat) Player.seekToStart(); }
                     if (e.code === 'Delete' || e.code === 'Backspace') { TimelineModule.deleteSelected(); }
                 });
+                
                 const tracksContainer = document.getElementById('tracksScrollArea');
                 const timelineWrapper = document.getElementById('timelineWrapper');
                 timelineWrapper.addEventListener('wheel', (e) => {
@@ -1367,8 +1364,8 @@
                     if(e.target.classList.contains('text-overlay-item')) {
                         isDraggingText = true;
                         dragClipId = e.target.dataset.clipId;
-                        const trackData = Store.tracks[Store.trackConfig.find(t=>t.type==='text')?.id || 'v2'] || [];
-                        const clip = trackData.find(c => c.id === dragClipId);
+                        const trackData = Store.tracks[Store.trackConfig.find(t=> t && t.type==='text')?.id || 'v2'] || [];
+                        const clip = trackData.find(c => c && c.id === dragClipId);
                         
                         textDragStartX = e.clientX;
                         textDragStartY = e.clientY;
@@ -1381,7 +1378,7 @@
                         Store.selectedClipId = dragClipId;
                         for (const trackId in Store.tracks) {
                             const td = Store.tracks[trackId] || [];
-                            if (td.find(c => c.id === dragClipId)) {
+                            if (td.find(c => c && c.id === dragClipId)) {
                                 Store.selectedTrackId = trackId;
                                 break;
                             }
@@ -1405,7 +1402,7 @@
                     let clip = null;
                     for (const tid in Store.tracks) {
                         const trackData = Store.tracks[tid] || [];
-                        const c = trackData.find(x => x.id === dragClipId);
+                        const c = trackData.find(x => x && x.id === dragClipId);
                         if(c) { clip = c; break; }
                     }
 
@@ -1452,7 +1449,7 @@
             },
             
             checkExportButton() {
-                const hasContent = Store.trackConfig.some(t => (Store.tracks[t.id] || []).length > 0);
+                const hasContent = Store.trackConfig.some(t => t && (Store.tracks[t.id] || []).length > 0);
                 const btn = document.getElementById('exportBtn');
                 if (window.isEngineReady && hasContent) {
                     btn.disabled = false;
@@ -1466,7 +1463,7 @@
             refreshTimeline() { 
                 TimelineModule.renderTrackStructure(); 
                 TimelineModule.updateContainerWidth(); this.renderRuler(); 
-                Store.trackConfig.forEach(t => TimelineModule.renderTrack(t.id)); 
+                Store.trackConfig.forEach(t => t && TimelineModule.renderTrack(t.id)); 
                 TimelineModule.updatePlayhead(Store.currentTime); TimelineModule.renderMinimap(); 
             },
             switchTab(name, btn) {
@@ -1640,6 +1637,7 @@
                 
                 let firstAudioFound = false;
                 container.innerHTML = Store.trackConfig.map(t => {
+                    if (!t) return '';
                     const isAudio = t.type === 'audio';
                     let extraClasses = '';
                     let labelClasses = '';
@@ -1661,7 +1659,7 @@
             },
             openAddTrackModal() { document.getElementById('addTrackModal').classList.remove('hidden'); },
             addTrack(type) {
-                const existingOfType = Store.trackConfig.filter(t => t.type === type).length;
+                const existingOfType = Store.trackConfig.filter(t => t && t.type === type).length;
                 let prefix = 'v'; let label = 'Video'; let icon = 'fa-video';
                 if (type === 'audio') { prefix = 'a'; label = 'Audio'; icon = 'fa-music'; }
                 if (type === 'text') { prefix = 't'; label = 'Text'; icon = 'fa-font'; }
@@ -1678,13 +1676,14 @@
             updateContainerWidth() {
                 const w = Store.getTotalDuration() * Store.zoom;
                 Store.trackConfig.forEach(t => { 
+                    if (!t) return;
                     const el = document.getElementById(`track-${t.id}`);
                     if(el) el.style.width = `${w}px`; 
                 });
             },
             handleGlobalDrop(e) {
                 e.preventDefault(); const assetId = e.dataTransfer.getData('assetId'); if(!assetId) return;
-                const asset = Store.assets.find(a => a.id === assetId); if(!asset) return;
+                const asset = Store.assets.find(a => a && a.id === assetId); if(!asset) return;
                 const tracksRect = document.getElementById('tracksContainer').getBoundingClientRect();
                 const relativeY = e.clientY - tracksRect.top;
                 
@@ -1704,6 +1703,7 @@
                 
                 if (trackIndex >= 0 && trackIndex < Store.trackConfig.length) {
                     const targetTrack = Store.trackConfig[trackIndex];
+                    if (!targetTrack) return;
                     let compatible = false;
                     if ((asset.type === 'video' || asset.type === 'image') && (targetTrack.type === 'video' || targetTrack.type === 'fx')) compatible = true;
                     if (asset.type === 'audio' && targetTrack.type === 'audio') compatible = true;
@@ -1726,16 +1726,19 @@
                 lane.innerHTML = '';
                 const trackData = Store.tracks[trackId] || [];
                 trackData.forEach(clip => {
-                    const asset = Store.assets.find(a => a.id === clip.assetId);
-                    if (!asset) return; // ORPHAN SHIELD: Prevents crashing if asset doesn't exist
+                    if (!clip) return;
+                    const asset = Store.assets.find(a => a && a.id === clip.assetId);
+                    if (!asset) return; 
                     
                     const el = document.createElement('div'); el.className = `t-clip ${asset.type}`;
-                    const trackType = Store.trackConfig.find(t => t.id === trackId)?.type;
+                    const trackType = Store.trackConfig.find(t => t && t.id === trackId)?.type;
                     if(trackType === 'fx') el.classList.add('fx');
                     if(Store.selectedClipId === clip.id) el.classList.add('selected');
                     el.style.left = `${clip.start * Store.zoom}px`; 
                     el.style.width = `${clip.duration * Store.zoom}px`;
+                    
                     el.innerHTML = `<div class="resize-handle left" data-side="left"></div><span class="truncate px-2 pointer-events-none w-full text-center">${asset.name}</span><div class="resize-handle right" data-side="right"></div>`;
+                    
                     el.addEventListener('click', (e) => { e.stopPropagation(); this.selectClip(clip.id, trackId); });
                     el.addEventListener('mousedown', e => {
                         if(e.target.classList.contains('resize-handle')) this.startResize(e, clip, trackId, e.target.dataset.side);
@@ -1752,8 +1755,10 @@
                 mapContent.innerHTML = '';
                 const trackHeightPct = 100 / Store.trackConfig.length;
                 Store.trackConfig.forEach((t, i) => {
+                    if (!t) return;
                     const trackData = Store.tracks[t.id] || [];
                     trackData.forEach(c => {
+                        if (!c) return;
                         const mClip = document.createElement('div'); mClip.className = 'minimap-clip';
                         mClip.style.left = `${(c.start / maxTime) * 100}%`; mClip.style.width = `${(c.duration / maxTime) * 100}%`;
                         mClip.style.top = `${i * trackHeightPct}%`; mClip.style.height = `${trackHeightPct}%`; 
@@ -1775,21 +1780,25 @@
             },
             selectClip(clipId, trackId) {
                 Store.selectedClipId = clipId; Store.selectedTrackId = trackId;
-                Store.trackConfig.forEach(t => this.renderTrack(t.id));
+                Store.trackConfig.forEach(t => t && this.renderTrack(t.id));
                 document.getElementById('deleteBtn').disabled = false; document.getElementById('splitBtn').disabled = false;
             },
             deleteSelected() {
-                Store.deleteSelected(); Store.trackConfig.forEach(t => this.renderTrack(t.id));
-                document.getElementById('deleteBtn').disabled = true; document.getElementById('splitBtn').disabled = true;
-                Player.safeRenderFrame(); this.renderMinimap(); this.triggerMinimap();
+                if(!Store.selectedClipId) return;
+                Store.deleteSelected();
+                UI.refreshTimeline();
+                Player.safeRenderFrame();
+                document.getElementById('deleteBtn').disabled = true;
+                document.getElementById('splitBtn').disabled = true;
+                if(typeof NativeInspector !== 'undefined') NativeInspector.render();
             },
             startDrag(e, clip, trackId) {
                 e.stopPropagation(); 
                 this.selectClip(clip.id, trackId);
                 const startX = e.clientX; 
                 const originalStart = clip.start;
-                const asset = Store.assets.find(a => a.id === clip.assetId);
-                if (!asset) return; // Null check
+                const asset = Store.assets.find(a => a && a.id === clip.assetId);
+                if (!asset) return; 
                 
                 let currentTrackId = trackId;
                 document.body.style.cursor = 'grabbing';
@@ -1813,16 +1822,18 @@
 
                     if (trackIndex >= 0 && trackIndex < Store.trackConfig.length) {
                         const targetTrack = Store.trackConfig[trackIndex];
-                        const targetId = targetTrack.id;
-                        let compatible = false;
-                        if ((asset.type === 'video' || asset.type === 'image') && (targetTrack.type === 'video' || targetTrack.type === 'fx')) compatible = true;
-                        if (asset.type === 'audio' && targetTrack.type === 'audio') compatible = true;
-                        if (asset.type === 'title' && targetTrack.type === 'text') compatible = true;
-                        if (compatible && targetId !== currentTrackId) {
-                             Store.moveClip(clip.id, currentTrackId, targetId);
-                             this.renderTrack(currentTrackId); 
-                             currentTrackId = targetId; 
-                             this.renderTrack(currentTrackId); 
+                        if (targetTrack) {
+                            const targetId = targetTrack.id;
+                            let compatible = false;
+                            if ((asset.type === 'video' || asset.type === 'image') && (targetTrack.type === 'video' || targetTrack.type === 'fx')) compatible = true;
+                            if (asset.type === 'audio' && targetTrack.type === 'audio') compatible = true;
+                            if (asset.type === 'title' && targetTrack.type === 'text') compatible = true;
+                            if (compatible && targetId !== currentTrackId) {
+                                Store.moveClip(clip.id, currentTrackId, targetId);
+                                this.renderTrack(currentTrackId); 
+                                currentTrackId = targetId; 
+                                this.renderTrack(currentTrackId); 
+                            }
                         }
                     }
                     Store.resolveDragCollision(currentTrackId, clip, clip.start); 
@@ -1841,8 +1852,8 @@
             startResize(e, clip, trackId, side) {
                 e.stopPropagation(); e.preventDefault();
                 const startX = e.clientX; const originalStart = clip.start; const originalDuration = clip.duration; const originalOffset = clip.offset;
-                const asset = Store.assets.find(a => a.id === clip.assetId); 
-                if (!asset) return; // Null check
+                const asset = Store.assets.find(a => a && a.id === clip.assetId); 
+                if (!asset) return; 
                 
                 const isMedia = asset.type === 'video' || asset.type === 'audio';
                 document.body.style.cursor = 'col-resize';
@@ -1873,11 +1884,11 @@
             splitClip() {
                 const time = Store.currentTime; const trackId = Store.selectedTrackId; if (!trackId) return;
                 const trackData = Store.tracks[trackId] || [];
-                const idx = trackData.findIndex(c => time > c.start && time < (c.start + c.duration)); if(idx === -1) return;
+                const idx = trackData.findIndex(c => c && time > c.start && time < (c.start + c.duration)); if(idx === -1) return;
                 const original = trackData[idx]; const newDuration = time - original.start; const remainingDuration = original.duration - newDuration;
                 if(remainingDuration < 0.1) return;
                 original.duration = newDuration;
-                const secondHalf = { ...original, id: 'clip_' + Date.now(), start: time, duration: remainingDuration, offset: original.offset + newDuration };
+                const secondHalf = { ...original, id: 'clip_' + Date.now(), start: time, duration: remainingDuration, offset: original.offset + newDuration, graphData: original.graphData ? JSON.parse(JSON.stringify(original.graphData)) : null };
                 trackData.splice(idx + 1, 0, secondHalf);
                 this.renderTrack(trackId); this.selectClip(secondHalf.id, trackId);
                 Store.saveState(); 
@@ -1923,7 +1934,7 @@
             
             getAudioSource(clipId, url) {
                 if(this.audioPool[clipId]) return this.audioPool[clipId];
-                if(!url) return null; // Orphan shield
+                if(!url) return null; 
                 if(!this.actx) this.initAudio();
                 if(!this.actx) return null;
                 const el = new Audio();
@@ -1951,7 +1962,7 @@
 
             getVideoSource(clipId, url) {
                 if(this.videoPool[clipId]) return this.videoPool[clipId];
-                if(!url) return null; // Orphan shield
+                if(!url) return null; 
                 const el = document.createElement('video');
                 el.src = url;
                 el.playsInline = true;
@@ -1979,7 +1990,7 @@
 
             getImageSource(clipId, url) {
                 if(this.imagePool[clipId]) return this.imagePool[clipId];
-                if(!url) return null; // Orphan shield
+                if(!url) return null; 
                 const el = new Image();
                 el.crossOrigin = "anonymous";
                 el.src = url;
@@ -2009,8 +2020,6 @@
                 let dt = (timestamp - this.lastFrame) / 1000; 
                 this.lastFrame = timestamp;
                 
-                // CRITICAL FIX: Tab-Switch Clamping
-                // If dt is huge because the tab was backgrounded, clamp it so the timeline doesn't jump crazily
                 if (dt > 0.1) dt = 0.1; 
                 
                 Store.currentTime += dt; 
@@ -2018,9 +2027,6 @@
                 requestAnimationFrame((ts) => this.gameLoop(ts));
             },
             
-            // --- GLOBAL RENDER SHIELD ---
-            // Wraps the entire render flow. If a legacy extension attempts to overwrite this 
-            // and fails due to missing DOM objects, it is caught here, keeping the engine alive.
             safeRenderFrame() {
                 try {
                     this.renderFrame();
@@ -2030,7 +2036,6 @@
             },
 
             renderFrame() {
-                // CRITICAL TIME SANITIZER: Prevent math failure/NaN drift causing "00:-1:-1:-1"
                 Store.currentTime = Number(Store.currentTime) || 0;
                 if (isNaN(Store.currentTime) || Store.currentTime < 0) Store.currentTime = 0;
                 const t = Store.currentTime;
@@ -2068,8 +2073,10 @@
                 
                 for(let i = Store.trackConfig.length - 1; i >= 0; i--) {
                     const track = Store.trackConfig[i];
+                    if (!track) continue;
                     const trackData = Store.tracks[track.id] || [];
                     const clips = trackData.filter(c => {
+                        if (!c) return false;
                         let s = c.start;
                         let e = c.start + c.duration;
                         if (c.transitions) {
@@ -2090,8 +2097,8 @@
 
                 const usedClipIds = new Set();
                 activeAudioClips.forEach(clip => {
-                    const asset = Store.assets.find(a => a.id === clip.assetId);
-                    if (!asset) return; // ORPHAN SHIELD
+                    const asset = Store.assets.find(a => a && a.id === clip.assetId);
+                    if (!asset) return; 
                     
                     const audioItem = this.getAudioSource(clip.id, asset.url || '');
                     if (!audioItem) return;
@@ -2112,15 +2119,15 @@
 
                 const usedVideoIds = new Set();
                 activeVideoClips.forEach(clip => {
-                    const asset = Store.assets.find(a => a.id === clip.assetId);
-                    if (!asset) return; // ORPHAN SHIELD
+                    const asset = Store.assets.find(a => a && a.id === clip.assetId);
+                    if (!asset) return; 
                     
                     if (asset.type === 'video') {
                         usedVideoIds.add(clip.id);
                         const vEl = this.getVideoSource(clip.id, asset.url || '');
                         if (!vEl) return;
                         
-                        vEl.muted = !!clip.muted; // Apply the clip's muted state
+                        vEl.muted = !!clip.muted; 
                         const internalTime = Math.max(0, Math.min(asset.duration || 9999, clip.offset + (t - clip.start)));
                         if(vEl.readyState >= 2) {
                             if(Math.abs(vEl.currentTime - internalTime) > 0.2) vEl.currentTime = internalTime;
@@ -2143,8 +2150,8 @@
                     existingOverlays.forEach(el => el.dataset.used = 'false');
 
                     activeTextClips.forEach(tClip => {
-                        const asset = Store.assets.find(a => a.id === tClip.assetId);
-                        if (!asset) return; // ORPHAN SHIELD
+                        const asset = Store.assets.find(a => a && a.id === tClip.assetId);
+                        if (!asset) return; 
                         
                         let txtEl = document.getElementById('text_overlay_' + tClip.id);
                         if (!txtEl) {
@@ -2200,8 +2207,8 @@
                 ctx.fillRect(0, 0, this.compositorCanvas.width, this.compositorCanvas.height);
                 
                 vClips.forEach(vClip => {
-                    const asset = Store.assets.find(a => a.id === vClip.assetId);
-                    if (!asset) return; // ORPHAN SHIELD
+                    const asset = Store.assets.find(a => a && a.id === vClip.assetId);
+                    if (!asset) return; 
                     
                     const scale = (vClip.scale || 100) / 100;
                     const rotation = vClip.rotation || 0;
@@ -2243,8 +2250,8 @@
                 });
                 
                 tClips.forEach(tClip => {
-                    const asset = Store.assets.find(a => a.id === tClip.assetId);
-                    if (!asset) return; // ORPHAN SHIELD
+                    const asset = Store.assets.find(a => a && a.id === tClip.assetId);
+                    if (!asset) return; 
                     
                     const baseFontSize = tClip.fontSize || 60; 
                     const scaledFontSize = (baseFontSize / 1080) * this.compositorCanvas.height;
@@ -2446,7 +2453,6 @@
                 try { 
                     Player.gainNode.disconnect(); 
                     Player.gainNode.connect(dest); 
-                    // Prevent playback through speakers during export
                 } catch(e) {}
                 if (dest.stream.getAudioTracks().length > 0) {
                     stream.addTrack(dest.stream.getAudioTracks()[0]);
@@ -2495,13 +2501,13 @@
                     const { fetchFile } = window.FFmpegUtil;
                     const ffmpeg = ExportManager.ffmpeg;
                     
-                    const videoTracks = Store.trackConfig.filter(t => t.type === 'video' || t.type === 'fx');
+                    const videoTracks = Store.trackConfig.filter(t => t && (t.type === 'video' || t.type === 'fx'));
                     const primaryVideoTrack = Store.tracks['v1'] || Store.tracks[videoTracks[0]?.id];
                     if(!primaryVideoTrack || primaryVideoTrack.length === 0) throw new Error("WASM Render requires content on primary video track.");
                     const uniqueAssets = [...new Set(primaryVideoTrack.map(c => c.assetId))];
                     
                     for(const aid of uniqueAssets) {
-                        const asset = Store.assets.find(a => a.id === aid);
+                        const asset = Store.assets.find(a => a && a.id === aid);
                         let data;
                         if(asset.file instanceof Blob) {
                             data = await fetchFile(asset.file);
@@ -2513,7 +2519,7 @@
 
                     status.innerText = "Building Render Graph...";
                     let inputs = []; let filterComplex = ""; let streamNames = "";
-                    uniqueAssets.forEach((aid, i) => inputs.push("-i", Store.assets.find(a => a.id === aid).name));
+                    uniqueAssets.forEach((aid, i) => inputs.push("-i", Store.assets.find(a => a && a.id === aid).name));
                     
                     const sortedClips = [...primaryVideoTrack].sort((a,b) => a.start - b.start);
                     
