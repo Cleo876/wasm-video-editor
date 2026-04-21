@@ -782,7 +782,7 @@
                                 scale: c.scale !== undefined ? Number(c.scale) : 100,
                                 opacity: c.opacity !== undefined ? Number(c.opacity) : 100,
                                 rotation: c.rotation !== undefined ? Number(c.rotation) : 0,
-                                graphData: c.graphData || null
+                                graphData: c.graphData || null // Added to support per-clip Rubicon Graph States
                             }));
                     }
                 });
