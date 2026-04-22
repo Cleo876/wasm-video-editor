@@ -1,6 +1,6 @@
 /**
  * @name Hotkey Master & Command Palette
- * @version 2.7.8
+ * @version 2.7.9
  * @developer Forge™
  * @description Ensures all extensions receive keyboard input through a unified, user‑customizable system. Blocks rogue listeners that bypass the central mapper.
  */
@@ -14,7 +14,7 @@
 
     const HotkeyMaster = {
         name: "Hotkey Master & Command Palette",
-        version: "2.7.8",
+        version: "2.7.9",
         
         contexts: {},     
         commands: {},     
@@ -75,7 +75,6 @@
 
             this.processQueue();
             this.waitForModuleManager();
-            this.watchForExtensionManagerModal();
         },
 
         processQueue() {
@@ -200,46 +199,12 @@
             hook();
         },
 
-        watchForExtensionManagerModal() {
-            // Inject the Rescan button whenever the modal becomes visible
-            const observer = new MutationObserver(() => {
-                const modal = document.getElementById('modulesModal');
-                if (modal && !modal.classList.contains('hidden') && !document.getElementById('hk-rescan-btn')) {
-                    this.injectRescanButton();
-                }
-            });
-            observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-        },
-
-        injectRescanButton() {
-            const modalFooter = document.querySelector('#modulesModal .flex.justify-between.items-center');
-            if (!modalFooter) return;
-            
-            // Remove any existing button to avoid duplicates
-            document.getElementById('hk-rescan-btn')?.remove();
-            
-            const rescanBtn = document.createElement('button');
-            rescanBtn.id = 'hk-rescan-btn';
-            rescanBtn.className = 'px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-black font-bold text-xs rounded transition shadow-lg ml-2';
-            rescanBtn.innerHTML = '<i class="fa-solid fa-shield-halved mr-1"></i> Rescan Extensions';
-            rescanBtn.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (typeof Notify !== 'undefined') Notify.show('Scanning extensions...', 'fa-search');
-                HotkeyMaster.scanExistingModules().catch(err => console.warn('Rescan failed:', err));
-            };
-            
-            const doneBtn = modalFooter.querySelector('button:last-child');
-            modalFooter.insertBefore(rescanBtn, doneBtn);
-        },
-
         monitorModuleInstallation() {
             const origLoadFolder = ModuleManager.loadFolder;
             const origInstallDefaults = ModuleManager.installDefaults;
 
             ModuleManager.loadFolder = function(...args) {
                 const result = origLoadFolder.apply(this, args);
-                // Wait longer for folder processing and DB writes
                 setTimeout(() => {
                     console.log(`[${MODULE_ID}] Folder load complete – scanning.`);
                     HotkeyMaster.scanExistingModules();
@@ -295,7 +260,7 @@
         },
 
         async purgeRogueModule(extName) {
-            this.warnedExtensions.delete(extName); // Allow re‑flagging if reinstalled
+            this.warnedExtensions.delete(extName);
             if (typeof ModuleManager !== 'undefined') {
                 ModuleManager.modules = ModuleManager.modules.filter(m => m.name !== extName);
                 if (typeof DB !== 'undefined') await DB.delete('modules', extName);
@@ -377,7 +342,6 @@
                 banner.className = 'fixed top-6 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-[#1a1a1a] border-2 border-red-600 text-white p-6 rounded-lg shadow-[0_30px_60px_rgba(0,0,0,0.9)] flex flex-col items-center text-center opacity-0 transition-all duration-300 translate-y-[-30px] w-[550px] pointer-events-auto';
                 document.body.appendChild(banner);
             } else {
-                // Remove old button listener before updating content
                 const oldBtn = banner.querySelector('#hk-rogue-ack-btn');
                 if (oldBtn) {
                     const newBtn = oldBtn.cloneNode(true);
@@ -415,12 +379,11 @@
                 if(typeof Notify !== 'undefined') Notify.show(`${current.extName} removed`, "fa-trash");
                 this.rogueQueue.shift();
                 
-                // Animate out, then show next or hide
                 banner.style.transform = 'translate(-50%, -5px) scale(0.98)';
                 banner.style.opacity = '0';
                 setTimeout(() => {
                     if (this.rogueQueue.length > 0) {
-                        this.showNextRogue(); // Reuse same banner element
+                        this.showNextRogue();
                     } else {
                         this.isRogueBannerVisible = false;
                         banner.remove();
