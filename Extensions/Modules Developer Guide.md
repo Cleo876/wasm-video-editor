@@ -23,7 +23,7 @@ The Extension Manager (v2.6.21+) uses a regex scanner to extract module details 
 
 Every module should follow this structural pattern to support system-level toggling, description display, and clean deletion.
 
-\`\`\`javascript
+```javascript
 /**
  * @name My Awesome Filter
  * @version 1.2.0
@@ -38,16 +38,16 @@ Every module should follow this structural pattern to support system-level toggl
         elements: [], // Track all DOM elements for cleanup
 
         init() {
-            console.log(\`[\${MODULE_ID}] Initializing...\`);
+            console.log(`[${MODULE_ID}] Initializing...`);
             this.createUI();
             this.bindEvents();
         },
 
         createUI() {
             const panel = document.createElement('div');
-            panel.id = \`\${MODULE_ID}_panel\`;
+            panel.id = `${MODULE_ID}_panel`;
             panel.className = 'p-3 bg-gray-800 rounded border border-gray-700 mt-2';
-            panel.innerHTML = \`Grain Settings\`;
+            panel.innerHTML = `Grain Settings`;
             
             // Injecting into the Sidebar
             const sidebar = document.querySelector('.main-section .flex-col');
@@ -63,7 +63,7 @@ Every module should follow this structural pattern to support system-level toggl
         // MANDATORY: Cleanup Function
         // This is called by the system when toggled OFF or UNINSTALLED
         cleanup() {
-            console.log(\`[\${MODULE_ID}] Performing deep cleanup...\`);
+            console.log(`[${MODULE_ID}] Performing deep cleanup...`);
             
             // 1. Remove DOM Elements
             this.elements.forEach(el => el.remove());
@@ -81,7 +81,7 @@ Every module should follow this structural pattern to support system-level toggl
     window[MODULE_ID.toUpperCase()] = MyModule;
     MyModule.init();
 })();
-\`\`\`
+```
 
 ### 4. Toggling Logic (Active vs. Inactive)
 
@@ -113,37 +113,67 @@ Your module has access to these global singletons:
 | `UI` | Post system notifications via `Notify.show(msg, icon)`. |
 | `DB` | Store local extension data asynchronously using IndexedDB. |
 
+#HotKey Master Extension Support
 ### 7. Keyboard & Shortcut Integration (Mandatory)
 
-To prevent shortcut conflicts and maintain absolute user control over keyboard mapping, the Editor employs an **Execution-Level Rogue Shield**. 
+To prevent shortcut conflicts and maintain absolute user control over keyboard mapping, the Editor employs a **Load-Time Static Analysis Rogue Shield**. 
 
-**⚠️ CRITICAL WARNING:** Using native bindings like `document.addEventListener('keydown', ...)` or `window.onkeyup = ...` is **strictly forbidden**. The system utilizes Load-Time Static Analysis. If it detects these bindings in your code, your extension will be permanently blocked from injecting into the DOM, flagged as rogue, and the user will be prompted to uninstall it.
+**⚠️ CRITICAL WARNING:** Using native bindings like `document.addEventListener('keydown', ...)` or `window.onkeyup = ...` is **strictly forbidden**. If the engine's regex scanner detects these hardcoded native inputs in your code, your extension will be permanently blocked from injecting into the DOM, flagged as a rogue module, and the user will be forced to uninstall it.
 
-You must register your commands through the centralized `Hotkey Master` API. This automatically adds your command to the user's visual Shortcut Mapper UI where they can assign their own keys to it.
+You must route all keyboard inputs through the centralized `Hotkey Master` API. This allows the Hotkey Master to automatically build a custom UI for your command, letting the user map it to whatever key they prefer. 
 
-**How to Register a Command safely:**
-Because your extension might load before the Hotkey Master boots, you should push your commands to the global `window.HOTKEY_QUEUE`.
+Follow this exact 4-step process to migrate your extension:
 
-\`\`\`javascript
-// Define your command package
-const myCommand = [
-    'global',                 // Context ID ('global' for main editor scope)
-    'my_ext.do_magic',        // Unique Command ID (Use a namespace)
-    'Do Magic Trick',         // Display Name for the Shortcut UI
-    'VFX',                    // Category Name for the UI
-    () => this.triggerMagic(),// The function to execute
-    "Applies a sparkling magic effect to the timeline." // Detailed description
+#### Step 1: Remove Native Listeners
+Scrub your codebase of any direct DOM keyboard listeners.
+**❌ DO NOT DO THIS:**
+```javascript
+window.addEventListener('keydown', (e) => { 
+    if(e.key === 'M') this.doMagic(); 
+});
+```
+
+#### Step 2: Define Your Command Package
+Instead of binding a specific key (like 'M'), you define a "Command Package". 
+Create an array containing exactly 6 elements:
+1. **Context ID:** Use `'global'` to make it work anywhere in the main editor.
+2. **Command ID:** A unique string namespace (e.g., `'my_ext.do_magic'`).
+3. **Display Name:** What the user sees in the Shortcut Mapper UI.
+4. **Category:** Groups similar commands together in the UI (e.g., `'VFX'`, `'Editing'`).
+5. **Execution Function:** An arrow function `() =>` that runs your actual logic.
+6. **Description:** A helpful tooltip for the user explaining what the command does.
+
+```javascript
+const magicCommand = [
+    'global',                 // 1. Context
+    'my_ext.do_magic',        // 2. Unique ID
+    'Trigger Magic Effect',   // 3. Display Name
+    'VFX',                    // 4. Category
+    () => this.doMagic(),     // 5. Execution Function
+    "Applies a sparkling magic effect to the timeline." // 6. Description
 ];
+```
 
-// Safely register the command
-if (window.HOTKEY_MASTER && window.HOTKEY_MASTER.registerCommand) {
-    window.HOTKEY_MASTER.registerCommand(...myCommand);
-} else {
-    // Fallback: Queue it for when Hotkey Master boots
-    window.HOTKEY_QUEUE = window.HOTKEY_QUEUE || [];
-    window.HOTKEY_QUEUE.push({ type: 'command', args: myCommand });
+#### Step 3: Implement the Registration Logic
+Because extensions load asynchronously via IndexedDB, your script might boot *before* the Hotkey Master is ready. You must implement a fallback queue. 
+
+Write a registration function like this:
+```javascript
+registerHotkeys() {
+    // Check if the Hotkey Master is already active and ready
+    if (window.HOTKEY_MASTER && window.HOTKEY_MASTER.registerCommand) {
+        window.HOTKEY_MASTER.registerCommand(...magicCommand);
+    } else {
+        // Fallback: Push it to the global queue. 
+        // The Hotkey Master will process this array the exact millisecond it boots!
+        window.HOTKEY_QUEUE = window.HOTKEY_QUEUE || [];
+        window.HOTKEY_QUEUE.push({ type: 'command', args: magicCommand });
+    }
 }
-\`\`\`
+```
+
+#### Step 4: Call Registration on Init
+Finally, call your new `registerHotkeys()` function inside your module's `init()` method so it registers as soon as your extension boots up. Once registered, users can open the "Keyboard Shortcuts..." menu in the editor and securely assign their preferred key combinations to your command!
 
 *Documentation Version 2.6.21-Docs*
     
