@@ -1,4 +1,3 @@
-
 # WASM Video Editor Extension API (v2.6.21)
 
 ## Official Module Development Documentation
@@ -58,9 +57,7 @@ Every module should follow this structural pattern to support system-level toggl
         },
 
         bindEvents() {
-            const handler = (e) => this.handleGlobalKey(e);
-            document.addEventListener('keydown', handler);
-            this.keydownHandler = handler; // Store reference for cleanup
+            // Note: See Section 7 for proper keyboard bindings!
         },
 
         // MANDATORY: Cleanup Function
@@ -72,13 +69,10 @@ Every module should follow this structural pattern to support system-level toggl
             this.elements.forEach(el => el.remove());
             this.elements = [];
 
-            // 2. Unbind Event Listeners
-            document.removeEventListener('keydown', this.keydownHandler);
-
-            // 3. Stop Intervals/Timeouts
+            // 2. Stop Intervals/Timeouts
             if (this.refreshInterval) clearInterval(this.refreshInterval);
 
-            // 4. Clear Global References
+            // 3. Clear Global References
             delete window[MODULE_ID.toUpperCase()];
         }
     };
@@ -118,6 +112,38 @@ Your module has access to these global singletons:
 | `NativeInspector` | Dynamically inject settings into the properties panel. |
 | `UI` | Post system notifications via `Notify.show(msg, icon)`. |
 | `DB` | Store local extension data asynchronously using IndexedDB. |
+
+### 7. Keyboard & Shortcut Integration (Mandatory)
+
+To prevent shortcut conflicts and maintain absolute user control over keyboard mapping, the Editor employs an **Execution-Level Rogue Shield**. 
+
+**⚠️ CRITICAL WARNING:** Using native bindings like `document.addEventListener('keydown', ...)` or `window.onkeyup = ...` is **strictly forbidden**. The system utilizes Load-Time Static Analysis. If it detects these bindings in your code, your extension will be permanently blocked from injecting into the DOM, flagged as rogue, and the user will be prompted to uninstall it.
+
+You must register your commands through the centralized `Hotkey Master` API. This automatically adds your command to the user's visual Shortcut Mapper UI where they can assign their own keys to it.
+
+**How to Register a Command safely:**
+Because your extension might load before the Hotkey Master boots, you should push your commands to the global `window.HOTKEY_QUEUE`.
+
+\`\`\`javascript
+// Define your command package
+const myCommand = [
+    'global',                 // Context ID ('global' for main editor scope)
+    'my_ext.do_magic',        // Unique Command ID (Use a namespace)
+    'Do Magic Trick',         // Display Name for the Shortcut UI
+    'VFX',                    // Category Name for the UI
+    () => this.triggerMagic(),// The function to execute
+    "Applies a sparkling magic effect to the timeline." // Detailed description
+];
+
+// Safely register the command
+if (window.HOTKEY_MASTER && window.HOTKEY_MASTER.registerCommand) {
+    window.HOTKEY_MASTER.registerCommand(...myCommand);
+} else {
+    // Fallback: Queue it for when Hotkey Master boots
+    window.HOTKEY_QUEUE = window.HOTKEY_QUEUE || [];
+    window.HOTKEY_QUEUE.push({ type: 'command', args: myCommand });
+}
+\`\`\`
 
 *Documentation Version 2.6.21-Docs*
     
