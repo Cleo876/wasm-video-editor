@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Editor - Pro Workflow</title>
-    <script>const TOOL_VERSION = '2.6.20';</script>
+    <script>const TOOL_VERSION = '2.6.21';</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -121,6 +121,21 @@
         .collapsed-inspector #inspTitle { display: none !important; }
         .collapsed-inspector #inspHeader { padding: 0 !important; width: 40px !important; justify-content: center !important; align-items: center !important; border-bottom: none !important; }
         .collapsed-inspector #inspToggleBtn { width: 100% !important; height: 100% !important; margin: 0 !important; border-radius: 0 !important; }
+        
+        /* CSS Fullscreen Fallback */
+        .pseudo-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 2147483647 !important;
+            background: #000 !important;
+            border-radius: 0 !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
     </style>
 </head>
 <body>
@@ -132,7 +147,7 @@
             <div class="flex items-center gap-4 h-full flex-1 min-w-0">
                 <div class="flex items-center gap-2 mr-4 flex-shrink-0">
                     <i class="fa-solid fa-layer-group text-teal-400"></i>
-                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.20</span>
+                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.21</span>
                     <span id="safeModeBadge" class="hidden ml-2 bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider uppercase shadow-md" title="Extensions are temporarily disabled for a clean boot.">Safe Mode</span>
                 </div>
                 
@@ -421,7 +436,59 @@
         });
         window.addEventListener('unhandledrejection', (e) => {
             console.warn("🛡️ Engine Shield Caught Promise Rejection:", e.reason);
+            if (e.reason && typeof e.reason.message === 'string' && e.reason.message.includes('permissions policy')) {
+                e.preventDefault();
+            }
         });
+
+        // --- FULLSCREEN FALLBACK SHIELD ---
+        (function() {
+            const origReq = Element.prototype.requestFullscreen;
+            const origExit = document.exitFullscreen;
+            
+            Element.prototype.requestFullscreen = function(options) {
+                return new Promise((resolve, reject) => {
+                    if (origReq) {
+                        origReq.call(this, options).then(resolve).catch(err => {
+                            console.warn("🛡️ Native fullscreen rejected. Using CSS fallback.");
+                            this.classList.add('pseudo-fullscreen');
+                            resolve();
+                        });
+                    } else {
+                        this.classList.add('pseudo-fullscreen');
+                        resolve();
+                    }
+                });
+            };
+
+            document.exitFullscreen = function() {
+                return new Promise((resolve, reject) => {
+                    const pseudo = document.querySelector('.pseudo-fullscreen');
+                    if (pseudo) {
+                        pseudo.classList.remove('pseudo-fullscreen');
+                        resolve();
+                    } else if (origExit) {
+                        origExit.call(document).then(resolve).catch(reject);
+                    } else {
+                        resolve();
+                    }
+                });
+            };
+
+            const origGetFullscreen = Object.getOwnPropertyDescriptor(Document.prototype, 'fullscreenElement')?.get;
+            Object.defineProperty(document, 'fullscreenElement', {
+                get: function() {
+                    return document.querySelector('.pseudo-fullscreen') || (origGetFullscreen ? origGetFullscreen.call(this) : null);
+                },
+                configurable: true
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.querySelector('.pseudo-fullscreen')) {
+                    document.exitFullscreen();
+                }
+            });
+        })();
 
         window.isEngineReady = false;
         window.wasmEngineAvailable = false;
@@ -1113,7 +1180,8 @@
                     'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Extensions/Undo%20%26%20Redo%20Engine.js',
                     'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Extensions/Media%20Manager%20Pro.js',
                     'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Extensions/Audio%20Mixer%20Engine.js',
-                    'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Extensions/PiP%20Transform%20Engine.js'
+                    'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Extensions/PiP%20Transform%20Engine.js',
+                    'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Extensions/Hotkey%20Master%20%26%20Shortcuts.js'
                 ];
                 
                 let addedCount = 0;
@@ -2062,8 +2130,10 @@
                         h = rect.height;
                         w = h * (16/9);
                     }
-                    vp.style.width = w + 'px';
-                    vp.style.height = h + 'px';
+                    if (!vp.classList.contains('pseudo-fullscreen')) {
+                        vp.style.width = w + 'px';
+                        vp.style.height = h + 'px';
+                    }
                     viewportRect = vp.getBoundingClientRect();
                 }
 
