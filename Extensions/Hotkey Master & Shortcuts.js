@@ -378,7 +378,7 @@
                 <div class="text-xs text-gray-400 mt-4 bg-[#111] px-4 py-3 rounded border border-[#333] w-full text-left leading-relaxed">
                     <span class="text-red-400 font-bold uppercase tracking-wider text-[10px] block mb-1">Technical Reason:</span>
                     ${current.violationDetails}.<br><br>
-                    Please refer to the <a href="https://github.com/Cleo876/wasm-video-editor/blob/main/Extensions/Modules%20Developer%20Guide.md" target="_blank" class="text-teal-400 hover:text-teal-300 underline font-bold transition">Modules Developer Guide</a> for integration instructions.
+                    Please refer to the <a href="https://github.com/Cleo876/wasm-video-editor/blob/main/Extensions/Modules%20Developer%20Guide.md#hotkey-master-extension-support" target="_blank" class="text-teal-400 hover:text-teal-300 underline font-bold transition">Modules Developer Guide</a> for integration instructions.
                 </div>
                 <button id="hk-rogue-ack-btn" class="mt-5 w-full bg-red-600 hover:bg-red-500 text-white py-3 rounded font-bold shadow-lg transition-transform transform active:scale-95 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-trash mr-1"></i> Uninstall Extension
