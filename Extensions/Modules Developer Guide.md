@@ -113,7 +113,7 @@ Your module has access to these global singletons:
 | `UI` | Post system notifications via `Notify.show(msg, icon)`. |
 | `DB` | Store local extension data asynchronously using IndexedDB. |
 
-#HotKey Master Extension Support
+# HotKey Master Extension Support
 ### 7. Keyboard & Shortcut Integration (Mandatory)
 
 To prevent shortcut conflicts and maintain absolute user control over keyboard mapping, the Editor employs a **Load-Time Static Analysis Rogue Shield**. 
