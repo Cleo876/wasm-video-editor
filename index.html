@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Editor - Pro Workflow</title>
-    <script>const TOOL_VERSION = '2.6.21';</script>
+    <script>const TOOL_VERSION = '2.6.26';</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -147,7 +147,7 @@
             <div class="flex items-center gap-4 h-full flex-1 min-w-0">
                 <div class="flex items-center gap-2 mr-4 flex-shrink-0">
                     <i class="fa-solid fa-layer-group text-teal-400"></i>
-                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.21</span>
+                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.26</span>
                     <span id="safeModeBadge" class="hidden ml-2 bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider uppercase shadow-md" title="Extensions are temporarily disabled for a clean boot.">Safe Mode</span>
                 </div>
                 
@@ -278,19 +278,20 @@
         </section>
     </div>
 
+    <!-- Global Video Effects Panel (Restored) -->
     <div id="effectsPanel" class="effects-panel">
         <h3 class="text-white text-sm mb-3 font-bold text-teal-400"><i class="fa-solid fa-sliders mr-2"></i>Video Adjustments</h3>
         <div class="mb-4">
             <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Brightness</span><span id="valBright">1.0</span></div>
-            <input type="range" min="0" max="200" value="100" class="effect-slider" oninput="VideoEffects.update('brightness', this.value)">
+            <input type="range" id="brightSlider" min="0" max="200" value="100" class="effect-slider" oninput="VideoEffects.update('brightness', this.value)">
         </div>
         <div class="mb-4">
             <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Contrast</span><span id="valContrast">1.0</span></div>
-            <input type="range" min="0" max="200" value="100" class="effect-slider" oninput="VideoEffects.update('contrast', this.value)">
+            <input type="range" id="contrastSlider" min="0" max="200" value="100" class="effect-slider" oninput="VideoEffects.update('contrast', this.value)">
         </div>
         <div class="mb-4">
             <div class="flex justify-between text-xs text-gray-400 mb-1"><span>Saturation</span><span id="valSat">1.0</span></div>
-            <input type="range" min="0" max="200" value="100" class="effect-slider" oninput="VideoEffects.update('saturate', this.value)">
+            <input type="range" id="satSlider" min="0" max="200" value="100" class="effect-slider" oninput="VideoEffects.update('saturate', this.value)">
         </div>
         <button onclick="VideoEffects.reset()" class="mt-2 text-gray-500 hover:text-white text-xs w-full text-center underline">Reset to Default</button>
         <button onclick="document.getElementById('effectsPanel').style.display='none'" class="absolute top-2 right-2 text-gray-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
@@ -431,7 +432,6 @@
         // --- GLOBAL SHIELD: Prevent Uncaught Extensions from Crashing Editor ---
         window.addEventListener('error', (e) => {
             console.warn("🛡️ Engine Shield Caught Error:", e.message);
-            // Ignore cross-origin Chrome extension noises
             if (e.filename && e.filename.includes('extension')) return; 
         });
         window.addEventListener('unhandledrejection', (e) => {
@@ -582,6 +582,9 @@
             openPanel() {
                 if(!Store.selectedClipId) { alert("Please select a video clip first."); return; }
                 document.getElementById('effectsPanel').style.display = 'block';
+                document.getElementById('brightSlider').value = this.values.brightness;
+                document.getElementById('contrastSlider').value = this.values.contrast;
+                document.getElementById('satSlider').value = this.values.saturate;
             },
             update(prop, val) {
                 this.values[prop] = val;
@@ -593,7 +596,12 @@
             },
             reset() {
                 this.values = { brightness: 100, contrast: 100, saturate: 100 };
-                document.querySelectorAll('.effect-slider').forEach(i => i.value = 100);
+                document.getElementById('brightSlider').value = 100;
+                document.getElementById('contrastSlider').value = 100;
+                document.getElementById('satSlider').value = 100;
+                document.getElementById('valBright').innerText = "1.0";
+                document.getElementById('valContrast').innerText = "1.0";
+                document.getElementById('valSat').innerText = "1.0";
                 Player.safeRenderFrame();
                 Store.saveState();
             }
@@ -782,7 +790,6 @@
                 this.tracks = { v2: [], fx1: [], v1: [], a1: [] };
                 this.assets = [];
                 this.currentTime = 0;
-                VideoEffects.values = { brightness: 100, contrast: 100, saturate: 100 };
                 
                 document.querySelectorAll('.waveform-overlay').forEach(el => el.remove());
                 Player.videoPool = {};
@@ -849,12 +856,11 @@
                                 scale: c.scale !== undefined ? Number(c.scale) : 100,
                                 opacity: c.opacity !== undefined ? Number(c.opacity) : 100,
                                 rotation: c.rotation !== undefined ? Number(c.rotation) : 0,
-                                graphData: c.graphData || null // Added to support per-clip Rubicon Graph States
+                                graphData: c.graphData || null 
                             }));
                     }
                 });
 
-                if(project.effects) VideoEffects.values = project.effects;
                 localStorage.setItem('wasm_last_pid', pid);
                 
                 this.sortTracks();
@@ -891,7 +897,6 @@
                     name: this.projectName,
                     tracks: this.tracks,
                     trackConfig: this.trackConfig,
-                    effects: VideoEffects.values,
                     lastModified: Date.now()
                 };
                 await DB.put('projects', state);
@@ -1158,7 +1163,8 @@
                             document.body.appendChild(script);
                             console.log(`✅ Loaded Module: ${m.name}`);
                         } catch (e) {
-                            console.error(`Failed to load module ${m.name}`, e);
+                            console.error(`❌ Syntax/Load Error in module ${m.name} - Likely Truncated:`, e);
+                            if (typeof Notify !== 'undefined') Notify.show(`Error loading ${m.name}`, 'fa-triangle-exclamation');
                         }
                     }
                 }
@@ -1219,9 +1225,13 @@
                         addedCount++;
                         
                         if (!this.isSafeMode) {
-                            const script = document.createElement('script');
-                            script.textContent = content;
-                            document.body.appendChild(script);
+                            try {
+                                const script = document.createElement('script');
+                                script.textContent = content;
+                                document.body.appendChild(script);
+                            } catch (err) {
+                                console.error(`Syntax Error in default extension ${name}:`, err);
+                            }
                         }
                     } catch(e) {
                         console.error("Failed to fetch default extension:", url, e);
@@ -1266,9 +1276,14 @@
                             addedCount++;
                             
                             if (!this.isSafeMode) {
-                                const script = document.createElement('script');
-                                script.textContent = content;
-                                document.body.appendChild(script);
+                                try {
+                                    const script = document.createElement('script');
+                                    script.textContent = content;
+                                    document.body.appendChild(script);
+                                } catch (err) {
+                                    console.error(`❌ Syntax Error in loaded file ${f.name}:`, err);
+                                    alert(`Syntax Error in ${f.name}!\n\nThe file appears to be truncated or corrupted (Unexpected end of input). Please re-copy the code completely and ensure no closing brackets are missing.`);
+                                }
                             }
                             Notify.show(`Module '${name}' loaded`, 'fa-puzzle-piece');
                         }
@@ -2268,6 +2283,7 @@
 
                 this.drawToCanvas(activeVideoClips, this.isRecording ? activeTextClips : []);
             },
+            
             drawToCanvas(vClips, tClips) {
                 const ctx = this.compositorCanvas.getContext('2d');
                 ctx.imageSmoothingEnabled = true;
@@ -2280,8 +2296,9 @@
                     const asset = Store.assets.find(a => a && a.id === vClip.assetId);
                     if (!asset) return; 
                     
-                    const scale = (vClip.scale || 100) / 100;
+                    const scale = (vClip.scale !== undefined ? vClip.scale : 100) / 100;
                     const rotation = vClip.rotation || 0;
+                    
                     const b = VideoEffects.values.brightness;
                     const c = VideoEffects.values.contrast;
                     const s = VideoEffects.values.saturate;
@@ -2596,11 +2613,29 @@
                     sortedClips.forEach((clip, i) => {
                         const inputIdx = uniqueAssets.indexOf(clip.assetId);
                         filterComplex += `[${inputIdx}:v]trim=${clip.offset}:${clip.offset + clip.duration},setpts=PTS-STARTPTS`;
+                        
                         if(res) {
                              const targetH = parseInt(res);
                              const targetW = targetH === 1080 ? 1920 : (targetH === 720 ? 1280 : 3840);
                              filterComplex += `,scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2`; 
                         }
+                        
+                        // FFmpeg Export Hooks (Middleware)
+                        if (Store.middleware && Store.middleware.length > 0) {
+                            let mwFilters = [];
+                            Store.middleware.forEach(mw => {
+                                try {
+                                    const res = mw(clip);
+                                    if (res && typeof res === 'string' && res.trim() !== '') {
+                                        mwFilters.push(res);
+                                    }
+                                } catch(e) {}
+                            });
+                            if (mwFilters.length > 0) {
+                                filterComplex += `,${mwFilters.join(',')}`;
+                            }
+                        }
+
                         filterComplex += `[v${i}];`;
                         streamNames += `[v${i}]`;
                     });
