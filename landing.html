@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forge™ WASM Video Editor — Professional Browser‑Based NLE</title>
+    <meta name="description" content="A powerful, client‑side video editor with node compositing, real‑time effects, and WASM export. No install, no servers — just pure creative freedom.">
+    <style>
+        :root {
+            --bg:#0a0a0a;
+            --surface:rgba(18,18,18,0.8);
+            --accent:#00d2be;
+            --yellow:#eab308;
+            --text:#e0e0e0;
+            --muted:#999;
+            --border:rgba(255,255,255,0.08);
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{
+            font-family:'Inter',system-ui,sans-serif;
+            background:var(--bg);color:var(--text);
+            overflow-x:hidden;line-height:1.6;
+            -webkit-font-smoothing:antialiased;
+        }
+        .bg-dynamic{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;}
+        .orb{position:absolute;border-radius:50%;filter:blur(120px);opacity:0.1;animation:floatOrb 25s infinite alternate ease-in-out;}
+        .orb1{width:800px;height:800px;background:var(--accent);top:-350px;left:-250px;}
+        .orb2{width:700px;height:700px;background:#6366f1;bottom:-300px;right:-300px;}
+        .orb3{width:600px;height:600px;background:var(--yellow);top:40%;left:55%;}
+        @keyframes floatOrb{0%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-30px) scale(1.3)}100%{transform:translate(-20px,20px) scale(0.9)}}
+        .grid-bg{position:absolute;top:0;left:0;width:100%;height:100%;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(circle at 50% 50%,black 20%,transparent 70%);}
+        .wrapper{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 2rem;}
+        .gradient-text{background:linear-gradient(135deg,var(--accent),#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+        .yellow-glow{color:var(--yellow);text-shadow:0 0 20px rgba(234,179,8,0.6);}
+        h1{font-size:clamp(3.5rem,8vw,6rem);font-weight:800;letter-spacing:-0.02em;line-height:1.1;}
+        h2{font-size:2.8rem;font-weight:700;}
+        .badge{background:rgba(0,210,190,0.15);color:var(--accent);padding:0.4rem 1.2rem;border-radius:30px;font-weight:600;font-size:0.8rem;letter-spacing:1px;display:inline-block;text-transform:uppercase;}
+        .btn-primary{background:var(--accent);color:#000;font-weight:700;padding:1rem 2.5rem;border-radius:40px;text-decoration:none;display:inline-block;transition:0.2s;box-shadow:0 0 30px rgba(0,210,190,0.3);font-size:1.1rem;}
+        .btn-primary:hover{background:#00e6cf;transform:scale(1.05);}
+        .btn-outline{border:1px solid #333;color:#ccc;padding:0.9rem 2.3rem;border-radius:40px;text-decoration:none;margin-left:1rem;transition:0.2s;font-size:1.1rem;}
+        .btn-outline:hover{border-color:var(--accent);color:#fff;}
+        .video-banner{position:relative;border-radius:24px;overflow:hidden;box-shadow:0 0 60px rgba(0,210,190,0.15),0 20px 40px rgba(0,0,0,0.6);border:1px solid var(--border);aspect-ratio:16/9;width:100%;max-width:1200px;margin:4rem auto;}
+        .video-banner video{width:100%;height:100%;object-fit:cover;}
+        .video-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(0,0,0,0.85),transparent);padding:2rem;display:flex;align-items:center;gap:1rem;}
+        .section{margin:8rem 0;}
+        .two-col{display:flex;gap:4rem;align-items:center;flex-wrap:wrap;}
+        .two-col>div{flex:1 1 400px;}
+        .glass-demo{background:rgba(15,15,15,0.5);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.06);border-radius:24px;position:relative;overflow:hidden;box-shadow:0 25px 50px rgba(0,0,0,0.5);}
+        .node-graph-preview{position:relative;width:100%;min-height:480px;border-radius:20px;margin-top:2rem;background:radial-gradient(circle at 50% 50%,rgba(0,210,190,0.05) 0%,transparent 70%);}
+        #rubiconPreviewCanvas{position:absolute;top:0;left:0;width:100%;height:100%;cursor:grab;}
+        #rubiconPreviewCanvas:active{cursor:grabbing;}
+        .placeholder-video{display:flex;align-items:center;justify-content:center;width:100%;height:300px;background:rgba(0,0,0,0.3);border-radius:16px;border:1px dashed var(--border);}
+        .placeholder-video i{font-size:3rem;color:rgba(255,255,255,0.2);}
+
+        /* ----- Refined Carousel ----- */
+        .carousel-wrapper{position:relative;margin:3rem 0;}
+        .carousel-viewport{overflow:hidden;border-radius:20px;}
+        .carousel-track{display:flex;gap:1.5rem;transition:transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);}
+        .ext-item{
+            flex: 0 0 calc((100% - 4.5rem) / 3.5); /* exactly 3.5 cards visible */
+            min-width:0; /* allow shrinking */
+            background:rgba(22,22,22,0.6);backdrop-filter:blur(12px);
+            border:1px solid var(--border);border-radius:24px;
+            padding:clamp(1rem, 2vw, 2rem);
+            transition:opacity 0.4s, border-color 0.3s, transform 0.3s;
+            opacity:1;
+        }
+        .ext-item.fading-out{opacity:0;pointer-events:none;}
+        .ext-item.semi-transparent{opacity:0.5;}
+        .ext-item:hover{border-color:var(--accent);transform:translateY(-5px);}
+        .ext-icon{font-size:clamp(1.8rem, 5vw, 2.5rem);margin-bottom:0.8rem;line-height:1;}
+        .ext-item h3{font-size:clamp(1rem, 2.5vw, 1.4rem);margin-bottom:0.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .ext-item p{font-size:clamp(0.7rem, 1.5vw, 0.9rem);line-height:1.4;color:var(--muted);}
+
+        .carousel-btn{
+            position:absolute;top:50%;transform:translateY(-50%);
+            background:rgba(20,20,20,0.8);backdrop-filter:blur(8px);
+            border:1px solid #333;color:#fff;width:44px;height:44px;
+            border-radius:50%;display:flex;align-items:center;justify-content:center;
+            cursor:pointer;z-index:10;transition:0.2s;font-size:1.2rem;
+        }
+        .carousel-btn:hover{background:var(--accent);color:#000;border-color:var(--accent);}
+        .carousel-btn.prev{left:-22px;}
+        .carousel-btn.next{right:-22px;}
+        .carousel-btn:disabled{opacity:0.3;pointer-events:none;}
+        .carousel-gradient-right{
+            position:absolute;right:0;top:0;bottom:0;width:80px;
+            background:linear-gradient(to right,transparent,var(--bg));
+            pointer-events:none;z-index:5;border-radius:0 20px 20px 0;
+        }
+
+        .cta-section{text-align:center;}
+        footer{border-top:1px solid #222;padding:2rem 0;color:#666;text-align:center;}
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="bg-dynamic"><div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div><div class="grid-bg"></div></div>
+
+<div class="wrapper">
+    <header style="padding-top:6rem;text-align:center;">
+        <span class="badge">FORGE™ PROFESSIONAL VIDEO EDITING</span>
+        <h1 class="gradient-text" style="margin:1.5rem 0;">The Editor Without Limits</h1>
+        <p style="font-size:1.4rem;color:var(--muted);max-width:800px;margin:1.5rem auto;">
+            A full‑featured video editor with node‑based compositing, real‑time effects, and hardware‑accelerated export — all running in your browser. <br>
+            <strong>No install. No cloud. Just pure creative freedom.</strong>
+        </p>
+        <div style="margin-top:2rem;">
+            <a href="#compositing" class="btn-primary"><i class="fa-solid fa-film"></i> Explore the Editor</a>
+            <a href="#jam" class="btn-outline"><i class="fa-solid fa-trophy"></i> Editor's Jam 2025</a>
+        </div>
+    </header>
+
+    <div class="video-banner">
+        <video muted autoplay loop playsinline poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080' viewBox='0 0 1920 1080'%3E%3Crect width='100%25' height='100%25' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23555' font-family='sans-serif' font-size='28'%3EWinner's Reel — Coming Soon%3C/text%3E%3C/svg%3E">
+            <source src="" type="video/mp4">
+        </video>
+        <div class="video-overlay">
+            <span class="badge" style="background:var(--yellow);color:#000;"><i class="fa-solid fa-crown"></i> JAM WINNER 2025</span>
+            <span style="font-size:1rem;">The ultimate showcase of what's possible in the browser — created in 48 hours</span>
+        </div>
+    </div>
+
+    <section class="section" id="compositing">
+        <div class="two-col">
+            <div>
+                <span class="badge" style="margin-bottom:1rem;">VISUAL EFFECTS</span>
+                <h2 class="gradient-text">Node‑Based Compositing</h2>
+                <p style="font-size:1.2rem;margin:1.5rem 0;color:var(--muted);">
+                    Build professional compositing chains directly on your clips. Connect nodes for colour grading, glows, vignettes, masks, and merges — and watch the result update in real time. The graph overlays on top of your original media, so you can always toggle back.
+                </p>
+                <p style="color:var(--muted);">
+                    Every node type is colour‑coded — yellow for image, blue for mask, green for value — making complex graphs readable at a glance. Import custom .js nodes from the community, or write your own to create effects no other editor can match.
+                </p>
+            </div>
+            <div class="glass-demo" style="min-height:480px;">
+                <div class="node-graph-preview">
+                    <canvas id="rubiconPreviewCanvas"></canvas>
+                </div>
+                <div style="position:absolute;bottom:16px;right:20px;color:var(--yellow);font-size:0.65rem;background:rgba(0,0,0,0.7);padding:0.3rem 0.8rem;border-radius:20px;pointer-events:none;">
+                    <i class="fa-solid fa-dice-d20"></i> DRAG NODES TO EXPLORE
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="two-col" style="flex-direction:row-reverse;">
+            <div>
+                <span class="badge" style="margin-bottom:1rem;">DYNAMIC MOVEMENT</span>
+                <h2 class="gradient-text">Transitions that Flow</h2>
+                <p style="font-size:1.2rem;margin:1.5rem 0;color:var(--muted);">
+                    Custom transitions created as tiny .js modules. Define your animation on a canvas, set the timing and alignment, and the engine handles the rest — including seamless half‑and‑half cross‑fades where the animation continues smoothly across the cut.
+                </p>
+                <p style="color:var(--muted);">
+                    Every transition can auto‑reverse, respect a maximum duration, and export the exact same look to FFmpeg for your final render. The result is motion that feels intentional and cinematic, never cheap.
+                </p>
+            </div>
+            <div class="glass-demo" style="padding:2rem;">
+                <div class="placeholder-video" id="transitionPlaceholder">
+                    <div style="text-align:center;color:rgba(255,255,255,0.3);">
+                        <i class="fa-solid fa-play" style="font-size:4rem;display:block;margin-bottom:1rem;"></i>
+                        <span style="font-size:1rem;">Transition reel coming soon</span>
+                    </div>
+                </div>
+                <p style="text-align:center;margin-top:1rem;font-size:0.9rem;color:var(--muted);">Drop a video here to showcase custom transitions</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div style="text-align:center;margin-bottom:2rem;">
+            <span class="badge" style="margin-bottom:1rem;">EXTENDABLE PLATFORM</span>
+            <h2 class="gradient-text">Powerful Tools, One Click Away</h2>
+            <p style="max-width:700px;margin:1.5rem auto;color:var(--muted);font-size:1.1rem;">
+                The core editor stays lightweight. Pro features come as extensions — install only what you need.
+            </p>
+        </div>
+
+        <div class="carousel-wrapper">
+            <button class="carousel-btn prev" id="carouselPrev"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="carousel-viewport" id="carouselViewport">
+                <div class="carousel-track" id="carouselTrack">
+                    <div class="ext-item">
+                        <div class="ext-icon"><i class="fa-solid fa-volume-high" style="color:#10b981;"></i></div>
+                        <h3>Audio Mixing</h3>
+                        <p>Per‑clip volume, fade handles, and one‑click L‑cut extraction.</p>
+                    </div>
+                    <div class="ext-item">
+                        <div class="ext-icon"><i class="fa-solid fa-crop-simple" style="color:#60a5fa;"></i></div>
+                        <h3>PiP & Transform</h3>
+                        <p>Drag clips on canvas with smart guides. Shadows, corners, blend modes.</p>
+                    </div>
+                    <div class="ext-item">
+                        <div class="ext-icon"><i class="fa-solid fa-font" style="color:#8b5cf6;"></i></div>
+                        <h3>Media Manager</h3>
+                        <p>Inline rename, preview, safe deletion, and Google Fonts integration.</p>
+                    </div>
+                    <div class="ext-item">
+                        <div class="ext-icon"><i class="fa-solid fa-rotate-left" style="color:#f59e0b;"></i></div>
+                        <h3>Undo & Redo</h3>
+                        <p>Deep history that remembers every cut. Experiment fearlessly.</p>
+                    </div>
+                    <div class="ext-item">
+                        <div class="ext-icon"><i class="fa-solid fa-wand-magic-sparkles" style="color:#ec4899;"></i></div>
+                        <h3>Transition Creator</h3>
+                        <p>Build custom animated transitions as .js modules. Auto‑reverse and export‑ready.</p>
+                    </div>
+                    <div class="ext-item">
+                        <div class="ext-icon"><i class="fa-solid fa-puzzle-piece" style="color:#f59e0b;"></i></div>
+                        <h3>Hotkey Master</h3>
+                        <p>Fully customisable shortcuts with automatic conflict resolution.</p>
+                    </div>
+                </div>
+            </div>
+            <button class="carousel-btn next" id="carouselNext"><i class="fa-solid fa-chevron-right"></i></button>
+            <div class="carousel-gradient-right"></div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="two-col">
+            <div>
+                <span class="badge" style="margin-bottom:1rem;">DELIVER</span>
+                <h2 class="gradient-text">Export to Any Screen</h2>
+                <p style="font-size:1.2rem;margin:1.5rem 0;color:var(--muted);">
+                    Render a true MP4 file directly in the browser using ffmpeg.wasm with SIMD acceleration. Or grab a quick WebM preview in real time. Your colour grades, fades, and graph effects are baked into the final output.
+                </p>
+                <p style="color:var(--muted);">Everything happens client‑side — your footage never leaves your device.</p>
+            </div>
+            <div class="glass-demo" style="padding:2rem;text-align:center;">
+                <i class="fa-solid fa-file-export" style="font-size:4rem;color:var(--accent);"></i>
+                <div style="margin-top:1.5rem;font-size:1.1rem;">Your Timeline. Your Format.</div>
+                <div style="margin-top:1rem;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+                    <div style="background:#1a1a1a;padding:1rem 2rem;border-radius:12px;">
+                        <span style="font-size:2rem;font-weight:700;">MP4</span><br><span style="color:var(--muted);">Full HD / 4K</span>
+                    </div>
+                    <div style="background:#1a1a1a;padding:1rem 2rem;border-radius:12px;">
+                        <span style="font-size:2rem;font-weight:700;">WebM</span><br><span style="color:var(--muted);">Real‑time</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" style="text-align:center;">
+        <span class="badge" style="margin-bottom:1rem;">YOUR FOOTAGE, YOUR RIGHTS</span>
+        <h2 class="gradient-text">100% Client‑Side. 100% Private.</h2>
+        <p style="max-width:800px;margin:1.5rem auto;color:var(--muted);font-size:1.2rem;">
+            No cloud uploads, no accounts, no tracking. Your project stays on your device. That's why the WASM Video Editor is trusted by security‑conscious teams who need airtight offline workflows. <strong>Your art belongs to you.</strong>
+        </p>
+    </section>
+
+    <section class="section cta-section" id="jam">
+        <h2 class="gradient-text" style="font-size:3rem;">Editor's Jam 2025</h2>
+        <p style="color:var(--muted);max-width:700px;margin:1.5rem auto;font-size:1.1rem;">
+            <strong>For video editors:</strong> Create a stunning cinematic short using the WASM Video Editor in 48 hours. Footage donated by filmmaking studios.<br>
+            <strong>For developers:</strong> Build an extension, a transition, or a Rubicon node that pushes the platform forward.<br><br>
+            Prizes include curated LUTs, SFX packs, and Steam keys. The winning video will be featured right here on this page.
+        </p>
+        <a href="#" class="btn-primary"><i class="fa-solid fa-gamepad"></i> Join on itch.io</a>
+        <p style="color:#666;margin-top:1rem;font-size:0.85rem;">Sponsored by filmmaking studios and the Forge™ community.</p>
+    </section>
+
+    <footer>
+        <p>Forge™ WASM Video Editor — Open Source, Client‑Side, Professional. <span class="yellow-glow">Cross the Rubicon.</span></p>
+        <p style="margin-top:0.5rem;">© 2025 Forge™. Built with <i class="fa-solid fa-heart" style="color:var(--accent);"></i> for storytellers everywhere.</p>
+    </footer>
+</div>
+
+<script>
+(function(){
+    // ---------- DRAGGABLE NODE GRAPH (all nodes always visible) ----------
+    const canvas = document.getElementById('rubiconPreviewCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    const container = canvas.parentElement;
+    function resize(){
+        width = container.clientWidth;
+        height = container.clientHeight || 480;
+        canvas.width = width;
+        canvas.height = height;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const nodeWidth = Math.min(180, width * 0.18); // responsive node width
+    const nodeHeight = nodeWidth * 0.61; // keep aspect ≈ 180x110
+
+    const nodes = [
+        { id:'media_in',   type:'media_in',   name:'Media In',        x:0, y:0, inputs:[], outputs:['image'] },
+        { id:'color_corr', type:'color_corr', name:'Color Corrector', x:0, y:0, inputs:['image'], outputs:['image'] },
+        { id:'vignette',   type:'vignette_fx', name:'Cinematic Vignette', x:0, y:0, inputs:['image'], outputs:['image'] },
+        { id:'media_out',  type:'media_out',  name:'Media Out',       x:0, y:0, inputs:['image'], outputs:[] }
+    ];
+
+    function repositionNodes(){
+        const margin = 40;
+        const totalWidth = width - margin * 2;
+        const spacing = (totalWidth - nodeWidth * nodes.length) / (nodes.length - 1);
+        nodes.forEach((node, i) => {
+            node.x = margin + i * (nodeWidth + spacing);
+            node.y = (height - nodeHeight) / 2;
+        });
+    }
+    repositionNodes();
+    window.addEventListener('resize', () => {
+        resize();
+        repositionNodes();
+        wireData = buildWireData();
+    });
+
+    const wires = [
+        { from:'media_in', to:'color_corr', type:'image' },
+        { from:'color_corr', to:'vignette', type:'image' },
+        { from:'vignette', to:'media_out', type:'image' }
+    ];
+
+    function getPortPos(nodeId, portIdx, isInput){
+        const node = nodes.find(n=>n.id===nodeId);
+        if(!node) return {x:0,y:0};
+        const header = nodeHeight * 0.29; // 32/110
+        const body = nodeHeight - header;
+        const count = isInput ? node.inputs.length : node.outputs.length;
+        const spacingY = body/(count+1);
+        const portY = node.y + header + spacingY*(portIdx+1);
+        const portX = isInput ? node.x : node.x + nodeWidth;
+        return {x:portX, y:portY};
+    }
+    function pointOnBezier(from, to, cpOff, t){
+        const x0=from.x, y0=from.y, x1=from.x+cpOff, y1=from.y, x2=to.x-cpOff, y2=to.y, x3=to.x, y3=to.y;
+        const mt=1-t, mt2=mt*mt, t2=t*t;
+        return { x:mt*mt2*x0+3*mt2*t*x1+3*mt*t2*x2+t2*t*x3, y:mt*mt2*y0+3*mt2*t*y1+3*mt*t2*y2+t2*t*y3 };
+    }
+
+    function buildWireData(){
+        return wires.map(w => {
+            const fromP = getPortPos(w.from, 0, false);
+            const toP   = getPortPos(w.to, 0, true);
+            const cpOff = Math.abs(toP.x - fromP.x) * 0.5;
+            const path = new Path2D();
+            path.moveTo(fromP.x, fromP.y);
+            path.bezierCurveTo(fromP.x+cpOff, fromP.y, toP.x-cpOff, toP.y, toP.x, toP.y);
+            const points = [];
+            for(let i=0; i<=100; i++) points.push(pointOnBezier(fromP, toP, cpOff, i/100));
+            return { path, points, color: w.type==='image' ? '#eab308' : '#3b82f6' };
+        });
+    }
+    let wireData = buildWireData();
+
+    const particles = [];
+    function spawnParticles(){
+        particles.length = 0;
+        for(let i=0; i<30; i++){
+            const wi = Math.floor(Math.random()*wireData.length);
+            const w = wireData[wi];
+            const prog = Math.random();
+            const idx = Math.floor(prog * (w.points.length-1));
+            const pt = w.points[Math.min(idx, w.points.length-1)];
+            particles.push({ wi, prog, x:pt.x, y:pt.y, r:1.5+Math.random()*2, spd:0.003+Math.random()*0.006, color:w.color });
+        }
+    }
+    spawnParticles();
+
+    function drawNode(n){
+        const {x,y,name,inputs,outputs} = n;
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 8;
+        ctx.fillStyle = 'rgba(20,20,20,0.8)';
+        ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+        const w = nodeWidth, h = nodeHeight, r = Math.min(8, h*0.15);
+        ctx.beginPath();
+        ctx.moveTo(x+r, y); ctx.lineTo(x+w-r, y);
+        ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+        ctx.lineTo(x+w, y+h-r); ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+        ctx.lineTo(x+r, y+h); ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+        ctx.lineTo(x, y+r); ctx.quadraticCurveTo(x, y, x+r, y);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+
+        const headerH = h * 0.29;
+        ctx.fillStyle = '#1e1e1e';
+        ctx.fillRect(x, y, w, headerH);
+        ctx.fillStyle = '#fff';
+        const fontSize = Math.min(14, h*0.18);
+        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+        ctx.fillText(name, x+10, y + headerH*0.65);
+
+        inputs.forEach((type, idx) => {
+            const py = y + headerH + ((h-headerH)/(inputs.length+1))*(idx+1);
+            ctx.beginPath(); ctx.arc(x, py, 5, 0, Math.PI*2);
+            ctx.fillStyle = type==='image' ? '#eab308' : '#3b82f6'; ctx.fill();
+            ctx.strokeStyle = '#222'; ctx.lineWidth = 1.2; ctx.stroke();
+        });
+        outputs.forEach((type, idx) => {
+            const py = y + headerH + ((h-headerH)/(outputs.length+1))*(idx+1);
+            ctx.beginPath(); ctx.arc(x+w, py, 5, 0, Math.PI*2);
+            ctx.fillStyle = type==='image' ? '#eab308' : '#3b82f6'; ctx.fill();
+            ctx.strokeStyle = '#222'; ctx.lineWidth = 1.2; ctx.stroke();
+        });
+        ctx.restore();
+    }
+
+    let draggingNode = null;
+    let dragOffX = 0, dragOffY = 0;
+
+    function hitTest(mx, my){
+        for(let i=nodes.length-1; i>=0; i--){
+            const n = nodes[i];
+            if(mx >= n.x && mx <= n.x+nodeWidth && my >= n.y && my <= n.y+nodeHeight) return n;
+        }
+        return null;
+    }
+
+    canvas.addEventListener('mousedown', e => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = width / rect.width;
+        const scaleY = height / rect.height;
+        const mx = (e.clientX - rect.left) * scaleX;
+        const my = (e.clientY - rect.top) * scaleY;
+        const hit = hitTest(mx, my);
+        if(hit){
+            draggingNode = hit;
+            dragOffX = mx - hit.x;
+            dragOffY = my - hit.y;
+            canvas.style.cursor = 'grabbing';
+        }
+    });
+    window.addEventListener('mousemove', e => {
+        if(!draggingNode) return;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = width / rect.width;
+        const scaleY = height / rect.height;
+        const mx = (e.clientX - rect.left) * scaleX;
+        const my = (e.clientY - rect.top) * scaleY;
+        draggingNode.x = Math.max(0, Math.min(width - nodeWidth, mx - dragOffX));
+        draggingNode.y = Math.max(0, Math.min(height - nodeHeight, my - dragOffY));
+        wireData = buildWireData();
+    });
+    window.addEventListener('mouseup', () => {
+        draggingNode = null;
+        canvas.style.cursor = 'grab';
+    });
+
+    function animate(){
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = 'rgba(5,5,5,0.2)'; ctx.fillRect(0,0,width,height);
+
+        wireData.forEach(wd => {
+            ctx.save();
+            ctx.strokeStyle = wd.color;
+            ctx.lineWidth = Math.max(2, nodeWidth*0.03);
+            ctx.shadowColor = wd.color + '60';
+            ctx.shadowBlur = 6;
+            ctx.stroke(wd.path);
+            ctx.restore();
+        });
+        nodes.forEach(drawNode);
+
+        particles.forEach(p => {
+            p.prog += p.spd;
+            if(p.prog > 1) p.prog -= 1;
+            const wd = wireData[p.wi];
+            if(!wd) return;
+            const idx = Math.floor(p.prog * (wd.points.length-1));
+            const pt = wd.points[Math.min(idx, wd.points.length-1)];
+            p.x = pt.x; p.y = pt.y;
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 6;
+            ctx.fill();
+        });
+        ctx.shadowBlur = 0;
+        requestAnimationFrame(animate);
+    }
+    animate();
+
+    // ---------- FADING CAROUSEL (exactly 3.5 visible cards) ----------
+    const track = document.getElementById('carouselTrack');
+    const prevBtn = document.getElementById('carouselPrev');
+    const nextBtn = document.getElementById('carouselNext');
+    const items = Array.from(track.querySelectorAll('.ext-item'));
+    const totalItems = items.length;
+    const visibleCards = 3.5;
+    let currentIndex = 0;
+
+    function getItemWidth(){
+        const first = items[0];
+        if(!first) return 300;
+        return first.getBoundingClientRect().width + 24; // 24px gap (1.5rem)
+    }
+
+    function updateCarousel(animate = true){
+        const itemWidth = getItemWidth();
+        const translateX = -currentIndex * itemWidth;
+
+        if(!animate){
+            track.style.transition = 'none';
+        } else {
+            track.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        }
+
+        track.style.transform = `translateX(${translateX}px)`;
+
+        // Update opacity states
+        items.forEach((item, i) => {
+            item.classList.remove('fading-out', 'semi-transparent');
+            if(i < currentIndex) item.classList.add('fading-out');
+            else if(i >= currentIndex + Math.floor(visibleCards) && i < currentIndex + Math.floor(visibleCards) + 1){
+                item.classList.add('semi-transparent');
+            }
+        });
+
+        prevBtn.disabled = currentIndex === 0;
+        nextBtn.disabled = currentIndex >= totalItems - Math.floor(visibleCards);
+    }
+
+    nextBtn.addEventListener('click', () => {
+        if(currentIndex < totalItems - Math.floor(visibleCards)){
+            currentIndex++;
+            updateCarousel(true);
+        }
+    });
+    prevBtn.addEventListener('click', () => {
+        if(currentIndex > 0){
+            currentIndex--;
+            updateCarousel(true);
+        }
+    });
+
+    updateCarousel(false);
+    window.addEventListener('resize', () => updateCarousel(false));
+})();
+</script>
+</body>
+</html>
