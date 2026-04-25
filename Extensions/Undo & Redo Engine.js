@@ -1,12 +1,12 @@
 /**
  * @name Undo & Redo Engine
- * @version 1.4.0
+ * @version 1.6.0
  * @developer Forge™
- * @description Advanced history tracking utilizing IndexedDB. Features explicit 'Commit-Capture', GitHub Auto-Sync, and a Per-Project Storage Manager to prevent memory bloat.
+ * @description Advanced history tracking utilizing IndexedDB. Integrated with Hotkey Master's Auto-Mapping API for automatic Ctrl+Z & Ctrl+Y assignment.
  */
 (function() {
     const MODULE_ID = 'undo_redo_engine';
-    const CURRENT_VERSION = '1.4.0';
+    const CURRENT_VERSION = '1.6.0';
 
     if (typeof Store === 'undefined' || typeof Player === 'undefined' || typeof DB === 'undefined') {
         console.error(`❌ [${MODULE_ID}] Core environment not found. Ensure editor is fully loaded.`);
@@ -14,7 +14,7 @@
     }
 
     const MAX_HISTORY_STATES = 1500; 
-    const WARNING_THRESHOLD = 1000; // Trigger warning icon if a project exceeds this
+    const WARNING_THRESHOLD = 1000; 
 
     const deepClone = (obj) => JSON.parse(JSON.stringify(obj));
 
@@ -37,7 +37,6 @@
         elements: [], 
         captureTimeout: null, 
         
-        // Commit-Capture State
         isInteracting: false,
         pendingCapture: false,
         interactionListeners: {},
@@ -45,16 +44,15 @@
         originalSaveState: null,
         originalLoadProject: null,
         originalCreateProject: null,
-        keydownHandler: null,
 
         async init() {
-            console.log(`[${MODULE_ID}] Booting Engine...`);
+            console.log(`[${MODULE_ID}] Booting Engine v${CURRENT_VERSION}...`);
             
             this.checkForUpdates(); 
             
             this.injectUI();
-            this.injectStorageUI(); // Inject Warning Icon & Modal
-            this.bindHotkeys();
+            this.injectStorageUI();
+            this.registerWithHotkeyMaster(); // Dynamically assigns defaults!
             this.bindInteractionTracker();
             this.hijackStore();
 
@@ -98,9 +96,7 @@
                         }
                     }
                 }
-            } catch(e) {
-                console.log(`[${MODULE_ID}] Auto-update check skipped or repository unavailable.`);
-            }
+            } catch(e) {}
         },
 
         compareVersions(v1, v2) {
@@ -125,10 +121,10 @@
 
             container.innerHTML = `
                 <div class="h-6 w-px bg-[#333] mx-1"></div>
-                <button id="btnUndo" class="text-gray-500 hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition transform active:scale-95 text-lg disabled:cursor-not-allowed" title="Undo (Ctrl+Z)" disabled>
+                <button id="btnUndo" class="text-gray-500 hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition transform active:scale-95 text-lg disabled:cursor-not-allowed" title="Undo" disabled>
                     <i class="fa-solid fa-rotate-left"></i>
                 </button>
-                <button id="btnRedo" class="text-gray-500 hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition transform active:scale-95 text-lg disabled:cursor-not-allowed" title="Redo (Ctrl+Y)" disabled>
+                <button id="btnRedo" class="text-gray-500 hover:text-white disabled:opacity-30 disabled:hover:text-gray-500 transition transform active:scale-95 text-lg disabled:cursor-not-allowed" title="Redo" disabled>
                     <i class="fa-solid fa-rotate-right"></i>
                 </button>
             `;
@@ -140,9 +136,33 @@
             document.getElementById('btnRedo').addEventListener('click', () => this.redo());
         },
 
-        // --- STORAGE MANAGER INTEGRATION ---
+        // --- HOTKEY MASTER INTEGRATION ---
+        registerWithHotkeyMaster() {
+            const undoCommand = [
+                'global', 'ur.undo', 'Undo Action', 'History', 
+                () => this.undo(), 
+                "Reverts the timeline to the previous state.",
+                "Ctrl+KeyZ" // Auto-Mapped Default!
+            ];
+
+            const redoCommand = [
+                'global', 'ur.redo', 'Redo Action', 'History', 
+                () => this.redo(), 
+                "Restores the previously undone timeline state.",
+                "Ctrl+KeyY" // Auto-Mapped Default!
+            ];
+
+            if (window.HOTKEY_MASTER && window.HOTKEY_MASTER.registerCommand) {
+                window.HOTKEY_MASTER.registerCommand(...undoCommand);
+                window.HOTKEY_MASTER.registerCommand(...redoCommand);
+            } else {
+                window.HOTKEY_QUEUE = window.HOTKEY_QUEUE || [];
+                window.HOTKEY_QUEUE.push({ type: 'command', args: undoCommand });
+                window.HOTKEY_QUEUE.push({ type: 'command', args: redoCommand });
+            }
+        },
+
         injectStorageUI() {
-            // Inject Warning Icon next to WASM Status
             const wasmStatus = document.getElementById('wasmStatus');
             if (wasmStatus && !document.getElementById('ur-warning-icon')) {
                 const warnBtn = document.createElement('div');
@@ -152,12 +172,10 @@
                 warnBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> Storage Warning';
                 warnBtn.onclick = () => this.openStorageManager();
                 
-                // Insert right after the wasmStatus
                 wasmStatus.parentNode.insertBefore(warnBtn, wasmStatus.nextSibling);
                 this.elements.push(warnBtn);
             }
 
-            // Inject the Modal Shell
             if (!document.getElementById('urStorageModal')) {
                 const modal = document.createElement('div');
                 modal.id = 'urStorageModal';
@@ -170,9 +188,7 @@
                         </div>
                         <p class="text-xs text-gray-400 mb-4">Excessive undo states can consume system RAM and degrade performance. Purge oldest states to restore speed.</p>
                         
-                        <div id="urStorageList" class="flex-1 overflow-y-auto custom-scroll pr-2">
-                            <!-- Populated Dynamically -->
-                        </div>
+                        <div id="urStorageList" class="flex-1 overflow-y-auto custom-scroll pr-2"></div>
                         
                         <div class="mt-4 pt-3 border-t border-[#333] text-right">
                             <button onclick="document.getElementById('urStorageModal').classList.add('hidden')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold rounded transition">Close</button>
@@ -201,9 +217,7 @@
                 
                 const warnIcon = document.getElementById('ur-warning-icon');
                 if (warnIcon) warnIcon.style.display = warning ? 'flex' : 'none';
-            } catch(e) {
-                console.warn("Storage health check failed", e);
-            }
+            } catch(e) {}
         },
 
         async openStorageManager() {
@@ -244,92 +258,52 @@
                 });
                 
                 listContainer.innerHTML = html;
-            } catch(e) {
-                listContainer.innerHTML = '<div class="text-center text-red-500 py-4">Failed to load storage data.</div>';
-            }
+            } catch(e) {}
         },
 
         async purgeHistory(pid) {
             const slider = document.getElementById(`ur_slider_${pid}`);
             if (!slider) return;
             const amount = parseInt(slider.value);
-            
             if (amount <= 0) return;
 
             try {
                 if (pid === Store.projectId) {
-                    // Purging currently active project
-                    // Prioritize killing Redo (future) first if needed, otherwise kill from oldest past
                     if (this.past.length >= amount) {
                         this.past.splice(0, amount);
                     } else {
                         const remainder = amount - this.past.length;
                         this.past = [];
-                        this.future.splice(0, remainder); // Though usually we only care about past
+                        this.future.splice(0, remainder); 
                     }
                     await this.persistToDB();
                     this.updateUI();
                 } else {
-                    // Purging an inactive project directly in DB
                     const histData = await DB.get('system', 'history_' + pid);
                     if (histData && histData.past) {
                         histData.past.splice(0, amount);
                         await DB.put('system', histData);
                     }
                 }
-                
                 if (typeof Notify !== 'undefined') Notify.show(`Purged ${amount} states`, 'fa-broom');
                 this.checkStorageHealth();
-                this.openStorageManager(); // Refresh the modal UI
-                
-            } catch(e) {
-                console.error("Purge failed", e);
-                alert("Failed to purge history.");
-            }
-        },
-        // --- END STORAGE MANAGER ---
-
-        bindHotkeys() {
-            this.keydownHandler = (e) => {
-                if (!this.isActive) return;
-                
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-
-                if (e.ctrlKey || e.metaKey) {
-                    if (e.key.toLowerCase() === 'z') {
-                        e.preventDefault();
-                        if (e.shiftKey) this.redo();
-                        else this.undo();
-                    }
-                    if (e.key.toLowerCase() === 'y') {
-                        e.preventDefault();
-                        this.redo();
-                    }
-                }
-            };
-            document.addEventListener('keydown', this.keydownHandler);
+                this.openStorageManager(); 
+            } catch(e) {}
         },
 
-        // --- THE MASTERSTROKE: Commit-Capture Tracker ---
         bindInteractionTracker() {
-            const downHandler = () => {
-                this.isInteracting = true;
-            };
-            
+            const downHandler = () => { this.isInteracting = true; };
             const upHandler = () => {
                 this.isInteracting = false;
-                // The exact millisecond the user lets go of the slider/clip, if a save is pending, capture it!
                 if (this.pendingCapture && !this.isNavigating && this.isActive) {
                     this.pendingCapture = false;
                     this.captureState();
                 }
             };
-
             document.addEventListener('mousedown', downHandler);
             document.addEventListener('touchstart', downHandler);
             document.addEventListener('mouseup', upHandler);
             document.addEventListener('touchend', upHandler);
-
             this.interactionListeners = { down: downHandler, up: upHandler };
         },
 
@@ -337,20 +311,14 @@
             this.originalSaveState = Store.saveState;
             Store.saveState = async () => {
                 const result = await this.originalSaveState.call(Store);
-                
                 if (this.isActive && !this.isNavigating) {
                     if (this.isInteracting) {
-                        // User is currently dragging a slider or clip. Put the capture on hold!
                         this.pendingCapture = true;
                     } else {
-                        // User used a hotkey or clicked a button (no drag involved). Capture with a tiny safety debounce.
                         if (this.captureTimeout) clearTimeout(this.captureTimeout);
-                        this.captureTimeout = setTimeout(() => {
-                            this.captureState();
-                        }, 50);
+                        this.captureTimeout = setTimeout(() => this.captureState(), 50);
                     }
                 }
-                
                 return result;
             };
 
@@ -381,10 +349,7 @@
             }
 
             this.past.push(currentState);
-            
-            if (this.past.length > MAX_HISTORY_STATES) {
-                this.past.shift(); 
-            }
+            if (this.past.length > MAX_HISTORY_STATES) this.past.shift(); 
             
             this.future = []; 
             this.updateUI();
@@ -393,13 +358,11 @@
 
         async undo() {
             if (this.past.length <= 1) return; 
-            
             this.isNavigating = true;
-            this.pendingCapture = false; // Purge any hovering captures
+            this.pendingCapture = false; 
             
             const currentState = this.past.pop();
             this.future.push(currentState);
-            
             const previousState = this.past[this.past.length - 1];
             await this.applyState(previousState);
             
@@ -412,7 +375,6 @@
 
         async redo() {
             if (this.future.length === 0) return;
-            
             this.isNavigating = true;
             this.pendingCapture = false;
             
@@ -433,7 +395,6 @@
             
             if (state.effects && typeof VideoEffects !== 'undefined') {
                 VideoEffects.values = deepClone(state.effects);
-                
                 const brightSlider = document.querySelector('input[oninput*="brightness"]');
                 const contrastSlider = document.querySelector('input[oninput*="contrast"]');
                 const satSlider = document.querySelector('input[oninput*="saturate"]');
@@ -460,9 +421,7 @@
                         liveAsset.color = savedAsset.color;
                         liveAsset.duration = savedAsset.duration;
                         await Store.updateAssetMeta(liveAsset.id, { 
-                            name: liveAsset.name, 
-                            color: liveAsset.color, 
-                            duration: liveAsset.duration 
+                            name: liveAsset.name, color: liveAsset.color, duration: liveAsset.duration 
                         });
                     }
                 }
@@ -474,7 +433,7 @@
             if(typeof NativeInspector !== 'undefined') {
                 let validSelection = false;
                 for (let t in Store.tracks) {
-                    if (Store.tracks[t].find(c => c.id === Store.selectedClipId)) validSelection = true;
+                    if (Store.tracks[t].find(c => c && c.id === Store.selectedClipId)) validSelection = true;
                 }
                 if (!validSelection) Store.selectedClipId = null;
                 NativeInspector.render();
@@ -494,41 +453,29 @@
                     await this.captureState(); 
                 }
                 this.updateUI();
-            } catch (e) {
-                console.warn(`[${MODULE_ID}] Failed to load history`, e);
-            }
+            } catch (e) {}
         },
 
         async persistToDB() {
             if (!Store.projectId) return;
             try {
-                await DB.put('system', {
-                    id: 'history_' + Store.projectId,
-                    past: this.past,
-                    future: this.future
-                });
-                this.checkStorageHealth(); // Re-evaluate health after saving
-            } catch (e) {
-                console.warn(`[${MODULE_ID}] Failed to persist history`, e);
-            }
+                await DB.put('system', { id: 'history_' + Store.projectId, past: this.past, future: this.future });
+                this.checkStorageHealth();
+            } catch (e) {}
         },
 
         updateUI() {
             const undoBtn = document.getElementById('btnUndo');
             const redoBtn = document.getElementById('btnRedo');
-            
             if(undoBtn) undoBtn.disabled = this.past.length <= 1;
             if(redoBtn) redoBtn.disabled = this.future.length === 0;
         },
 
         cleanup() {
-            console.log(`[${MODULE_ID}] Executing secure shutdown & uninstallation...`);
             this.isActive = false;
-            
             this.elements.forEach(el => el.remove());
             this.elements = [];
 
-            document.removeEventListener('keydown', this.keydownHandler);
             if (this.interactionListeners.down) {
                 document.removeEventListener('mousedown', this.interactionListeners.down);
                 document.removeEventListener('touchstart', this.interactionListeners.down);
@@ -547,5 +494,4 @@
 
     window.UNDO_REDO_ENGINE = UndoRedoEngine;
     UndoRedoEngine.init();
-
 })();
