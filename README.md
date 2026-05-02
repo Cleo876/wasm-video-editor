@@ -1,5 +1,7 @@
-# Forge™ WASM Video Editor 🎬
-**Forge™. Own. Forever. ⚒️**
+# <p align="center"><em> Forge™ WASM Video Editor 🎬</em></p>
+> <p align="center"><em>Forge™. Own. Forever.</em></p>
+
+---
 
 A professional-grade, 100% client-side Non-Linear Editor (NLE) running entirely in your browser. Powered by **WebAssembly (FFmpeg.wasm)**, the **HTML5 Canvas API**, and the **Web Audio API**, this editor delivers a desktop-like workflow with zero server uploads, ensuring total privacy and instantaneous performance.
 
