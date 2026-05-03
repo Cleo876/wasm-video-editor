@@ -640,9 +640,10 @@
                     } else if (prop === 'muted') {
                         clip.muted = val;
                     } else if (prop === 'text' || prop === 'color' || prop === 'fontSize') {
-                        if(prop === 'text') { asset.name = val; Store.updateAssetMeta(asset.id, { name: val }); }
-                        if(prop === 'color') { asset.color = val; Store.updateAssetMeta(asset.id, { color: val }); }
+                        if(prop === 'text') { clip.text = val; }
+                        if(prop === 'color') { clip.color = val; }
                         if(prop === 'fontSize') { clip.fontSize = parseInt(val) || 10; }
+                        UI.refreshTimeline();
                     }
                     Player.safeRenderFrame();
                     Store.saveState();
@@ -712,12 +713,13 @@
 
                 if (trackType === 'text') {
                     if (!clip.fontSize) clip.fontSize = 60;
-                    const color = asset.color || '#ffffff';
+                    const content = clip.text !== undefined ? clip.text : asset.name;
+                    const color = clip.color !== undefined ? clip.color : (asset.color || '#ffffff');
                     html += `
                         <div class="border-t border-[#222] pt-4 mt-2">
                             <div class="mb-4">
                                 <label class="text-[10px] uppercase text-gray-500 font-bold block mb-1">Text Content</label>
-                                <textarea rows="2" class="w-full bg-[#1a1a1a] border border-[#333] text-white p-2 text-sm rounded focus:border-teal-500 outline-none te-safe-input" oninput="NativeInspector.updateProp('text', this.value)">${asset.name}</textarea>
+                                <textarea rows="2" class="w-full bg-[#1a1a1a] border border-[#333] text-white p-2 text-sm rounded focus:border-teal-500 outline-none te-safe-input" oninput="NativeInspector.updateProp('text', this.value)">${content}</textarea>
                             </div>
                             <div class="flex gap-2 mb-4">
                                 <div class="flex-1">
@@ -1011,6 +1013,8 @@
                     this.selectedTrackId = null; 
                     this.saveState(); 
                     UI.checkExportButton();
+                    if (typeof UI !== 'undefined') UI.refreshTimeline();
+                    if (typeof Player !== 'undefined') Player.safeRenderFrame();
                 }
             },
             setZoom(newZoom) { this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, newZoom)); },
@@ -1820,7 +1824,8 @@
                     el.style.left = `${clip.start * Store.zoom}px`; 
                     el.style.width = `${clip.duration * Store.zoom}px`;
                     
-                    el.innerHTML = `<div class="resize-handle left" data-side="left"></div><span class="truncate px-2 pointer-events-none w-full text-center">${asset.name}</span><div class="resize-handle right" data-side="right"></div>`;
+                    const clipLabel = clip.text !== undefined ? clip.text : asset.name;
+                    el.innerHTML = `<div class="resize-handle left" data-side="left"></div><span class="truncate px-2 pointer-events-none w-full text-center">${clipLabel}</span><div class="resize-handle right" data-side="right"></div>`;
                     
                     el.addEventListener('click', (e) => { e.stopPropagation(); this.selectClip(clip.id, trackId); });
                     el.addEventListener('mousedown', e => {
@@ -1867,13 +1872,18 @@
                 document.getElementById('deleteBtn').disabled = false; document.getElementById('splitBtn').disabled = false;
             },
             deleteSelected() {
-                if(!Store.selectedClipId) return;
-                Store.deleteSelected();
-                UI.refreshTimeline();
-                Player.safeRenderFrame();
-                document.getElementById('deleteBtn').disabled = true;
-                document.getElementById('splitBtn').disabled = true;
-                if(typeof NativeInspector !== 'undefined') NativeInspector.render();
+                if(!Store.selectedClipId || !Store.selectedTrackId) return;
+                const track = Store.tracks[Store.selectedTrackId] || [];
+                const idx = track.findIndex(c => c && c.id === Store.selectedClipId);
+                if(idx !== -1) { 
+                    track.splice(idx, 1); 
+                    Store.selectedClipId = null; 
+                    Store.selectedTrackId = null; 
+                    Store.saveState(); 
+                    UI.checkExportButton();
+                    UI.refreshTimeline();
+                    Player.safeRenderFrame();
+                }
             },
             startDrag(e, clip, trackId) {
                 e.stopPropagation(); 
@@ -2249,8 +2259,11 @@
                         }
                         txtEl.dataset.used = 'true';
                         
-                        txtEl.innerText = asset.name;
-                        txtEl.style.color = asset.color || '#ffffff';
+                        const content = tClip.text !== undefined ? tClip.text : asset.name;
+                        const color = tClip.color !== undefined ? tClip.color : (asset.color || '#ffffff');
+                        
+                        txtEl.innerText = content;
+                        txtEl.style.color = color;
                         
                         const baseFontSize = tClip.fontSize || 60;
                         const scaledFontSize = (baseFontSize / 1080) * viewportRect.height;
@@ -2340,11 +2353,14 @@
                     const asset = Store.assets.find(a => a && a.id === tClip.assetId);
                     if (!asset) return; 
                     
+                    const content = tClip.text !== undefined ? tClip.text : asset.name;
+                    const color = tClip.color !== undefined ? tClip.color : (asset.color || 'white');
+                    
                     const baseFontSize = tClip.fontSize || 60; 
                     const scaledFontSize = (baseFontSize / 1080) * this.compositorCanvas.height;
                     
                     ctx.font = `bold ${scaledFontSize}px Inter, sans-serif`;
-                    ctx.fillStyle = asset.color || 'white';
+                    ctx.fillStyle = color;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.shadowColor = 'rgba(0,0,0,0.8)';
@@ -2352,7 +2368,7 @@
                     
                     const cx = tClip.x !== undefined ? (tClip.x / 100) * this.compositorCanvas.width : this.compositorCanvas.width / 2;
                     const cy = tClip.y !== undefined ? (tClip.y / 100) * this.compositorCanvas.height : this.compositorCanvas.height / 2;
-                    ctx.fillText(asset.name, cx, cy);
+                    ctx.fillText(content, cx, cy);
                 });
             }
         };
