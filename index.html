@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Editor - Pro Workflow</title>
-    <script>const TOOL_VERSION = '2.6.26';</script>
+    <script>const TOOL_VERSION = '2.7.0';</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -147,7 +147,7 @@
             <div class="flex items-center gap-4 h-full flex-1 min-w-0">
                 <div class="flex items-center gap-2 mr-4 flex-shrink-0">
                     <i class="fa-solid fa-layer-group text-teal-400"></i>
-                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.6.26</span>
+                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.7.0</span>
                     <span id="safeModeBadge" class="hidden ml-2 bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider uppercase shadow-md" title="Extensions are temporarily disabled for a clean boot.">Safe Mode</span>
                 </div>
                 
@@ -425,6 +425,19 @@
         </div>
     </div>
 
+    <!-- 🔥 GLOBAL INLINE PROMPT MODAL (Removes Alert/Confirm) -->
+    <div id="inlinePromptModal" class="modal-overlay hidden z-[20000]">
+        <div class="bg-[#1e1e1e] border border-[#333] p-6 rounded-xl w-[400px] shadow-2xl text-center flex flex-col items-center">
+            <div id="inlinePromptIcon" class="text-teal-400 text-4xl mb-4 drop-shadow-md"><i class="fa-solid fa-circle-info"></i></div>
+            <h2 id="inlinePromptTitle" class="text-lg font-bold text-white mb-2">Notice</h2>
+            <p id="inlinePromptMessage" class="text-sm text-gray-400 mb-6 w-full px-2 leading-relaxed"></p>
+            <div id="inlinePromptActions" class="flex justify-center gap-3 w-full">
+                <button id="inlinePromptBtnCancel" class="flex-1 bg-[#333] hover:bg-[#444] text-white py-2.5 rounded text-sm font-bold transition shadow-lg hidden">Cancel</button>
+                <button id="inlinePromptBtnConfirm" class="flex-1 bg-teal-600 hover:bg-teal-500 text-white py-2.5 rounded text-sm font-bold transition shadow-lg">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
     <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
 
@@ -580,7 +593,7 @@
         const VideoEffects = {
             values: { brightness: 100, contrast: 100, saturate: 100 },
             openPanel() {
-                if(!Store.selectedClipId) { alert("Please select a video clip first."); return; }
+                if(!Store.selectedClipId) { UI.showAlert("Selection Required", "Please select a video clip first.", "fa-hand-pointer", "text-yellow-400"); return; }
                 document.getElementById('effectsPanel').style.display = 'block';
                 document.getElementById('brightSlider').value = this.values.brightness;
                 document.getElementById('contrastSlider').value = this.values.contrast;
@@ -1106,20 +1119,21 @@
                 Notify.show('Project Loaded');
             },
             async deleteProject(pid) {
-                if(!confirm("Delete this project and all its media? This cannot be undone.")) return;
-                await DB.delete('projects', pid);
-                const allAssets = await DB.getAll('assets');
-                for(const a of allAssets) {
-                    if(a.projectId === pid) {
-                        await DB.delete('assets', a.id);
+                UI.showConfirm("Delete Project", "Delete this project and all its media? This cannot be undone.", "Delete Project", "flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded text-sm font-bold transition shadow-lg", async () => {
+                    await DB.delete('projects', pid);
+                    const allAssets = await DB.getAll('assets');
+                    for(const a of allAssets) {
+                        if(a.projectId === pid) {
+                            await DB.delete('assets', a.id);
+                        }
                     }
-                }
-                if(pid === Store.projectId) {
-                    await Store.createProject('Untitled Project');
-                } else {
-                    this.openProjectManager(); 
-                }
-                Notify.show('Project Deleted', 'fa-trash');
+                    if(pid === Store.projectId) {
+                        await Store.createProject('Untitled Project');
+                    } else {
+                        this.openProjectManager(); 
+                    }
+                    Notify.show('Project Deleted', 'fa-trash');
+                });
             },
             importFile() { document.getElementById('fileInput').click(); }
         };
@@ -1244,15 +1258,21 @@
                 
                 if(btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Defaults';
                 this.render();
-                if(addedCount > 0) Notify.show(`Installed ${addedCount} default extensions`, 'fa-check');
-                else Notify.show(`Defaults are already installed`, 'fa-info-circle');
+                if(addedCount > 0) {
+                    UI.showAlert("Installation Complete", `Successfully installed ${addedCount} default extensions.`, "fa-check", "text-green-400");
+                } else {
+                    UI.showAlert("Notice", "Defaults are already installed.", "fa-info-circle", "text-teal-400");
+                }
             },
 
             loadFolder() {
                 const input = document.createElement('input'); input.type = 'file'; input.webkitdirectory = true; input.directory = true; input.multiple = true;
                 input.onchange = async (e) => {
                     const files = Array.from(e.target.files).filter(f => f.name.endsWith('.js'));
-                    if(files.length === 0) { alert("No .js modules found."); return; }
+                    if(files.length === 0) { 
+                        UI.showAlert("No Modules", "No .js modules found in the selected directory.", "fa-folder-open", "text-yellow-400");
+                        return; 
+                    }
                     let addedCount = 0;
                     for (const f of files) {
                         const content = await f.text(); 
@@ -1286,7 +1306,7 @@
                                     document.body.appendChild(script);
                                 } catch (err) {
                                     console.error(`❌ Syntax Error in loaded file ${f.name}:`, err);
-                                    alert(`Syntax Error in ${f.name}!\n\nThe file appears to be truncated or corrupted (Unexpected end of input). Please re-copy the code completely and ensure no closing brackets are missing.`);
+                                    UI.showAlert("Syntax Error", `Syntax Error in <b>${f.name}</b>!<br><br>The file appears to be truncated or corrupted. Please re-copy the code completely and ensure no closing brackets are missing.`, "fa-bug", "text-red-400");
                                 }
                             }
                             Notify.show(`Module '${name}' loaded`, 'fa-puzzle-piece');
@@ -1302,15 +1322,16 @@
                     m.active = !m.active;
                     await DB.put('modules', m);
                     this.render();
-                    if(m.active) alert("Reload page to activate module.");
+                    if(m.active) UI.showAlert("Module Toggled", "Reload page to activate or deactivate module completely.", "fa-rotate-right", "text-teal-400");
                 }
             },
             async remove(name) {
-                if(confirm(`Remove extension "${name}"?`)) {
+                UI.showConfirm("Remove Extension", `Are you sure you want to completely uninstall <b>${name}</b>?`, "Uninstall", "flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded text-sm font-bold transition shadow-lg", async () => {
                     this.modules = this.modules.filter(m => m.name !== name);
                     await DB.delete('modules', name);
                     this.render();
-                }
+                    Notify.show('Extension Removed', 'fa-trash');
+                });
             },
             render() {
                 const list = document.getElementById('modulesList');
@@ -1346,6 +1367,44 @@
         };
 
         const UI = {
+            showAlert(title, message, icon = 'fa-circle-info', iconColor = 'text-teal-400') {
+                const modal = document.getElementById('inlinePromptModal');
+                document.getElementById('inlinePromptTitle').innerText = title;
+                document.getElementById('inlinePromptMessage').innerHTML = message;
+                document.getElementById('inlinePromptIcon').innerHTML = `<i class="fa-solid ${icon}"></i>`;
+                document.getElementById('inlinePromptIcon').className = `${iconColor} text-4xl mb-4 drop-shadow-md`;
+                
+                const btnConfirm = document.getElementById('inlinePromptBtnConfirm');
+                const btnCancel = document.getElementById('inlinePromptBtnCancel');
+                
+                btnConfirm.innerText = 'OK';
+                btnConfirm.className = 'flex-1 bg-teal-600 hover:bg-teal-500 text-white py-2.5 rounded text-sm font-bold transition shadow-lg';
+                btnCancel.classList.add('hidden');
+                
+                btnConfirm.onclick = () => modal.classList.add('hidden');
+                modal.classList.remove('hidden');
+            },
+            showConfirm(title, message, confirmText, confirmClass, onConfirm, icon = 'fa-triangle-exclamation', iconColor = 'text-yellow-400') {
+                const modal = document.getElementById('inlinePromptModal');
+                document.getElementById('inlinePromptTitle').innerText = title;
+                document.getElementById('inlinePromptMessage').innerHTML = message;
+                document.getElementById('inlinePromptIcon').innerHTML = `<i class="fa-solid ${icon}"></i>`;
+                document.getElementById('inlinePromptIcon').className = `${iconColor} text-4xl mb-4 drop-shadow-md`;
+                
+                const btnConfirm = document.getElementById('inlinePromptBtnConfirm');
+                const btnCancel = document.getElementById('inlinePromptBtnCancel');
+                
+                btnConfirm.innerText = confirmText || 'Confirm';
+                btnConfirm.className = confirmClass || 'flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded text-sm font-bold transition shadow-lg';
+                
+                btnCancel.classList.remove('hidden');
+                
+                btnConfirm.onclick = () => { modal.classList.add('hidden'); onConfirm(); };
+                btnCancel.onclick = () => modal.classList.add('hidden');
+                
+                modal.classList.remove('hidden');
+            },
+
             async init() {
                 this.setupResizer(); 
                 await DB.init();
@@ -1563,7 +1622,10 @@
             async handleUpload(file, context = 'media') {
                 const isImage = file.type.startsWith('image/');
                 const isVideo = file.type.startsWith('video/');
-                if (context === 'media' && !isImage && !isVideo) { alert("Please select a video or image file."); return; }
+                if (context === 'media' && !isImage && !isVideo) { 
+                    UI.showAlert("Invalid File", "Please select a video or image file.", "fa-file-circle-xmark", "text-red-400"); 
+                    return; 
+                }
                 const modal = document.getElementById('compressModal');
                 modal.classList.remove('hidden');
                 let processedFile = file;
@@ -1803,7 +1865,7 @@
                          UI.refreshTimeline();
                          Player.safeRenderFrame();
                     } else {
-                        alert(`Cannot drop ${asset.type} onto ${targetTrack.label} track.`);
+                        UI.showAlert("Track Mismatch", `Cannot drop ${asset.type} onto ${targetTrack.label} track.`, "fa-ban", "text-red-400");
                     }
                 }
             },
@@ -2162,6 +2224,33 @@
                     viewportRect = vp.getBoundingClientRect();
                 }
 
+                // --- PRE-WARMING ENGINE ---
+                const upcomingClips = [];
+                for(let i = Store.trackConfig.length - 1; i >= 0; i--) {
+                    const track = Store.trackConfig[i];
+                    if (!track) continue;
+                    const trackData = Store.tracks[track.id] || [];
+                    trackData.forEach(c => {
+                        if (!c) return;
+                        if (t < c.start && (c.start - t) <= 1.5) {
+                            upcomingClips.push(c);
+                        }
+                    });
+                }
+                upcomingClips.forEach(clip => {
+                    const asset = Store.assets.find(a => a && a.id === clip.assetId);
+                    if (asset && asset.type === 'video') {
+                        const vEl = this.getVideoSource(clip.id, asset.url || '');
+                        if (vEl && vEl.readyState >= 1) {
+                            const warmTime = clip.offset || 0;
+                            if (Math.abs(vEl.currentTime - warmTime) > 0.5) {
+                                vEl.currentTime = warmTime;
+                            }
+                        }
+                    }
+                });
+                // --- END PRE-WARMING ---
+
                 const activeVideoClips = [];
                 const activeTextClips = [];
                 const activeAudioClips = [];
@@ -2457,7 +2546,7 @@
                 const wasmInput = document.getElementById('coreWasmInput');
                 
                 if(!jsInput.files[0] || !wasmInput.files[0]) {
-                    alert("Please select both ffmpeg-core.js and ffmpeg-core.wasm files.");
+                    UI.showAlert("Missing Files", "Please select both ffmpeg-core.js and ffmpeg-core.wasm files.", "fa-file-circle-exclamation", "text-yellow-400");
                     return;
                 }
 
@@ -2492,14 +2581,14 @@
                     
                 } catch(e) {
                     console.error("Manual Init Error", e);
-                    alert("Failed to initialize engine with provided files. Please check the console.");
+                    UI.showAlert("Initialization Failed", "Failed to initialize engine with provided files. Please check the console.", "fa-triangle-exclamation", "text-red-400");
                     document.getElementById('manualCoreModal').classList.remove('hidden');
                 }
             },
 
             openModal() {
                 if (!window.isEngineReady) {
-                    alert("Export Engine is still loading. Please wait a moment.");
+                    UI.showAlert("Engine Loading", "Export Engine is still loading. Please wait a moment.", "fa-gears", "text-teal-400");
                     return;
                 }
                 document.getElementById('exportFilename').value = Store.projectName || 'WASM_Export';
