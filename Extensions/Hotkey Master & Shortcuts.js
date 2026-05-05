@@ -1,8 +1,8 @@
 /**
  * @name Hotkey Master & Command Palette
- * @version 2.9.0
+ * @version 2.12.0
  * @developer Forge™
- * @description The absolute sovereign of keyboard inputs. Features Virtual Modifier Toggles (Ctrl/Alt/Shift combos), Docked Inspector UX, Numpad support, and the Execution-Level Rogue Shield.
+ * @description The absolute sovereign of keyboard inputs. Features the Handshake/Receipt Protocol, "Open Receiver" Cross-Script API, and Execution-Level Rogue Shield.
  */
 (function() {
     const MODULE_ID = 'hotkey_master';
@@ -14,7 +14,7 @@
 
     const HotkeyMaster = {
         name: "Hotkey Master & Command Palette",
-        version: "2.9.0",
+        version: "2.11.0",
         
         contexts: {},     
         commands: {},     
@@ -38,12 +38,12 @@
                 'KeyS': 'core.split', 
                 'KeyC': 'core.split', 
                 'KeyX': 'core.delete', 
-                'Delete': 'core.delete', 
-                'Backspace': 'core.delete', 
+                'Delete': 'core.delete',
+                'Backspace': 'core.delete',
                 'KeyF': 'core.fullscreen', 
-                'Space': 'core.play_pause', 
-                'KeyL': 'core.fast_forward', 
-                'KeyK': 'core.pause', 
+                'Space': 'core.play_pause',
+                'KeyL': 'core.fast_forward',
+                'KeyK': 'core.pause',
                 'KeyJ': 'core.rewind',
                 'Ctrl+KeyZ': 'ur.undo',
                 'Ctrl+KeyY': 'ur.redo'
@@ -51,7 +51,7 @@
         },
 
         async init() {
-            console.log(`⌨️ Booting ${this.name} v${this.version} – Centralized keyboard governance.`);
+            console.log(`⌨️ Booting ${this.name} v${this.version}...`);
             
             this.rogueQueue = [];
             this.isRogueBannerVisible = false;
@@ -60,6 +60,9 @@
             this.hijackSecurity(); 
             this.hijackModuleManager(); 
             
+            // 🔥 OPEN RECEIVER: Instantly intercepts cross-script communications
+            this.setupOpenReceiver();
+
             await this.scanExistingModulesWithRetry(5);
             
             [3000, 8000, 15000, 30000].forEach(delay => {
@@ -68,9 +71,11 @@
 
             this.observeScriptInjections();
 
+            // Load saved preferences via Deep Merge so we don't wipe active async registrations
+            await this.loadPreferences();
+
             this.registerContext('global', 'Main Editor', () => true); 
             this.registerBuiltInCommands();
-            await this.loadPreferences();
 
             this.injectStyles();
             this.injectSecurityModals();
@@ -87,17 +92,31 @@
                 rescan: () => this.scanExistingModules()
             };
 
-            this.processQueue();
             this.waitForModuleManager();
         },
 
-        processQueue() {
-            if (window.HOTKEY_QUEUE && Array.isArray(window.HOTKEY_QUEUE)) {
-                window.HOTKEY_QUEUE.forEach(task => {
-                    if (task.type === 'context') this.registerContext(...task.args);
-                    if (task.type === 'command') this.registerCommand(...task.args);
-                });
-                window.HOTKEY_QUEUE = []; 
+        // --- OPEN RECEIVER CROSS-SCRIPT API ---
+        setupOpenReceiver() {
+            const _this = this;
+            const existingQueue = window.HOTKEY_QUEUE || [];
+            
+            // 🔥 INITIALIZE RECEIPTS: The central ledger for cross-script handshakes
+            window.HOTKEY_RECEIPTS = window.HOTKEY_RECEIPTS || {};
+            
+            // Transform the queue into a reactive proxy. 
+            // Any extension calling .push() instantly triggers registration.
+            window.HOTKEY_QUEUE = {
+                push: function(...tasks) {
+                    tasks.forEach(task => {
+                        if (task.type === 'context') _this.registerContext(...task.args);
+                        if (task.type === 'command') _this.registerCommand(...task.args);
+                    });
+                }
+            };
+
+            // Process anything that managed to load before we booted
+            if (Array.isArray(existingQueue)) {
+                existingQueue.forEach(task => window.HOTKEY_QUEUE.push(task));
             }
         },
         
@@ -166,7 +185,6 @@
             if (typeof DB === 'undefined' || !DB.db) throw new Error('Database not ready');
 
             const modules = await DB.getAll('modules');
-            console.log(`[${MODULE_ID}] Scanning ${modules.length} installed modules for rogue listeners...`);
 
             for (let m of modules) {
                 if (m.name.includes('Hotkey Master') || m.name === MODULE_ID) continue;
@@ -222,7 +240,6 @@
             ModuleManager.loadFolder = function(...args) {
                 const result = origLoadFolder.apply(this, args);
                 setTimeout(() => {
-                    console.log(`[${MODULE_ID}] Folder load complete – scanning.`);
                     HotkeyMaster.scanExistingModules();
                 }, 800);
                 return result;
@@ -231,7 +248,6 @@
             ModuleManager.installDefaults = async function(...args) {
                 const result = await origInstallDefaults.apply(this, args);
                 setTimeout(() => {
-                    console.log(`[${MODULE_ID}] Defaults installed – scanning.`);
                     HotkeyMaster.scanExistingModules();
                 }, 500);
                 return result;
@@ -255,17 +271,19 @@
             const secureAppend = function(originalMethod) {
                 return function(el) {
                     if (el.tagName === 'SCRIPT' && el.textContent) {
-                        const violation = _this.detectIllegalBindings(el.textContent);
-                        if (violation) {
-                            const nameMatch = el.textContent.match(/@name\s+(.+)/);
-                            const devMatch = el.textContent.match(/@developer\s+(.+)/);
-                            const extName = nameMatch ? nameMatch[1].trim() : 'Unknown Extension';
-                            const devName = devMatch ? devMatch[1].trim() : 'Unknown Developer';
-                            
-                            console.warn(`🛡️ SHIELD: Load‑time block of "${extName}" – ${violation}`);
-                            _this.queueRogueWarning(extName, devName, violation);
-                            return;
-                        }
+                        try {
+                            const violation = _this.detectIllegalBindings(el.textContent);
+                            if (violation) {
+                                const nameMatch = el.textContent.match(/@name\s+(.+)/);
+                                const devMatch = el.textContent.match(/@developer\s+(.+)/);
+                                const extName = nameMatch ? nameMatch[1].trim() : 'Unknown Extension';
+                                const devName = devMatch ? devMatch[1].trim() : 'Unknown Developer';
+                                
+                                console.warn(`🛡️ SHIELD: Load‑time block of "${extName}" – ${violation}`);
+                                _this.queueRogueWarning(extName, devName, violation);
+                                return;
+                            }
+                        } catch (err) {}
                     }
                     return originalMethod.apply(this, arguments);
                 };
@@ -435,8 +453,29 @@
             this.updateContextDropdown();
         },
         
-        registerCommand(contextId, commandId, name, category, executeFn, description = "") {
+        registerCommand(contextId, commandId, name, category, executeFn, description = "", defaultKeys = null) {
             this.commands[commandId] = { contextId, id: commandId, name, category, execute: executeFn, description };
+            
+            // 🔥 ISSUE RECEIPT: Ping back to the extension that the command was successfully loaded!
+            window.HOTKEY_RECEIPTS = window.HOTKEY_RECEIPTS || {};
+            window.HOTKEY_RECEIPTS[commandId] = Date.now();
+            
+            if (defaultKeys) {
+                const keys = Array.isArray(defaultKeys) ? defaultKeys : [defaultKeys];
+                const contextMaps = this.keymaps[contextId] || {};
+                const isAlreadyMapped = Object.values(contextMaps).includes(commandId);
+                
+                if (!isAlreadyMapped) {
+                    if (!this.keymaps[contextId]) this.keymaps[contextId] = {};
+                    keys.forEach(k => {
+                        if (!this.keymaps[contextId][k]) {
+                            this.keymaps[contextId][k] = commandId;
+                        }
+                    });
+                    this.savePreferences();
+                }
+            }
+
             if (this.modal && this.modal.style.display !== 'none') this.renderCommandList();
         },
         
@@ -447,36 +486,41 @@
                     const playBtn = document.getElementById('playPauseBtn');
                     if (playBtn) playBtn.innerHTML = Player.playing ? '<i class="fa-solid fa-circle-pause"></i>' : '<i class="fa-solid fa-circle-play"></i>';
                 }
-            }, "Toggles timeline video playback.");
+            }, "Toggles timeline video playback.", "Space");
             
             this.registerCommand('global', 'core.fast_forward', 'Play Forward / Fast', 'Playback', () => {
                 if (typeof Player !== 'undefined') Player.playing ? Player.seekRelative(2) : Player.togglePlay();
-            });
+            }, "Jump forward or speed up playback.", "KeyL");
+            
             this.registerCommand('global', 'core.pause', 'Pause', 'Playback', () => {
                 if (typeof Player !== 'undefined' && Player.playing) Player.togglePlay();
-            });
+            }, "Pause playback immediately.", "KeyK");
+            
             this.registerCommand('global', 'core.rewind', 'Rewind / Back', 'Playback', () => {
                 if (typeof Player !== 'undefined') Player.seekRelative(-2);
-            });
+            }, "Rewind the timeline by 2 seconds.", "KeyJ");
+            
             this.registerCommand('global', 'core.split', 'Split Clip (Razor)', 'Editing', () => {
                 if (typeof TimelineModule !== 'undefined') TimelineModule.splitClip();
-            });
+            }, "Cuts the selected clip at the playhead.", ["KeyS", "KeyC"]);
+            
             this.registerCommand('global', 'core.delete', 'Delete Selected', 'Editing', () => {
                 if (typeof TimelineModule !== 'undefined' && Store.selectedClipId) TimelineModule.deleteSelected();
-            });
+            }, "Deletes the actively selected clip.", ["Delete", "Backspace", "KeyX"]);
+            
             this.registerCommand('global', 'core.fullscreen', 'Toggle Fullscreen', 'View', () => {
                 const viewport = document.getElementById('viewportContainer');
                 if (viewport) document.fullscreenElement ? document.exitFullscreen() : viewport.requestFullscreen();
-            });
+            }, "Maximize the video preview canvas.", "KeyF");
         },
 
         bindSovereignListener() {
+            this.modTracking = { key: null, comboFired: false };
+
             this.keydownHandler = (e) => {
-                // Ignore inputs into text fields
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
                 
                 // Modifiers are completely ignored when pressed by themselves!
-                // They can only be used in combination with other keys.
                 if (['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
                 
                 // Base Editor Neutralization
@@ -487,7 +531,6 @@
                     if (id !== 'global' && ctx.isActive()) { activeContext = id; break; }
                 }
                 
-                // Compile the precise modifier string combination
                 let prefix = '';
                 if (e.ctrlKey || e.metaKey) prefix += 'Ctrl+';
                 if (e.altKey) prefix += 'Alt+';
@@ -495,7 +538,6 @@
                 
                 let fullCode = prefix + e.code;
 
-                // Look for an exact match including modifiers
                 let mappedCommandId = this.keymaps[activeContext]?.[fullCode] || this.keymaps['global'][fullCode];
                 
                 if (mappedCommandId && this.commands[mappedCommandId]) {
@@ -510,8 +552,30 @@
         async loadPreferences() {
             try {
                 const data = await DB.get('system', 'hotkey_preferences');
-                this.keymaps = data?.keymaps ? { ...this.defaultKeymaps, ...data.keymaps } : JSON.parse(JSON.stringify(this.defaultKeymaps));
-            } catch { this.keymaps = JSON.parse(JSON.stringify(this.defaultKeymaps)); }
+                const loadedKeymaps = data?.keymaps || {};
+                
+                // Deep Merge: Preserve dynamically registered defaults + apply user's saved maps
+                const merged = JSON.parse(JSON.stringify(this.defaultKeymaps));
+                
+                for (const ctx in this.keymaps) {
+                    if (!merged[ctx]) merged[ctx] = {};
+                    Object.assign(merged[ctx], this.keymaps[ctx]);
+                }
+                
+                for (const ctx in loadedKeymaps) {
+                    if (!merged[ctx]) merged[ctx] = {};
+                    Object.assign(merged[ctx], loadedKeymaps[ctx]);
+                }
+                
+                this.keymaps = merged;
+            } catch (e) {
+                const merged = JSON.parse(JSON.stringify(this.defaultKeymaps));
+                for (const ctx in this.keymaps) {
+                    if (!merged[ctx]) merged[ctx] = {};
+                    Object.assign(merged[ctx], this.keymaps[ctx]);
+                }
+                this.keymaps = merged;
+            }
         },
 
         async savePreferences() {
@@ -583,14 +647,12 @@
             this.modal.id = 'hk-mapper-modal';
             this.modal.className = 'fixed inset-0 bg-black/90 z-[100000] flex items-center justify-center hidden backdrop-blur-sm';
             
-            // Note the structurally redefined layout to ensure the Inspector is permanently visible
             this.modal.innerHTML = `
                 <div class="bg-[#151515] border border-[#333] rounded-xl w-[95vw] max-w-[1250px] h-[85vh] max-h-[850px] shadow-2xl flex flex-col overflow-hidden" onclick="event.stopPropagation()">
                     
                     <div class="flex justify-between items-center px-6 py-4 border-b border-[#333] bg-[#1a1a1a]">
                         <div class="flex items-center gap-6">
                             
-                            <!-- THE PROFESSIONAL FLAT LOGO -->
                             <div class="relative flex items-center select-none pointer-events-none py-1 px-2">
                                 <i class="fa-solid fa-fire absolute text-teal-500/20 text-4xl left-0 z-0"></i>
                                 <h2 class="text-2xl font-bold tracking-widest text-teal-400 uppercase relative z-10 ml-3">HOTKEY</h2>
@@ -609,22 +671,18 @@
 
                     <div class="flex flex-1 overflow-hidden">
                         
-                        <!-- LEFT: Unified Keyboard & Inspector Pane -->
                         <div class="flex-[3] flex flex-col bg-[#0a0a0a] relative min-w-0 border-r border-[#333]">
                             
-                            <!-- Static Header -->
                             <div class="p-6 pb-2 text-center flex-shrink-0">
                                 <p class="text-sm text-gray-400">Click a modifier toggle, then a key to map a shortcut.</p>
                             </div>
                             
-                            <!-- Scrollable Keyboard Canvas -->
                             <div class="flex-1 overflow-y-auto custom-scroll px-6 pb-6">
                                 <div id="hk-keyboard-render" class="max-w-full w-full mx-auto flex flex-col items-center">
                                     <!-- Keyboard generated by JS -->
                                 </div>
                             </div>
                             
-                            <!-- Fixed Bottom Inspector Panel -->
                             <div id="hk-key-inspector" class="bg-[#151515] border-t border-[#333] p-4 flex items-center gap-4 opacity-0 transition-opacity shadow-[0_-10px_30px_rgba(0,0,0,0.5)] flex-shrink-0 z-20">
                                 <button id="hk-ins-close" class="absolute top-2 right-2 text-gray-500 hover:text-white w-6 h-6 flex items-center justify-center rounded transition"><i class="fa-solid fa-xmark"></i></button>
                                 
@@ -639,7 +697,6 @@
 
                         </div>
 
-                        <!-- RIGHT: Command Legend -->
                         <div class="flex-[2] bg-[#151515] flex flex-col min-w-0">
                             <div class="p-4 border-b border-[#333] bg-[#1a1a1a]">
                                 <input type="text" id="hk-cmd-search" placeholder="Search commands..." class="w-full bg-[#111] border border-[#444] text-white p-2 text-sm rounded outline-none focus:border-teal-500 transition">
@@ -746,7 +803,6 @@
                     if (isMapped) classes += ' mapped';
                     if (isSelected) classes += ' selected';
                     
-                    // Highlight modifier keys if their global state is toggled
                     if ((key.c.includes('Control') && this.modCtrl) ||
                         (key.c.includes('Alt') && this.modAlt) ||
                         (key.c.includes('Shift') && this.modShift)) {
@@ -791,11 +847,20 @@
                 const baseCode = el.dataset.code;
                 
                 el.onclick = () => {
-                    // Clicking modifiers on the keyboard visually toggles the exact same state as the top buttons
                     if (baseCode.includes('Control')) { document.getElementById('hk-mod-ctrl').click(); return; }
                     if (baseCode.includes('Alt')) { document.getElementById('hk-mod-alt').click(); return; }
                     if (baseCode.includes('Shift')) { document.getElementById('hk-mod-shift').click(); return; }
-                    if (baseCode === 'CapsLock' || baseCode === 'NumLock') return; // Cannot be assigned
+                    if (baseCode === 'CapsLock' || baseCode === 'NumLock') return;
+
+                    const isPureMod = ['ControlLeft','ControlRight','AltLeft','AltRight','ShiftLeft','ShiftRight'].includes(baseCode);
+                    const activePrefix = this.getCurrentModifierPrefix();
+                    
+                    if (activePrefix.includes('Alt') || baseCode.includes('Alt')) {
+                        if (isPureMod) {
+                            if(typeof Notify !== 'undefined') Notify.show("Alt requires a standard letter/number key.", "fa-ban");
+                            return;
+                        }
+                    }
 
                     this.selectedKey = fullCode;
                     this.renderKeyboard(); 
@@ -803,7 +868,6 @@
                 };
 
                 el.onmouseenter = () => {
-                    // Do not highlight modifier keys in the list
                     if (['ControlLeft','ControlRight','AltLeft','AltRight','ShiftLeft','ShiftRight', 'CapsLock', 'NumLock'].includes(baseCode)) return;
 
                     const cmdId = this.keymaps[this.activeUiContext] ? this.keymaps[this.activeUiContext][fullCode] : null;
