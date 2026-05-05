@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Editor - Pro Workflow</title>
-    <script>const TOOL_VERSION = '2.7.0';</script>
+    <script>const TOOL_VERSION = '2.8.0';</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -147,7 +147,7 @@
             <div class="flex items-center gap-4 h-full flex-1 min-w-0">
                 <div class="flex items-center gap-2 mr-4 flex-shrink-0">
                     <i class="fa-solid fa-layer-group text-teal-400"></i>
-                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.7.0</span>
+                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.8.0</span>
                     <span id="safeModeBadge" class="hidden ml-2 bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider uppercase shadow-md" title="Extensions are temporarily disabled for a clean boot.">Safe Mode</span>
                 </div>
                 
@@ -1142,6 +1142,18 @@
             modules: [],
             isSafeMode: false,
             
+            compareVersions(v1, v2) {
+                const p1 = String(v1).split('.').map(Number);
+                const p2 = String(v2).split('.').map(Number);
+                for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+                    const n1 = p1[i] || 0;
+                    const n2 = p2[i] || 0;
+                    if (n1 > n2) return 1;
+                    if (n1 < n2) return -1;
+                }
+                return 0;
+            },
+
             async init() {
                 this.isSafeMode = window.location.hash.includes('safemode=true') || window.location.search.includes('safemode=true');
                 if (this.isSafeMode) {
@@ -1209,6 +1221,7 @@
                 ];
                 
                 let addedCount = 0;
+                let updatedCount = 0;
                 const btn = document.getElementById('btnInstallDefaults');
                 if(btn) btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Installing...';
                 
@@ -1221,34 +1234,50 @@
                         const nameMatch = content.match(/@name\s+(.+)/);
                         const name = nameMatch ? nameMatch[1].trim() : 'Unnamed Extension';
                         
-                        if(this.modules.find(m => m.name === name)) continue;
-
                         const versionMatch = content.match(/@version\s+([\d\.]+)/);
+                        const fetchedVersion = versionMatch ? versionMatch[1].trim() : '1.0.0';
+                        
                         const devMatch = content.match(/@developer\s+(.+)/);
                         const descMatch = content.match(/@description\s+(.+)/);
+
+                        const existingIdx = this.modules.findIndex(m => m.name === name);
                         
-                        const newMod = { 
-                            name: name, 
-                            version: versionMatch ? versionMatch[1].trim() : '1.0.0', 
-                            developer: devMatch ? devMatch[1].trim() : 'Unknown',
-                            description: descMatch ? descMatch[1].trim() : '',
-                            active: true, 
-                            size: (content.length/1024).toFixed(1)+'KB', 
-                            date: new Date().toLocaleDateString(), 
-                            content: content 
-                        };
+                        let shouldProceed = true;
                         
-                        this.modules.push(newMod);
-                        await DB.put('modules', newMod);
-                        addedCount++;
+                        if (existingIdx > -1) {
+                            if (this.compareVersions(fetchedVersion, this.modules[existingIdx].version) <= 0) {
+                                shouldProceed = false; // Skip if older or same
+                            } else {
+                                this.modules.splice(existingIdx, 1);
+                                updatedCount++;
+                            }
+                        } else {
+                            addedCount++;
+                        }
                         
-                        if (!this.isSafeMode) {
-                            try {
-                                const script = document.createElement('script');
-                                script.textContent = content;
-                                document.body.appendChild(script);
-                            } catch (err) {
-                                console.error(`Syntax Error in default extension ${name}:`, err);
+                        if (shouldProceed) {
+                            const newMod = { 
+                                name: name, 
+                                version: fetchedVersion, 
+                                developer: devMatch ? devMatch[1].trim() : 'Unknown',
+                                description: descMatch ? descMatch[1].trim() : '',
+                                active: true, 
+                                size: (content.length/1024).toFixed(1)+'KB', 
+                                date: new Date().toLocaleDateString(), 
+                                content: content 
+                            };
+                            
+                            this.modules.push(newMod);
+                            await DB.put('modules', newMod);
+                            
+                            if (!this.isSafeMode) {
+                                try {
+                                    const script = document.createElement('script');
+                                    script.textContent = content;
+                                    document.body.appendChild(script);
+                                } catch (err) {
+                                    console.error(`Syntax Error in default extension ${name}:`, err);
+                                }
                             }
                         }
                     } catch(e) {
@@ -1258,10 +1287,14 @@
                 
                 if(btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Defaults';
                 this.render();
-                if(addedCount > 0) {
-                    UI.showAlert("Installation Complete", `Successfully installed ${addedCount} default extensions.`, "fa-check", "text-green-400");
+                
+                if (addedCount > 0 || updatedCount > 0) {
+                    let msg = "";
+                    if (addedCount > 0) msg += `Installed ${addedCount} new modules. `;
+                    if (updatedCount > 0) msg += `Updated ${updatedCount} modules. `;
+                    UI.showAlert("Installation Complete", msg, "fa-check", "text-green-400");
                 } else {
-                    UI.showAlert("Notice", "Defaults are already installed.", "fa-info-circle", "text-teal-400");
+                    UI.showAlert("Notice", "All defaults are already up-to-date.", "fa-info-circle", "text-teal-400");
                 }
             },
 
@@ -1274,6 +1307,8 @@
                         return; 
                     }
                     let addedCount = 0;
+                    let updatedCount = 0;
+                    
                     for (const f of files) {
                         const content = await f.text(); 
                         
@@ -1281,13 +1316,28 @@
                         const name = nameMatch ? nameMatch[1].trim() : f.name.replace('.js','');
                         
                         const versionMatch = content.match(/@version\s+([\d\.]+)/);
+                        const fetchedVersion = versionMatch ? versionMatch[1].trim() : '1.0.0';
                         const devMatch = content.match(/@developer\s+(.+)/);
                         const descMatch = content.match(/@description\s+(.+)/);
 
-                        if(!this.modules.find(m => m.name === name)) {
+                        const existingIdx = this.modules.findIndex(m => m.name === name);
+                        let shouldAdd = true;
+                        
+                        if (existingIdx > -1) {
+                            if (this.compareVersions(fetchedVersion, this.modules[existingIdx].version) <= 0) {
+                                shouldAdd = false; // Already newer or equal
+                            } else {
+                                this.modules.splice(existingIdx, 1);
+                                updatedCount++;
+                            }
+                        } else {
+                            addedCount++;
+                        }
+
+                        if(shouldAdd) {
                             const newMod = { 
                                 name, 
-                                version: versionMatch ? versionMatch[1].trim() : '1.0.0', 
+                                version: fetchedVersion, 
                                 developer: devMatch ? devMatch[1].trim() : '',
                                 description: descMatch ? descMatch[1].trim() : '',
                                 active: true, 
@@ -1297,7 +1347,6 @@
                             };
                             this.modules.push(newMod);
                             await DB.put('modules', newMod);
-                            addedCount++;
                             
                             if (!this.isSafeMode) {
                                 try {
@@ -1309,10 +1358,10 @@
                                     UI.showAlert("Syntax Error", `Syntax Error in <b>${f.name}</b>!<br><br>The file appears to be truncated or corrupted. Please re-copy the code completely and ensure no closing brackets are missing.`, "fa-bug", "text-red-400");
                                 }
                             }
-                            Notify.show(`Module '${name}' loaded`, 'fa-puzzle-piece');
+                            Notify.show(`Module '${name}' processed`, 'fa-puzzle-piece');
                         }
                     }
-                    if(addedCount > 0) this.render();
+                    if(addedCount > 0 || updatedCount > 0) this.render();
                 };
                 input.click();
             },
@@ -1943,8 +1992,8 @@
                     Store.selectedTrackId = null; 
                     Store.saveState(); 
                     UI.checkExportButton();
-                    UI.refreshTimeline();
-                    Player.safeRenderFrame();
+                    if (typeof UI !== 'undefined') UI.refreshTimeline();
+                    if (typeof Player !== 'undefined') Player.safeRenderFrame();
                 }
             },
             startDrag(e, clip, trackId) {
@@ -2348,7 +2397,7 @@
                         }
                         txtEl.dataset.used = 'true';
                         
-                        const content = tClip.text !== undefined ? tClip.text : asset.name;
+                        const content = tClip.text !== undefined ? String(tClip.text) : String(asset.name);
                         const color = tClip.color !== undefined ? tClip.color : (asset.color || '#ffffff');
                         
                         txtEl.innerText = content;
@@ -2442,7 +2491,7 @@
                     const asset = Store.assets.find(a => a && a.id === tClip.assetId);
                     if (!asset) return; 
                     
-                    const content = tClip.text !== undefined ? tClip.text : asset.name;
+                    const content = tClip.text !== undefined ? String(tClip.text) : String(asset.name);
                     const color = tClip.color !== undefined ? tClip.color : (asset.color || 'white');
                     
                     const baseFontSize = tClip.fontSize || 60; 
@@ -2456,8 +2505,17 @@
                     ctx.shadowBlur = 10;
                     
                     const cx = tClip.x !== undefined ? (tClip.x / 100) * this.compositorCanvas.width : this.compositorCanvas.width / 2;
-                    const cy = tClip.y !== undefined ? (tClip.y / 100) * this.compositorCanvas.height : this.compositorCanvas.height / 2;
-                    ctx.fillText(content, cx, cy);
+                    let cy = tClip.y !== undefined ? (tClip.y / 100) * this.compositorCanvas.height : this.compositorCanvas.height / 2;
+                    
+                    // 🔥 FEATURE FIX: Multiline Support for WebM Export Rendering
+                    const lines = content.split('\n');
+                    const lineHeight = scaledFontSize * 1.2;
+                    const totalHeight = lineHeight * lines.length;
+                    const startY = cy - (totalHeight / 2) + (lineHeight / 2);
+
+                    lines.forEach((line, index) => {
+                        ctx.fillText(line, cx, startY + (index * lineHeight));
+                    });
                 });
             }
         };
@@ -2725,7 +2783,6 @@
                              filterComplex += `,scale=${targetW}:${targetH}:force_original_aspect_ratio=decrease,pad=${targetW}:${targetH}:(ow-iw)/2:(oh-ih)/2`; 
                         }
                         
-                        // FFmpeg Export Hooks (Middleware)
                         if (Store.middleware && Store.middleware.length > 0) {
                             let mwFilters = [];
                             Store.middleware.forEach(mw => {
