@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Editor - Pro Workflow</title>
-    <script>const TOOL_VERSION = '2.8.0';</script>
+    <script>const TOOL_VERSION = '2.9.0';</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -147,7 +147,7 @@
             <div class="flex items-center gap-4 h-full flex-1 min-w-0">
                 <div class="flex items-center gap-2 mr-4 flex-shrink-0">
                     <i class="fa-solid fa-layer-group text-teal-400"></i>
-                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.8.0</span>
+                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.9.0</span>
                     <span id="safeModeBadge" class="hidden ml-2 bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider uppercase shadow-md" title="Extensions are temporarily disabled for a clean boot.">Safe Mode</span>
                 </div>
                 
@@ -508,12 +508,28 @@
 
         const Notify = {
             timeout: null,
-            show(msg, icon='fa-check') {
+            queue: [],
+            isShowing: false,
+            show(msg, icon='fa-check', duration=2000) {
+                this.queue.push({msg, icon, duration});
+                if (!this.isShowing) this.processQueue();
+            },
+            processQueue() {
+                if (this.queue.length === 0) {
+                    this.isShowing = false;
+                    return;
+                }
+                this.isShowing = true;
+                const next = this.queue.shift();
                 const el = document.getElementById('toast');
-                el.innerHTML = `<i class="fa-solid ${icon} mr-2"></i> ${msg}`;
+                el.innerHTML = `<i class="fa-solid ${next.icon} mr-2"></i> ${next.msg}`;
                 el.classList.add('show');
-                clearTimeout(this.timeout);
-                this.timeout = setTimeout(() => el.classList.remove('show'), 2000);
+                
+                this.timeout = setTimeout(() => {
+                    el.classList.remove('show');
+                    // Add a small 400ms buffer to allow the CSS exit transition to finish gracefully
+                    setTimeout(() => this.processQueue(), 400); 
+                }, next.duration);
             }
         };
 
@@ -1176,8 +1192,77 @@
 
                 if (!this.isSafeMode) {
                     this.runActiveModules(); 
+                    this.checkUpdatesBackground();
                 }
             },
+            
+            async checkUpdatesBackground() {
+                if (this.isSafeMode) return;
+                if (sessionStorage.getItem('wasm_ext_update_checked')) return;
+                sessionStorage.setItem('wasm_ext_update_checked', 'true');
+
+                try {
+                    let repoUrl = 'https://api.github.com/repos/Cleo876/wasm-video-editor/contents/Extensions';
+                    let response = await fetch(repoUrl);
+                    if (response.ok) {
+                        let files = await response.json();
+                        await this.processGitHubFilesForUpdates(files);
+                    }
+                    
+                    repoUrl = 'https://api.github.com/repos/Cleo876/wasm-video-editor/contents/Transitions';
+                    response = await fetch(repoUrl);
+                    if (response.ok) {
+                        let files = await response.json();
+                        await this.processGitHubFilesForUpdates(files);
+                    }
+                    
+                    repoUrl = 'https://api.github.com/repos/Cleo876/wasm-video-editor/contents/Graph%20Compositing';
+                    response = await fetch(repoUrl);
+                    if (response.ok) {
+                        let files = await response.json();
+                        await this.processGitHubFilesForUpdates(files);
+                    }
+                    
+                    if (this.modules.some(m => m.updateAvailable)) {
+                        this.render(); 
+                    }
+                } catch(e) {
+                    console.warn("Background update check failed:", e);
+                }
+            },
+
+            async processGitHubFilesForUpdates(files) {
+                for (const file of files) {
+                    if (file.name.endsWith('.js')) {
+                        try {
+                            const rawRes = await fetch(file.download_url);
+                            const content = await rawRes.text();
+                            
+                            const nameMatch = content.match(/@name\s+(.+)/);
+                            const versionMatch = content.match(/@version\s+([\d\.]+)/);
+                            
+                            if (nameMatch && versionMatch) {
+                                const name = nameMatch[1].trim();
+                                const fetchedVersion = versionMatch[1].trim();
+                                
+                                const existingIdx = this.modules.findIndex(m => m.name === name);
+                                if (existingIdx > -1) {
+                                    const localMod = this.modules[existingIdx];
+                                    if (this.compareVersions(fetchedVersion, localMod.version) > 0) {
+                                        localMod.updateAvailable = fetchedVersion;
+                                        localMod.remoteContent = content; 
+                                        
+                                        if (!localMod.muteNotifications) {
+                                            Notify.show(`Update available for ${name} (v${fetchedVersion})`, 'fa-bell', 4500);
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (e) {}
+                    }
+                }
+            },
+
             async runActiveModules() {
                 for (const m of this.modules) {
                     if (m.active && m.content) {
@@ -1246,7 +1331,7 @@
                         
                         if (existingIdx > -1) {
                             if (this.compareVersions(fetchedVersion, this.modules[existingIdx].version) <= 0) {
-                                shouldProceed = false; // Skip if older or same
+                                shouldProceed = false; 
                             } else {
                                 this.modules.splice(existingIdx, 1);
                                 updatedCount++;
@@ -1264,7 +1349,8 @@
                                 active: true, 
                                 size: (content.length/1024).toFixed(1)+'KB', 
                                 date: new Date().toLocaleDateString(), 
-                                content: content 
+                                content: content,
+                                muteNotifications: false
                             };
                             
                             this.modules.push(newMod);
@@ -1325,7 +1411,7 @@
                         
                         if (existingIdx > -1) {
                             if (this.compareVersions(fetchedVersion, this.modules[existingIdx].version) <= 0) {
-                                shouldAdd = false; // Already newer or equal
+                                shouldAdd = false; 
                             } else {
                                 this.modules.splice(existingIdx, 1);
                                 updatedCount++;
@@ -1343,7 +1429,8 @@
                                 active: true, 
                                 size: (f.size/1024).toFixed(1)+'KB', 
                                 date: new Date().toLocaleDateString(), 
-                                content: content 
+                                content: content,
+                                muteNotifications: false
                             };
                             this.modules.push(newMod);
                             await DB.put('modules', newMod);
@@ -1382,6 +1469,87 @@
                     Notify.show('Extension Removed', 'fa-trash');
                 });
             },
+            openUpdateMenu(name) {
+                const m = this.modules.find(x => x.name === name);
+                if (!m) return;
+                
+                let modal = document.getElementById('extUpdateModal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'extUpdateModal';
+                    modal.className = 'fixed inset-0 bg-black/80 z-[100005] flex items-center justify-center hidden backdrop-blur-sm';
+                    document.body.appendChild(modal);
+                }
+                
+                const isUpdate = !!m.updateAvailable;
+                
+                modal.innerHTML = `
+                    <div class="bg-[#1e1e1e] border border-[#333] p-6 rounded-xl w-[400px] shadow-2xl flex flex-col">
+                        <div class="flex justify-between items-center mb-4 border-b border-[#333] pb-3">
+                            <h2 class="text-lg font-bold text-white flex items-center"><i class="fa-solid fa-bell text-teal-400 mr-2"></i> ${m.name}</h2>
+                            <button onclick="document.getElementById('extUpdateModal').classList.add('hidden')" class="text-gray-500 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        
+                        <div class="mb-5 bg-[#111] p-4 rounded border border-[#333]">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs text-gray-500 uppercase tracking-widest font-bold">Current Version</span>
+                                <span class="text-sm text-gray-300 font-mono">v${m.version || '1.0.0'}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-gray-500 uppercase tracking-widest font-bold">Latest Version</span>
+                                <span class="text-sm font-mono ${isUpdate ? 'text-teal-400 font-bold' : 'text-gray-300'}">v${isUpdate ? m.updateAvailable : (m.version || '1.0.0')}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between bg-[#111] p-3 rounded border border-[#333] mb-5">
+                            <span class="text-xs text-gray-300" id="muteIconLabel_${m.name.replace(/[^a-zA-Z0-9]/g, '')}"><i class="fa-solid ${m.muteNotifications ? 'fa-bell-slash' : 'fa-bell'} mr-2"></i> Update Notifications</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer" ${!m.muteNotifications ? 'checked' : ''} onchange="ModuleManager.toggleMute('${m.name}')">
+                                <div class="w-9 h-5 bg-[#333] border border-[#444] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-gray-400 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-[#004d45] peer-checked:border-[#006e63] peer-checked:after:bg-[#00d2be] shadow-inner"></div>
+                            </label>
+                        </div>
+                        
+                        <div class="flex justify-end gap-2 border-t border-[#333] pt-4">
+                            <button onclick="document.getElementById('extUpdateModal').classList.add('hidden')" class="px-4 py-2 text-gray-400 hover:text-white text-xs font-bold transition">Close</button>
+                            ${isUpdate ? `<button onclick="ModuleManager.applyUpdate('${m.name}')" class="bg-teal-600 hover:bg-teal-500 text-white text-sm font-bold px-5 py-2 rounded transition shadow-lg shadow-teal-900/20"><i class="fa-solid fa-cloud-arrow-down mr-2"></i> Update Now</button>` : `<button disabled class="bg-[#333] text-gray-500 text-sm font-bold px-5 py-2 rounded cursor-not-allowed border border-[#444]">Up to Date</button>`}
+                        </div>
+                    </div>
+                `;
+                
+                modal.classList.remove('hidden');
+            },
+            async toggleMute(name) {
+                const m = this.modules.find(x => x.name === name);
+                if (m) {
+                    m.muteNotifications = !m.muteNotifications;
+                    await DB.put('modules', m);
+                    this.render(); 
+                    
+                    const muteLabel = document.getElementById(`muteIconLabel_${m.name.replace(/[^a-zA-Z0-9]/g, '')}`);
+                    if (muteLabel) {
+                         muteLabel.innerHTML = `<i class="fa-solid ${m.muteNotifications ? 'fa-bell-slash' : 'fa-bell'} mr-2"></i> Update Notifications`;
+                    }
+                }
+            },
+            async applyUpdate(name) {
+                const m = this.modules.find(x => x.name === name);
+                if (m && m.updateAvailable && m.remoteContent) {
+                    m.version = m.updateAvailable;
+                    m.content = m.remoteContent;
+                    m.updateAvailable = null;
+                    m.remoteContent = null;
+                    m.size = (m.content.length/1024).toFixed(1)+'KB';
+                    m.date = new Date().toLocaleDateString();
+                    
+                    await DB.put('modules', m);
+                    
+                    const modal = document.getElementById('extUpdateModal');
+                    if(modal) modal.classList.add('hidden');
+                    this.render();
+                    
+                    Notify.show(`${name} Updated to v${m.version}! Reload to apply.`, 'fa-check', 4000);
+                }
+            },
             render() {
                 const list = document.getElementById('modulesList');
                 document.getElementById('moduleCount').innerText = `${this.modules.length} extension${this.modules.length !== 1 ? 's' : ''} installed`;
@@ -1403,7 +1571,11 @@
                                 <div class="text-[9px] text-gray-600 mt-1.5 uppercase font-mono tracking-tighter">${m.size} • Added ${m.date}</div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-6 ml-4">
+                        <div class="flex items-center gap-4 ml-4">
+                            <button onclick="ModuleManager.openUpdateMenu('${m.name.replace(/'/g, "\\'")}')" class="relative w-8 h-8 flex items-center justify-center rounded text-gray-400 hover:text-white hover:bg-[#333] transition" title="Updates & Notifications">
+                                <i class="fa-solid ${m.muteNotifications ? 'fa-bell-slash text-gray-600' : 'fa-bell'}"></i>
+                                ${m.updateAvailable ? '<span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-[#1a1a1a]"></span>' : ''}
+                            </button>
                             <label class="relative inline-flex items-center cursor-pointer" title="${m.active ? 'Disable' : 'Enable'}">
                                 <input type="checkbox" value="" class="sr-only peer" ${m.active ? 'checked' : ''} onchange="ModuleManager.toggle('${m.name}')">
                                 <div class="w-9 h-5 bg-[#333] border border-[#444] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-gray-400 after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-[#004d45] peer-checked:border-[#006e63] peer-checked:after:bg-[#00d2be] shadow-inner"></div>
