@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forge™ - Official Prize Sponsor</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        forge: {
+                            bg: '#0a0a0c',        
+                            panel: '#15151a',     
+                            amber: '#f59e0b',     
+                            glow: '#d97706',      
+                            purple: '#7c3aed',    
+                            teal: '#0ea5e9',      
+                            text: '#f8fafc',
+                            muted: '#94a3b8'
+                        }
+                    },
+                    fontFamily: { 
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Josefin Sans', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { 
+            background-color: #0a0a0c; 
+            color: #f8fafc; 
+            margin: 0; 
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Abstract Procedural Background Grid */
+        .bg-grid {
+            background-image: 
+                linear-gradient(rgba(245, 158, 11, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(245, 158, 11, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Premium Glassmorphism */
+        .glass {
+            background: rgba(21, 21, 26, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Input Styling */
+        .forge-input {
+            width: 100%; 
+            background: rgba(255, 255, 255, 0.02); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            color: white;
+            padding: 0.875rem 1rem; 
+            border-radius: 0.75rem; 
+            transition: all 0.3s ease; 
+            outline: none; 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.875rem;
+        }
+        .forge-input:focus { 
+            border-color: #f59e0b; 
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.15); 
+            background: rgba(255, 255, 255, 0.05); 
+        }
+        .forge-input::placeholder { color: #475569; }
+        
+        /* Select Dropdown Styling tweaks */
+        select.forge-input {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.2em;
+        }
+        select.forge-input option {
+            background-color: #15151a;
+            color: #f8fafc;
+        }
+
+        /* Custom Scrollbar for Textarea */
+        .forge-input::-webkit-scrollbar { width: 8px; }
+        .forge-input::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        .forge-input::-webkit-scrollbar-thumb { background: rgba(245,158,11,0.3); border-radius: 4px; }
+        .forge-input::-webkit-scrollbar-thumb:hover { background: rgba(245,158,11,0.6); }
+
+        /* Typography Highlights */
+        .text-gradient {
+            background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #d97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Fix for Bold text inside font-light paragraphs */
+        strong, b {
+            font-weight: 700 !important;
+            color: #f8fafc !important; /* Forces bold text to be bright white instead of muted gray */
+        }
+
+        /* Success Animation States */
+        #success-screen { 
+            opacity: 0; 
+            pointer-events: none; 
+            transition: opacity 0.5s ease; 
+            position: absolute; 
+            inset: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        #success-screen.active { 
+            opacity: 1; 
+            pointer-events: auto; 
+            z-index: 50;
+        }
+        #form-container { 
+            transition: opacity 0.5s ease, transform 0.5s ease; 
+        }
+        #form-container.hidden-fade { 
+            opacity: 0; 
+            pointer-events: none; 
+            transform: scale(0.95); 
+        }
+
+        /* Custom Checkbox */
+        .forge-checkbox {
+            appearance: none;
+            background-color: rgba(255, 255, 255, 0.05);
+            margin: 0;
+            font: inherit;
+            color: currentColor;
+            width: 1.15em;
+            height: 1.15em;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.25em;
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+        .forge-checkbox::before {
+            content: "";
+            width: 0.65em;
+            height: 0.65em;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em #f59e0b;
+            background-color: #f59e0b;
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+        .forge-checkbox:checked::before { transform: scale(1); }
+        .forge-checkbox:checked { border-color: #f59e0b; background-color: rgba(245, 158, 11, 0.1); }
+    </style>
+</head>
+<body class="py-12 px-6 lg:px-12 flex items-center justify-center relative">
+    
+    <div class="bg-grid"></div>
+
+    <div class="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-start relative z-10">
+        
+        <!-- LEFT COLUMN: The Mission & The Ask -->
+        <div class="col-span-1 lg:col-span-5 lg:sticky lg:top-12 flex flex-col gap-8">
+            <div>
+                <div class="inline-flex items-center gap-3 px-5 py-2 rounded-full glass border border-forge-amber/30 text-forge-amber text-[10px] font-bold tracking-[0.3em] uppercase mb-6 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+                    <i class="fa-solid fa-fire-flame-curved"></i> Indie Prize Sponsor
+                </div>
+                <h1 class="font-display text-5xl lg:text-6xl font-bold leading-tight mb-4 text-white">
+                    Forge™ <span class="text-gradient">Editor's Jam</span>
+                </h1>
+                <p class="text-forge-muted font-light leading-relaxed mb-6">
+                    A groundbreaking 48-hour global event uniting two distinct creative worlds. <strong>Video Editors</strong> are challenged to cut a 90-second cinematic short from donated cinematic footage based on a theme that will be announced at the start of the event, while <strong>Web Developers</strong> simultaneously code live custom JavaScript extensions to upgrade the editor they are actively using. August 14–16, 2026.
+                </p>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Philanthropy Card -->
+                <div class="glass p-6 rounded-2xl border-l-4 border-forge-purple bg-gradient-to-r from-forge-purple/5 to-transparent">
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-gift text-forge-purple"></i> About Forge™ (The Brand)
+                    </h3>
+                    <p class="text-sm text-forge-muted font-light leading-relaxed">
+                        Welcome to the <strong>Forge™ Suite</strong>: A philanthropic collection of 15+ open-source, client-side browser tools built on the God-led principle that creatives must own and control their software. We challenge the SaaS model that revokes access when subscriptions end.
+                    </p>
+                    <p class="text-sm text-forge-muted font-light leading-relaxed mt-3">
+                        Truly offline-first, our Community Edition tools are distributed as single, self-contained HTML files. No servers. No tracking. You download the tool, you own the code, and it is yours to command forever.
+                    </p>
+                </div>
+
+                <!-- The Tool Card -->
+                <div class="glass p-6 rounded-2xl border-l-4 border-forge-teal bg-gradient-to-r from-forge-teal/5 to-transparent">
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-microchip text-forge-teal"></i> The Tool: WASM Video Editor
+                    </h3>
+                    <p class="text-sm text-forge-muted font-light leading-relaxed">
+                        A professional-grade, 100% client-side Non-Linear Editor (NLE) running entirely in your browser. Powered by <strong>WebAssembly</strong> (<strong>FFmpeg.wasm</strong>), the <strong>HTML5 Canvas API</strong>, and the <strong>Web Audio API</strong>, this editor delivers a desktop-like workflow with zero server uploads, ensuring total privacy and instantaneous performance.
+                    </p>
+                    <p class="text-sm text-forge-muted font-light leading-relaxed mt-3">
+                        It features real-time Canvas compositing, a multi-track timeline, and a highly modular, hot-pluggable <code>.js</code> extension ecosystem.
+                    </p>
+                </div>
+
+                <!-- The Ask Card -->
+                <div class="glass p-6 rounded-2xl border-l-4 border-forge-amber bg-gradient-to-r from-forge-amber/5 to-transparent shadow-[0_0_20px_rgba(245,158,11,0.05)]">
+                    <h3 class="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-handshake text-forge-amber"></i> The Indie Showcase
+                    </h3>
+                    <p class="text-sm text-forge-muted font-light leading-relaxed">
+                        In partnership with the <strong>Jamaica Game Developer Society (JGDS)</strong>, we are seeking Steam Keys for our live engagement rewards. This event replaces standard corporate prizes with a curated Indie Showcase. By donating keys, you receive highly-targeted, organic exposure directly to dedicated PC power-users, developers, and global creators who value independent games.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: The Secure Form Container -->
+        <div class="col-span-1 lg:col-span-7 relative">
+            <div id="form-container" class="glass p-8 md:p-10 rounded-[2.5rem] border-t-4 border-white/10 relative overflow-hidden shadow-2xl">
+                
+                <!-- Decorative background icon -->
+                <div class="absolute -top-10 -right-10 p-6 opacity-5 rotate-12 pointer-events-none">
+                    <i class="fa-brands fa-steam text-[15rem] text-white"></i>
+                </div>
+
+                <div class="mb-8 relative z-10 border-b border-white/10 pb-6">
+                    <h2 class="text-2xl font-bold text-white mb-1">Submit Your Keys</h2>
+                    <p class="text-xs text-forge-muted font-light uppercase tracking-widest">Secure Client-Side Transmission</p>
+                </div>
+
+                <!-- FORM USES FETCH API NOW -->
+                <form action="https://docs.google.com/forms/d/e/1FAIpQLSf75yylM1y44Z7Z_px0nhz4gnw3LG6ftWI-6ozPUEf1TmkeNw/formResponse" method="POST" id="steam-key-form" class="space-y-6 relative z-10">
+                    
+                    <!-- Row 1: Studio & Game -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-[10px] font-bold tracking-widest text-forge-muted uppercase mb-2 ml-1">Studio Name *</label>
+                            <input type="text" name="entry.818256077" placeholder="e.g. Spritewrench Studios" required class="forge-input">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold tracking-widest text-forge-muted uppercase mb-2 ml-1">Game Title *</label>
+                            <input type="text" name="entry.2094808770" placeholder="e.g. Duppy Detective Tashia" required class="forge-input">
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Contact & Socials -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <!-- Email with Tooltip -->
+                            <div class="relative flex items-center gap-2 mb-2 ml-1 group w-max">
+                                <label class="block text-[10px] font-bold tracking-widest text-forge-muted uppercase cursor-help">Contact Email *</label>
+                                <i class="fa-solid fa-circle-info text-forge-muted/60 text-[10px] cursor-help"></i>
+                                <!-- Tooltip Box -->
+                                <div class="absolute bottom-full left-0 mb-2 w-64 p-3 bg-forge-panel border border-white/10 rounded-xl text-xs text-forge-muted opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 shadow-xl">
+                                    Required securely in case a key throws an error, or to send a brief post-jam 'Thank You' recap! We respect your inbox.
+                                </div>
+                            </div>
+                            <input type="email" name="entry.1222449361" placeholder="studio@example.com" required class="forge-input">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold tracking-widest text-forge-muted uppercase mb-2 ml-1 mt-[2px]">Social Handles <span class="text-forge-muted/50 font-normal tracking-normal">(Optional)</span></label>
+                            <input type="text" name="entry.2090537355" placeholder="@YourStudio" class="forge-input">
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Promo Art & Key Count -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                        <div class="md:col-span-4">
+                            <label class="block text-[10px] font-bold tracking-widest text-forge-muted uppercase mb-2 ml-1">Amount *</label>
+                            <!-- Dropdown replacing the number input -->
+                            <select name="entry.581087922" required class="forge-input cursor-pointer">
+                                <option value="" disabled selected>Select...</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6-8">6-8</option>
+                                <option value="9-10">9-10</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-8">
+                            <label class="block text-[10px] font-bold tracking-widest text-forge-muted uppercase mb-2 ml-1">Promo Art Link <span class="text-forge-muted/50 font-normal tracking-normal">(Optional)</span></label>
+                            <input type="url" name="entry.312225132" placeholder="Imgur, Drive, Dropbox URL..." class="forge-input">
+                        </div>
+                    </div>
+                    
+                    <!-- MISSING FIELD: Game Pitch / Steam Link -->
+                    <div>
+                        <label class="block text-[10px] font-bold tracking-widest text-forge-muted uppercase mb-2 ml-1">Game Pitch / Steam Page Link *</label>
+                        <!-- IMPORTANT: Replace YOUR_STEAM_LINK_ID with the actual entry ID from Google Forms -->
+                        <input type="url" name="entry.YOUR_STEAM_LINK_ID" placeholder="https://store.steampowered.com/app/..." required class="forge-input">
+                    </div>
+
+                    <!-- Row 4: The Keys -->
+                    <div>
+                        <label class="block text-[10px] font-bold tracking-widest text-forge-muted uppercase mb-2 ml-1 flex justify-between">
+                            <span>The Keys *</span>
+                            <span class="text-forge-amber font-normal tracking-normal normal-case"><i class="fa-brands fa-steam"></i> Steam Preferred</span>
+                        </label>
+                        <textarea name="entry.2116703802" rows="4" placeholder="Paste keys here, separated by commas or new lines.&#10;XXXXX-XXXXX-XXXXX&#10;XXXXX-XXXXX-XXXXX" required class="forge-input resize-y"></textarea>
+                    </div>
+
+                    <!-- Row 5: Agreements -->
+                    <div class="space-y-4 bg-white/5 p-5 rounded-xl border border-white/5">
+                        <label class="flex items-start gap-3 cursor-pointer group">
+                            <!-- MUST exactly match value expected by Google Form -->
+                            <input type="checkbox" name="entry.2051353180" value="Yes, please acknowledge me/my studio" class="forge-checkbox">
+                            <span class="text-sm text-forge-muted group-hover:text-white transition-colors leading-snug">Yes, please officially acknowledge me/my studio as a Sponsor during the giveaways.</span>
+                        </label>
+                        
+                        <label class="flex items-start gap-3 cursor-pointer group">
+                            <!-- MUST exactly match value expected by Google Form -->
+                            <input type="checkbox" name="entry.1514035749" value="I agree and confirm the keys are valid." class="forge-checkbox" required>
+                            <span class="text-sm text-forge-muted group-hover:text-white transition-colors leading-snug">I confirm these keys are valid, unredeemed, and not regionally locked. *</span>
+                        </label>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="pt-2">
+                        <button type="submit" id="submit-btn" class="w-full bg-forge-amber hover:bg-forge-glow text-forge-bg font-bold py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:shadow-[0_0_30px_rgba(245,158,11,0.5)] flex items-center justify-center gap-3">
+                            <i class="fa-solid fa-lock text-sm"></i> Securely Submit to Database
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Custom Success UI Overlay -->
+            <div id="success-screen" class="glass rounded-[2.5rem] border border-forge-amber/30 text-center p-12 lg:p-20 absolute inset-0 z-50">
+                <div class="w-24 h-24 bg-forge-amber/20 text-forge-amber rounded-full flex items-center justify-center text-4xl mx-auto mb-8 shadow-[0_0_40px_rgba(245,158,11,0.4)]">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h2 class="text-4xl font-display font-bold text-white mb-4">Keys Secured.</h2>
+                <p class="text-lg text-forge-muted font-light mb-12 max-w-md mx-auto leading-relaxed">
+                    Thank you for supporting the grassroots open-source movement. Your game will be officially showcased to the global creators of the Forge Editor's Jam.
+                </p>
+                <div class="inline-block border-t border-white/10 pt-8 mt-4">
+                    <p class="text-xs font-bold text-forge-amber tracking-[0.5em] uppercase opacity-80">Forge™. Own. Forever.</p>
+                </div>
+            </div>
+            
+            <!-- Powered by Google Forms Badge (Moved here to scroll naturally) -->
+            <div class="mt-6 pr-4 flex justify-end items-center gap-2 opacity-40 hover:opacity-100 transition-opacity duration-300 select-none">
+                <span class="text-[10px] font-bold text-forge-muted uppercase tracking-widest">Powered by Google Forms</span>
+                <svg class="w-4 h-4 text-forge-muted" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 14H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('steam-key-form').addEventListener('submit', function(e) {
+            e.preventDefault(); // Stop standard form submission completely
+
+            const form = e.target;
+            const formData = new FormData(form);
+            const btn = document.getElementById('submit-btn');
+
+            // Set loading state
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Transmitting...';
+            btn.style.opacity = '0.8';
+            btn.style.pointerEvents = 'none';
+
+            // Send via Fetch API (no-cors bypasses the file:/// local block)
+            fetch(form.action, {
+                method: 'POST',
+                mode: 'no-cors', // Crucial for submitting cross-origin from a static page/local file
+                body: formData
+            })
+            .then(() => {
+                // With 'no-cors', we don't get a strict response code back, but resolving means it fired successfully.
+                triggerSuccess();
+            })
+            .catch((error) => {
+                console.error('Submission Error:', error);
+                // Reset button state
+                btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Network Error. Try Again.';
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+                alert("Submission failed. Please check your internet connection and try again.");
+            });
+        });
+
+        function triggerSuccess() {
+            // Smoothly fade out form
+            document.getElementById('form-container').classList.add('hidden-fade');
+            
+            // Bring in the beautiful success screen
+            setTimeout(() => {
+                document.getElementById('success-screen').classList.add('active');
+                
+                // Scroll to top on mobile so they see the success message
+                if(window.innerWidth < 1024) {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }, 400);
+        }
+    </script>
+</body>
+</html>
