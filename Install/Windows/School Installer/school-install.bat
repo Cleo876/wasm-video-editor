@@ -48,37 +48,7 @@ powershell -NoProfile -Command "$ws=New-Object -ComObject WScript.Shell; $s=$ws.
 :: Safe Mode shortcut
 powershell -NoProfile -Command "$ws=New-Object -ComObject WScript.Shell; $s=$ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\SAFEMODE WASM Video Editor.lnk'); $s.TargetPath='!EDGE_PATH!'; $s.Arguments='--app=\"%SAFE_URL%\" --user-data-dir=\"!DATA_DIR!\"'; $s.IconLocation='%SAFE_ICON_PATH%'; $s.Save()"
 
-:: ========================================================================
-:: WALLPAPER ROTATION SETUP (added for schools)
-:: ========================================================================
 echo.
-echo Setting up wallpaper rotation (every 20-25 min, random)...
-
-:: Create persistent folder for wallpaper system
-set "WALLPAPER_DIR=%APPDATA%\ForgeWallpapers"
-if not exist "!WALLPAPER_DIR!" mkdir "!WALLPAPER_DIR!"
-
-:: Copy the persistent rotation script
-copy /Y "%~dp0rotate-wallpaper.ps1" "!WALLPAPER_DIR!\rotate-wallpaper.ps1" >nul
-
-:: Start the background rotation immediately, hidden, so it doesn't block the installer
-start /min powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File "!WALLPAPER_DIR!\rotate-wallpaper.ps1" >nul 2>&1
-
-:: Remove any old tasks
-schtasks /delete /tn "Forge Wallpaper Rotation" /f >nul 2>&1
-schtasks /delete /tn "Forge Wallpaper Rotation Mid-Session" /f >nul 2>&1
-
-:: Schedule to start at every logon
-schtasks /create /tn "Forge Wallpaper Rotation" /tr "powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File \"!WALLPAPER_DIR!\rotate-wallpaper.ps1\"" /sc ONLOGON /f >nul 2>&1
-
-:: Restart every 30 minutes (self-healing)
-schtasks /create /tn "Forge Wallpaper Rotation Mid-Session" /tr "powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File \"!WALLPAPER_DIR!\rotate-wallpaper.ps1\"" /sc MINUTE /mo 30 /f >nul 2>&1
-
-echo  - Background rotation installed (random 20-25 min interval, self-healing)
-
-echo.
-echo ========================================
-echo Success! Both editor modes are on your Desktop.
-echo Wallpapers will rotate automatically every 20-25 minutes.
+echo Success! Both modes are on your Desktop, sharing the same project data.
 echo Closing in 2 seconds...
 timeout /t 2 >nul
