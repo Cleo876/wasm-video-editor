@@ -1,0 +1,87 @@
+===================================================================
+                WASM Video Editor — Windows Edition
+===================================================================
+
+Everything you need is already in this folder.
+Installation is just one double‑click.
+
+_______________________________________________________
+📁 BEFORE YOU INSTALL
+_______________________________________________________
+
+1. Move this entire folder to a permanent spot where it won't
+   be accidentally deleted (Documents, a "My Apps" folder, etc.).
+
+   IMPORTANT: Once you install, keep the folder in this location.
+   Moving it later will break the shortcuts.
+
+2. Check that the folder contains these four files:
+
+   • install.bat
+   • uninstall.bat
+   • layer.ico
+   • safe-layers.ico
+
+   (They’re already included — you don't need to create or convert
+   anything.)
+
+_______________________________________________________
+⚙️ HOW TO INSTALL
+_______________________________________________________
+
+1. Open this folder in File Explorer (you're probably here now).
+
+2. Double‑click   install.bat
+
+   A black window will appear briefly. It will:
+   – Find Microsoft Edge on your PC (no download needed)
+   – Place two shortcuts on your Desktop:
+
+        →   WASM Video Editor
+        →   SAFEMODE WASM Video Editor
+
+   The window closes automatically after a couple of seconds.
+
+3. All done! Double‑click any of the shortcuts to launch the editor
+   in a clean, borderless window. Both share the same project data
+   (videos, timelines, extensions) — they just open in different modes.
+
+_______________________________________________________
+❓ WHY IS THERE A SAFE MODE?
+_______________________________________________________
+
+If an extension ever makes the editor unstable, open the
+SAFEMODE shortcut. Safe Mode runs the editor with all extensions
+temporarily disabled, so you can open the Extension Manager and
+remove the faulty one. After that, close Safe Mode and switch back
+to the regular shortcut — everything works again.
+
+_______________________________________________________
+🗑️ HOW TO UNINSTALL
+_______________________________________________________
+
+You can clean up everything quickly:
+
+1. Open this folder again.
+
+2. Double‑click   uninstall.bat
+
+   The script will ask two yes/no questions:
+   – Remove the Desktop shortcuts?            (Y)
+   – Delete the sandboxed browser data?        (Y)
+
+   Just type Y (or yes, Yes, YES … anything starting with "y")
+   and press Enter.
+
+3. Optionally delete this whole folder afterwards.
+
+_______________________________________________________
+📄 LICENSE
+_______________________________________________________
+
+This project is licensed under the MIT License.
+See the LICENSE file in the repository for details.
+
+===================================================================
+  Happy editing!  — The Forge Team
+===================================================================
