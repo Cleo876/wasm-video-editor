@@ -1,96 +1,84 @@
-# Forge Wallpaper Rotator – Bing Wallpaper Edition
-# Kills Bing Wallpaper, disables slideshow, sets wallpaper, repeats every 20‑25 min.
+@echo off
+setlocal enabledelayedexpansion
+cd /d "%~dp0"
 
-$ErrorActionPreference = "SilentlyContinue"
+echo ----------------------------------------
+echo Forge: Windows WASM Editor Installer
+echo Locating Microsoft Edge...
+echo ----------------------------------------
 
-# ---- Singleton guard ----
-$mutex = New-Object System.Threading.Mutex($false, "Global\ForgeWallpaperRotator")
-if (-not $mutex.WaitOne(0, $false)) { exit }
-$host.UI.RawUI.WindowTitle = "Forge Wallpaper Rotator"
+:: Try known install paths first
+set "EDGE_PATH="
+if exist "C:\Program Files\Microsoft\Edge\Application\msedge.exe" (
+    set "EDGE_PATH=C:\Program Files\Microsoft\Edge\Application\msedge.exe"
+)
+if exist "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" (
+    set "EDGE_PATH=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+)
 
-$manifestUrl = "https://raw.githubusercontent.com/Cleo876/wasm-video-editor/refs/heads/main/Wallpaper/wallpaper-manifest.json"
-$cacheDir = "$env:APPDATA\ForgeWallpapers\cache"
-$manifestCache = "$env:APPDATA\ForgeWallpapers\manifest.json"
-$brandedRatio = 0.6
+:: Fallback to 'where' command
+if "!EDGE_PATH!"=="" (
+    for /f "delims=" %%i in ('where msedge 2^>nul') do (
+        if "!EDGE_PATH!"=="" set "EDGE_PATH=%%i"
+    )
+)
 
-if (-not (Test-Path $cacheDir)) { New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null }
+if "!EDGE_PATH!"=="" (
+    echo ERROR: Microsoft Edge not found. Please install it.
+    timeout /t 5 >nul
+    exit /b 1
+)
 
-# ---- One‑time: disable Windows Slideshow / Spotlight ----
-function Disable-Slideshow {
-    $wallpaperReg = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Wallpapers"
-    $desktopReg   = "HKCU:\Control Panel\Desktop"
-    if (-not (Test-Path $wallpaperReg)) { New-Item -Path $wallpaperReg -Force | Out-Null }
-    Set-ItemProperty -Path $wallpaperReg -Name BackgroundType -Value 0 -Force
-    Set-ItemProperty -Path $desktopReg   -Name SlideshowFolderPath -Value "" -Force
-    Set-ItemProperty -Path $desktopReg   -Name WallpaperStyle -Value "10" -Force
-    Set-ItemProperty -Path $desktopReg   -Name TileWallpaper -Value "0" -Force
-}
+echo Found: !EDGE_PATH!
 
-# ---- Kill Bing Wallpaper process ----
-function Stop-BingWallpaper {
-    Get-Process -Name "BingWallpaperApp" -ErrorAction SilentlyContinue | Stop-Process -Force
-    Get-Process -Name "BingWallpaper"   -ErrorAction SilentlyContinue | Stop-Process -Force
-}
+set "APP_URL=http://cleo876.github.io/wasm-video-editor"
+set "SAFE_URL=https://cleo876.github.io/wasm-video-editor/#safemode=true"
+set "ICON_PATH=%~dp0layer.ico"
+set "SAFE_ICON_PATH=%~dp0safe-layers.ico"
 
-# ---- Manifest & image helpers ----
-function Get-Manifest {
-    try {
-        $m = Invoke-RestMethod -Uri $manifestUrl -TimeoutSec 10
-        $m | ConvertTo-Json | Set-Content $manifestCache -Force
-        return $m
-    } catch {
-        if (Test-Path $manifestCache) {
-            return Get-Content $manifestCache | ConvertFrom-Json
-        }
-        Write-Output "Wallpaper Rotator: No internet and no cached manifest."
-        return $null
-    }
-}
+:: One single sandboxed data folder for both modes
+set "DATA_DIR=%LocalAppData%\WASMEditor"
 
-function Get-RandomWallpaper($manifest) {
-    if (-not $manifest -or -not $manifest.wallpapers) { return $null }
-    $wallpapers = $manifest.wallpapers
-    $branded = @($wallpapers | Where-Object { $_.type -eq "branded" })
-    $neutral = @($wallpapers | Where-Object { $_.type -eq "neutral" })
-    $pool = if ((Get-Random -Maximum 100) -lt ($brandedRatio * 100)) { $branded } else { $neutral }
-    if (-not $pool -or $pool.Count -eq 0) { $pool = $wallpapers }
-    return $pool | Get-Random
-}
+echo Installing WASM Editor (Standard & Safe Mode)...
+echo Shared sandboxed data folder: !DATA_DIR!
 
-function Get-LocalImage($url) {
-    $name = Split-Path $url -Leaf
-    $local = Join-Path $cacheDir $name
-    if (-not (Test-Path $local)) {
-        try { Invoke-WebRequest -Uri $url -OutFile $local -TimeoutSec 15 } catch { return $null }
-    }
-    return $local
-}
+:: Standard shortcut
+powershell -NoProfile -Command "$ws=New-Object -ComObject WScript.Shell; $s=$ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\WASM Video Editor.lnk'); $s.TargetPath='!EDGE_PATH!'; $s.Arguments='--app=\"%APP_URL%\" --user-data-dir=\"!DATA_DIR!\"'; $s.IconLocation='%ICON_PATH%'; $s.Save()"
 
-# ---- One‑time disable ----
-Disable-Slideshow
+:: Safe Mode shortcut
+powershell -NoProfile -Command "$ws=New-Object -ComObject WScript.Shell; $s=$ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\SAFEMODE WASM Video Editor.lnk'); $s.TargetPath='!EDGE_PATH!'; $s.Arguments='--app=\"%SAFE_URL%\" --user-data-dir=\"!DATA_DIR!\"'; $s.IconLocation='%SAFE_ICON_PATH%'; $s.Save()"
 
-# ---- Main loop ----
-Write-Output "Forge Wallpaper Rotator started."
-while ($true) {
-    Stop-BingWallpaper
+:: ========================================================================
+:: WALLPAPER ROTATION SETUP (added for schools)
+:: ========================================================================
+echo.
+echo Setting up wallpaper rotation (every 20-25 min, random)...
 
-    $manifest = Get-Manifest
-    $choice = Get-RandomWallpaper $manifest
-    if ($choice) {
-        $imagePath = Get-LocalImage $choice.url
-        if ($imagePath) {
-            Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-public class Wallpaper {
-    [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
-}
-"@
-            [Wallpaper]::SystemParametersInfo(0x0014, 0, $imagePath, 0x0003)
-        }
-    }
+:: Create persistent folder for wallpaper system
+set "WALLPAPER_DIR=%APPDATA%\ForgeWallpapers"
+if not exist "!WALLPAPER_DIR!" mkdir "!WALLPAPER_DIR!"
 
-    $sleepSeconds = Get-Random -Minimum 1200 -Maximum 1501
-    Start-Sleep -Seconds $sleepSeconds
-}
+:: Copy the persistent rotation script
+copy /Y "%~dp0rotate-wallpaper.ps1" "!WALLPAPER_DIR!\rotate-wallpaper.ps1" >nul
+
+:: Start the background rotation immediately, hidden, so it doesn't block the installer
+start /min powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File "!WALLPAPER_DIR!\rotate-wallpaper.ps1" >nul 2>&1
+
+:: Remove any old tasks
+schtasks /delete /tn "Forge Wallpaper Rotation" /f >nul 2>&1
+schtasks /delete /tn "Forge Wallpaper Rotation Mid-Session" /f >nul 2>&1
+
+:: Schedule to start at every logon
+schtasks /create /tn "Forge Wallpaper Rotation" /tr "powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File \"!WALLPAPER_DIR!\rotate-wallpaper.ps1\"" /sc ONLOGON /f >nul 2>&1
+
+:: Restart every 30 minutes (self-healing)
+schtasks /create /tn "Forge Wallpaper Rotation Mid-Session" /tr "powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File \"!WALLPAPER_DIR!\rotate-wallpaper.ps1\"" /sc MINUTE /mo 30 /f >nul 2>&1
+
+echo  - Background rotation installed (random 20-25 min interval, self-healing)
+
+echo.
+echo ========================================
+echo Success! Both editor modes are on your Desktop.
+echo Wallpapers will rotate automatically every 20-25 minutes.
+echo Closing in 2 seconds...
+timeout /t 2 >nul
