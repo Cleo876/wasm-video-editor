@@ -1,30 +1,69 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo Setting up wallpaper rotation (every 20-25 min)...
+echo =====================================
+echo  Forge Wallpaper Rotator
+echo  (Self-contained, branded/neutral aware)
+echo =====================================
+echo.
 
-set "WALLPAPER_DIR=%APPDATA%\ForgeWallpapers"
-if not exist "%WALLPAPER_DIR%" mkdir "%WALLPAPER_DIR%"
+:: ----- cache folder -----
+set "CACHE_DIR=%APPDATA%\ForgeWallpapers\cache"
+if not exist "%CACHE_DIR%" mkdir "%CACHE_DIR%"
 
-:: Copy the rotation script if it exists in the current folder
-if exist "%~dp0rotate-wallpaper.ps1" (
-    copy /Y "%~dp0rotate-wallpaper.ps1" "%WALLPAPER_DIR%\rotate-wallpaper.ps1" >nul
-) else (
-    echo ERROR: rotate-wallpaper.ps1 not found. Place it next to this batch file.
+:: ----- manifest URL -----
+set "MANIFEST_URL=https://raw.githubusercontent.com/Cleo876/wasm-video-editor/refs/heads/main/Wallpaper/wallpaper-manifest.json"
+
+:: ----- 1. Download the manifest with curl -----
+echo Downloading wallpaper manifest...
+curl -sL "%MANIFEST_URL%" -o "%TEMP%\wallpaper-manifest.json"
+if not exist "%TEMP%\wallpaper-manifest.json" (
+    echo ERROR: Could not download manifest.
     timeout /t 5 >nul
     exit /b 1
 )
+echo Manifest downloaded.
 
-:: Start the rotation immediately (hidden)
-start "" powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File "%WALLPAPER_DIR%\rotate-wallpaper.ps1"
+:: ----- 2. Apply one wallpaper right now (branded/neutral aware) -----
+echo Choosing and applying a wallpaper...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$m = Get-Content '%TEMP%\wallpaper-manifest.json' | ConvertFrom-Json; " + ^
+    "$branded = @($m.wallpapers ^| Where-Object { $_.type -eq 'branded' }); " + ^
+    "$neutral = @($m.wallpapers ^| Where-Object { $_.type -eq 'neutral' }); " + ^
+    "$pool = if ((Get-Random -Maximum 100) -lt 60) { $branded } else { $neutral }; " + ^
+    "if (-not $pool -or $pool.Count -eq 0) { $pool = $m.wallpapers }; " + ^
+    "$c = $pool ^| Get-Random; " + ^
+    "$img = '%CACHE_DIR%\' + [System.IO.Path]::GetFileName($c.url); " + ^
+    "Write-Host ('Downloading ' + $c.type + ': ' + $c.url); " + ^
+    "Invoke-WebRequest -Uri $c.url -OutFile $img -TimeoutSec 20; " + ^
+    "Add-Type -TypeDef 'using System; using System.Runtime.InteropServices; public class Wallpaper { [DllImport(\"user32.dll\", CharSet = CharSet.Auto)] public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni); }'; " + ^
+    "[Wallpaper]::SystemParametersInfo(0x0014, 0, $img, 0x0003); " + ^
+    "Write-Host 'Wallpaper applied.'"
 
-:: Remove old tasks
-schtasks /delete /tn "Forge Wallpaper Rotation" /f >nul 2>&1
-schtasks /delete /tn "Forge Wallpaper Rotation Mid-Session" /f >nul 2>&1
+if %errorlevel% neq 0 (
+    echo WARNING: The wallpaper change may have failed.
+) else (
+    echo Check your desktop – the wallpaper should be different!
+)
 
-:: Create tasks
-schtasks /create /tn "Forge Wallpaper Rotation" /tr "powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File \"%WALLPAPER_DIR%\rotate-wallpaper.ps1\"" /sc ONLOGON /f >nul 2>&1
-schtasks /create /tn "Forge Wallpaper Rotation Mid-Session" /tr "powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File \"%WALLPAPER_DIR%\rotate-wallpaper.ps1\"" /sc MINUTE /mo 30 /f >nul 2>&1
+:: ----- 3. Install recurring task (every 20 min) -----
+echo.
+echo Installing background rotation task...
+set "TASK_NAME=Forge Wallpaper Rotation"
+schtasks /delete /tn "%TASK_NAME%" /f >nul 2>&1
 
-echo Done. Wallpaper will rotate every 20-25 minutes.
-timeout /t 2 >nul
+set "PS_CMD=powershell -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command \"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $m = Invoke-RestMethod '%MANIFEST_URL%'; $branded = @($m.wallpapers ^| Where-Object { $_.type -eq 'branded' }); $neutral = @($m.wallpapers ^| Where-Object { $_.type -eq 'neutral' }); $pool = if ((Get-Random -Maximum 100) -lt 60) { $branded } else { $neutral }; if (-not $pool -or $pool.Count -eq 0) { $pool = $m.wallpapers }; $c = $pool ^| Get-Random; $img = '%CACHE_DIR%\' + [System.IO.Path]::GetFileName($c.url); Invoke-WebRequest $c.url -OutFile $img -TimeoutSec 20; Add-Type -TypeDef 'using System; using System.Runtime.InteropServices; public class Wallpaper { [DllImport(\\\"user32.dll\\\", CharSet = CharSet.Auto)] public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni); }'; [Wallpaper]::SystemParametersInfo(0x0014, 0, $img, 0x0003)\""
+
+schtasks /create /tn "%TASK_NAME%" /tr "%PS_CMD%" /sc MINUTE /mo 20 /f >nul 2>&1
+
+if %errorlevel% equ 0 (
+    echo Task installed. Wallpaper will change every 20 minutes.
+) else (
+    echo WARNING: Could not create scheduled task. Rotation will not happen.
+)
+
+echo.
+echo =====================================
+echo  Setup complete.
+echo =====================================
+timeout /t 3 >nul
