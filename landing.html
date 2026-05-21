@@ -38,8 +38,8 @@
         .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 2rem; }
         .gradient-text { background: linear-gradient(135deg, var(--accent), #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .yellow-glow { color: var(--yellow); text-shadow: 0 0 20px rgba(234, 179, 8, 0.6); }
-        h1 { font-size: clamp(3rem, 7vw, 5rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
-        h2 { font-size: clamp(2rem, 5vw, 2.6rem); font-weight: 700; }
+        h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+        h2 { font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 700; }
         .badge {
             background: rgba(0, 210, 190, 0.15); color: var(--accent); padding: 0.4rem 1.2rem;
             border-radius: 30px; font-weight: 600; font-size: 0.8rem; letter-spacing: 1px;
@@ -57,11 +57,10 @@
         }
         .btn-outline:hover { border-color: var(--accent); color: #fff; }
 
-        /* Hero banner image */
         .hero-bg {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
             background: url('https://github.com/Cleo876/wasm-video-editor/blob/main/IMG\'s/Banners/Wallpaper%201_WASM%20Video%20Editor_website.png?raw=true') center/cover no-repeat;
-            filter: blur(18px) brightness(0.35); opacity: 0.85;
+            filter: blur(8px) brightness(0.4); opacity: 0.9;
         }
         .hero-section { position: relative; padding: 6rem 0 4rem; text-align: center; overflow: hidden; border-radius: 0 0 24px 24px; }
 
@@ -76,7 +75,7 @@
             background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
             padding: 2rem; display: flex; align-items: center; gap: 1rem;
         }
-        .section { margin: 6rem 0; }
+        .section { margin: 5rem 0; }
         .two-col { display: flex; gap: 4rem; align-items: center; flex-wrap: wrap; }
         .two-col > div { flex: 1 1 400px; }
         .glass-demo {
@@ -84,8 +83,17 @@
             border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 24px;
             position: relative; overflow: hidden; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
         }
+
+        /* Preview image above nodes */
+        .preview-panel {
+            width: 100%; max-width: 400px; margin: 0 auto 0.8rem;
+            border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.15);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .preview-panel canvas { width: 100%; height: auto; display: block; }
+
         .node-graph-preview {
-            position: relative; width: 100%; min-height: 460px; border-radius: 20px; margin-top: 1.5rem;
+            position: relative; width: 100%; min-height: 420px; border-radius: 20px; margin-top: 1rem;
             background: radial-gradient(circle at 50% 50%, rgba(0, 210, 190, 0.05) 0%, transparent 70%);
         }
         #rubiconPreviewCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: grab; }
@@ -125,7 +133,7 @@
             pointer-events: none; z-index: 5; border-radius: 0 20px 20px 0;
         }
 
-        /* Download section */
+        /* Download */
         .download-card {
             background: rgba(18, 18, 18, 0.85); backdrop-filter: blur(16px);
             border: 1px solid var(--border); border-radius: 24px; padding: 2.5rem 2rem;
@@ -138,12 +146,19 @@
             border-radius: 30px; font-weight: 600; font-size: 0.7rem; letter-spacing: 0.5px;
             display: inline-block; text-transform: uppercase; margin-bottom: 0.8rem;
         }
-
         .cta-section { text-align: center; }
         footer { border-top: 1px solid #222; padding: 2rem 0; color: #666; text-align: center; }
 
         @media (max-width: 768px) {
             .two-col { flex-direction: column; gap: 2rem; }
+            .carousel-btn.prev { left: 0; } .carousel-btn.next { right: 0; }
+            .node-graph-preview { min-height: 320px; }
+            .ext-item { flex: 0 0 calc((100% - 2rem) / 2.2); }
+        }
+        @media (max-width: 480px) {
+            .ext-item { flex: 0 0 calc((100% - 1rem) / 1.5); }
+            .node-graph-preview { min-height: 260px; }
+            .btn-primary, .btn-outline { padding: 0.8rem 1.8rem; font-size: 1rem; }
         }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -154,7 +169,7 @@
 <div class="bg-dynamic"><div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div><div class="grid-bg"></div></div>
 
 <div class="wrapper">
-    <!-- HERO (with blurred editor screenshot) -->
+    <!-- HERO -->
     <header class="hero-section">
         <div class="hero-bg"></div>
         <span class="badge" style="position:relative;">FORGE™ PROFESSIONAL VIDEO EDITING</span>
@@ -170,7 +185,7 @@
         </div>
     </header>
 
-    <!-- VIDEO BANNER (reserved for Jam winner) -->
+    <!-- VIDEO BANNER (reserved) -->
     <div class="video-banner">
         <video muted autoplay loop playsinline poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080' viewBox='0 0 1920 1080'%3E%3Crect width='100%25' height='100%25' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23555' font-family='sans-serif' font-size='28'%3EJam Winner's Reel — Coming August 2026%3C/text%3E%3C/svg%3E">
             <source src="" type="video/mp4">
@@ -181,7 +196,7 @@
         </div>
     </div>
 
-    <!-- RUBICON GRAPH ENGINE -->
+    <!-- RUBICON GRAPH ENGINE (with live preview) -->
     <section class="section" id="compositing">
         <div class="two-col">
             <div>
@@ -198,12 +213,16 @@
                     own to create effects no other editor can match.
                 </p>
             </div>
-            <div class="glass-demo" style="min-height:460px;">
+            <div class="glass-demo" style="min-height:520px; padding:1.2rem;">
+                <!-- Live preview image that responds to sliders -->
+                <div class="preview-panel">
+                    <canvas id="previewCanvas" width="400" height="225"></canvas>
+                </div>
                 <div class="node-graph-preview">
                     <canvas id="rubiconPreviewCanvas"></canvas>
                 </div>
-                <div style="position:absolute;bottom:14px;right:18px;color:var(--yellow);font-size:0.6rem;background:rgba(0,0,0,0.7);padding:0.25rem 0.7rem;border-radius:20px;pointer-events:none;">
-                    <i class="fa-solid fa-dice-d20"></i> DRAG NODES TO EXPLORE
+                <div style="position:absolute;bottom:10px;right:16px;color:var(--yellow);font-size:0.6rem;background:rgba(0,0,0,0.7);padding:0.2rem 0.6rem;border-radius:20px;pointer-events:none;">
+                    <i class="fa-solid fa-dice-d20"></i> DRAG NODES — ADJUST SLIDERS
                 </div>
             </div>
         </div>
@@ -235,7 +254,7 @@
         </div>
     </section>
 
-    <!-- EXPORT (honest about current state) -->
+    <!-- EXPORT -->
     <section class="section">
         <div class="two-col">
             <div>
@@ -267,7 +286,7 @@
         </div>
     </section>
 
-    <!-- GHOST APP DOWNLOAD SECTION -->
+    <!-- GHOST APP DOWNLOAD -->
     <section class="section" id="download">
         <div style="text-align:center;margin-bottom:2rem;">
             <span class="badge" style="margin-bottom:1rem;">NEW — DESKTOP EXPERIENCE</span>
@@ -279,7 +298,6 @@
                 editing workspace that behaves exactly like professional desktop software.
             </p>
         </div>
-
         <div class="download-card">
             <span class="ghost-badge"><i class="fa-solid fa-ghost"></i> Ghost App™</span>
             <h3 style="font-size:1.4rem;margin-bottom:0.5rem;">Download for Your System</h3>
@@ -309,13 +327,13 @@
         <h2 class="gradient-text">100% Client‑Side. 100% Private.</h2>
         <p style="max-width:760px;margin:1.2rem auto;color:var(--muted);font-size:1.15rem;">
             No cloud uploads, no accounts, no tracking. Your project stays on your device — in the browser
-            or inside the Ghost App’s isolated profile. That’s why the WASM Video Editor is trusted by
+            or inside the Ghost App's isolated profile. That's why the WASM Video Editor is trusted by
             journalists, legal teams, and anyone who needs airtight offline workflows.
             <strong>Your art belongs to you.</strong>
         </p>
     </section>
 
-    <!-- EDITOR'S JAM (future event) -->
+    <!-- EDITOR'S JAM -->
     <section class="section cta-section" id="jam">
         <h2 class="gradient-text" style="font-size:2.6rem;">Editor's Jam 2026</h2>
         <p style="color:var(--muted);max-width:680px;margin:1.2rem auto;font-size:1.05rem;">
@@ -337,67 +355,116 @@
 
 <script>
 (function(){
-    // ── OS Detection & Download Buttons ──
+    // ── OS Detection & Download ──
     (function() {
         const ua = navigator.userAgent || '';
         const isWin = ua.includes('Windows');
         const isLinux = ua.includes('Linux') && !ua.includes('Android');
-        const isMac = ua.includes('Macintosh') || ua.includes('Mac OS X');
-
         const winUrl  = 'https://github.com/Cleo876/wasm-video-editor/raw/refs/heads/main/Install/Windows/Windows%20-%20WASM%20EDITOR%20Installer.zip';
         const linUrl  = 'https://github.com/Cleo876/wasm-video-editor/raw/refs/heads/main/Install/Linux/Linux%20-%20WASM%20EDITOR%20Installer.zip';
-        const browserUrl = 'https://cleo876.github.io/wasm-video-editor/';
-
         const detectEl = document.getElementById('os-detect-text');
         const primaryBtn = document.getElementById('btn-download-primary');
         const primaryLabel = document.getElementById('btn-download-label');
         const otherBtn = document.getElementById('btn-download-other');
         const otherLabel = document.getElementById('btn-other-label');
-        const fallbackEl = document.getElementById('browser-fallback');
-
-        let detected = null;
-        if (isWin) detected = 'win';
-        else if (isLinux) detected = 'linux';
-        else if (isMac) detected = 'mac';
-
-        if (detected === 'win') {
+        if (isWin) {
             detectEl.innerText = 'We detected Windows — grab the installer below.';
-            primaryBtn.style.display = 'inline-block';
-            primaryBtn.href = winUrl;
+            primaryBtn.style.display = 'inline-block'; primaryBtn.href = winUrl;
             primaryLabel.innerText = 'Download for Windows (.zip)';
-            otherBtn.style.display = 'inline-block';
-            otherBtn.href = linUrl;
+            otherBtn.style.display = 'inline-block'; otherBtn.href = linUrl;
             otherLabel.innerText = 'Linux Installer';
-        } else if (detected === 'linux') {
+        } else if (isLinux) {
             detectEl.innerText = 'We detected Linux — grab the installer below.';
-            primaryBtn.style.display = 'inline-block';
-            primaryBtn.href = linUrl;
+            primaryBtn.style.display = 'inline-block'; primaryBtn.href = linUrl;
             primaryLabel.innerText = 'Download for Linux (.zip)';
-            otherBtn.style.display = 'inline-block';
-            otherBtn.href = winUrl;
+            otherBtn.style.display = 'inline-block'; otherBtn.href = winUrl;
             otherLabel.innerText = 'Windows Installer';
         } else {
             detectEl.innerText = 'Choose your platform below.';
-            primaryBtn.style.display = 'inline-block';
-            primaryBtn.href = winUrl;
+            primaryBtn.style.display = 'inline-block'; primaryBtn.href = winUrl;
             primaryLabel.innerText = 'Windows (.zip)';
-            otherBtn.style.display = 'inline-block';
-            otherBtn.href = linUrl;
+            otherBtn.style.display = 'inline-block'; otherBtn.href = linUrl;
             otherLabel.innerText = 'Linux (.zip)';
         }
-
-        // Always show browser fallback
-        fallbackEl.style.display = 'block';
+        document.getElementById('browser-fallback').style.display = 'block';
     })();
 
-    // ── DRAGGABLE NODE GRAPH ──
+    // ── PREVIEW CANVAS (responsive to slider values) ──
+    const previewCanvas = document.getElementById('previewCanvas');
+    const previewCtx = previewCanvas.getContext('2d');
+    // Generate a colourful gradient "test image" that we can filter
+    function drawBasePreview() {
+        const w = previewCanvas.width, h = previewCanvas.height;
+        previewCtx.clearRect(0,0,w,h);
+        // Sky gradient
+        const sky = previewCtx.createLinearGradient(0,0,0,h*0.6);
+        sky.addColorStop(0,'#1e3a5f'); sky.addColorStop(1,'#87ceeb');
+        previewCtx.fillStyle = sky; previewCtx.fillRect(0,0,w,h*0.6);
+        // Sun
+        previewCtx.fillStyle = '#ffd700';
+        previewCtx.beginPath(); previewCtx.arc(w*0.7,h*0.25,40,0,Math.PI*2); previewCtx.fill();
+        // Mountains
+        previewCtx.fillStyle = '#2d5a27';
+        previewCtx.beginPath(); previewCtx.moveTo(0,h*0.6); previewCtx.lineTo(w*0.3,h*0.35);
+        previewCtx.lineTo(w*0.6,h*0.55); previewCtx.lineTo(w*0.8,h*0.3); previewCtx.lineTo(w,h*0.5);
+        previewCtx.lineTo(w,h); previewCtx.lineTo(0,h); previewCtx.closePath(); previewCtx.fill();
+        // Grass
+        previewCtx.fillStyle = '#4a7c3f';
+        previewCtx.fillRect(0,h*0.65,w,h*0.35);
+        // House
+        previewCtx.fillStyle = '#8B4513'; previewCtx.fillRect(w*0.25,h*0.5,60,50);
+        previewCtx.fillStyle = '#A0522D'; previewCtx.beginPath();
+        previewCtx.moveTo(w*0.25-10,h*0.5); previewCtx.lineTo(w*0.25+30,h*0.35); previewCtx.lineTo(w*0.25+70,h*0.5);
+        previewCtx.closePath(); previewCtx.fill();
+    }
+    drawBasePreview();
+    // Store base image for re‑filtering
+    const baseImageData = previewCtx.getImageData(0,0,previewCanvas.width,previewCanvas.height);
+
+    // Slider state for Color Corrector
+    const sliderValues = { exposure: 0, contrast: 50, saturation: 50, temperature: 50, hueShift: 0 };
+
+    function applyFiltersToPreview() {
+        const v = sliderValues;
+        const exposureVal = 1 + v.exposure / 100;          // 0.5 – 1.5
+        const contrastVal = 0.5 + v.contrast / 50;         // 0.5 – 2.5
+        const saturationVal = v.saturation / 50;            // 0 – 2
+        const tempR = 1 + (v.temperature - 50) / 100;      // red shift
+        const tempB = 1 - (v.temperature - 50) / 100;      // blue shift
+
+        previewCtx.putImageData(baseImageData,0,0);
+        const imgData = previewCtx.getImageData(0,0,previewCanvas.width,previewCanvas.height);
+        const d = imgData.data;
+        for (let i=0; i<d.length; i+=4) {
+            // Brightness (exposure)
+            d[i]   = Math.min(255, Math.max(0, d[i] * exposureVal));
+            d[i+1] = Math.min(255, Math.max(0, d[i+1] * exposureVal));
+            d[i+2] = Math.min(255, Math.max(0, d[i+2] * exposureVal));
+            // Contrast
+            d[i]   = Math.min(255, Math.max(0, (d[i]-128)*contrastVal + 128));
+            d[i+1] = Math.min(255, Math.max(0, (d[i+1]-128)*contrastVal + 128));
+            d[i+2] = Math.min(255, Math.max(0, (d[i+2]-128)*contrastVal + 128));
+            // Saturation
+            const gray = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
+            d[i]   = Math.min(255, Math.max(0, gray + (d[i]-gray)*saturationVal));
+            d[i+1] = Math.min(255, Math.max(0, gray + (d[i+1]-gray)*saturationVal));
+            d[i+2] = Math.min(255, Math.max(0, gray + (d[i+2]-gray)*saturationVal));
+            // Temperature
+            d[i]   = Math.min(255, Math.max(0, d[i] * tempR));
+            d[i+2] = Math.min(255, Math.max(0, d[i+2] * tempB));
+        }
+        previewCtx.putImageData(imgData,0,0);
+    }
+    applyFiltersToPreview();
+
+    // ── RUBICON NODE GRAPH (with realistic interiors & slider interaction) ──
     const canvas = document.getElementById('rubiconPreviewCanvas');
     const ctx = canvas.getContext('2d');
     let width, height;
     const container = canvas.parentElement;
     function resize(){
         width = container.clientWidth;
-        height = container.clientHeight || 460;
+        height = container.clientHeight || 420;
         canvas.width = width;
         canvas.height = height;
     }
@@ -405,7 +472,8 @@
     window.addEventListener('resize', resize);
 
     const nodeWidth = Math.min(180, width * 0.18);
-    const nodeHeight = nodeWidth * 0.61;
+    const nodeHeight = nodeWidth * 0.75;
+
     const nodes = [
         { id:'media_in',   type:'media_in',   name:'Media In',        x:0, y:0, inputs:[], outputs:['image'] },
         { id:'color_corr', type:'color_corr', name:'Color Corrector', x:0, y:0, inputs:['image'], outputs:['image'] },
@@ -414,7 +482,7 @@
     ];
 
     function repositionNodes(){
-        const margin = 40;
+        const margin = 35;
         const totalWidth = width - margin * 2;
         const spacing = (totalWidth - nodeWidth * nodes.length) / (nodes.length - 1);
         nodes.forEach((node, i) => {
@@ -434,7 +502,7 @@
     function getPortPos(nodeId, portIdx, isInput){
         const node = nodes.find(n=>n.id===nodeId);
         if(!node) return {x:0,y:0};
-        const header = nodeHeight * 0.29;
+        const header = nodeHeight * 0.25;
         const body = nodeHeight - header;
         const count = isInput ? node.inputs.length : node.outputs.length;
         const spacingY = body/(count+1);
@@ -443,22 +511,18 @@
         return {x:portX, y:portY};
     }
     function pointOnBezier(from, to, cpOff, t){
-        const x0=from.x, y0=from.y, x1=from.x+cpOff, y1=from.y, x2=to.x-cpOff, y2=to.y, x3=to.x, y3=to.y;
-        const mt=1-t, mt2=mt*mt, t2=t*t;
-        return { x:mt*mt2*x0+3*mt2*t*x1+3*mt*t2*x2+t2*t*x3, y:mt*mt2*y0+3*mt2*t*y1+3*mt*t2*y2+t2*t*y3 };
+        const x0=from.x,y0=from.y,x1=from.x+cpOff,y1=from.y,x2=to.x-cpOff,y2=to.y,x3=to.x,y3=to.y;
+        const mt=1-t,mt2=mt*mt,t2=t*t;
+        return {x:mt*mt2*x0+3*mt2*t*x1+3*mt*t2*x2+t2*t*x3, y:mt*mt2*y0+3*mt2*t*y1+3*mt*t2*y2+t2*t*y3};
     }
-
     function buildWireData(){
         return wires.map(w => {
-            const fromP = getPortPos(w.from, 0, false);
-            const toP   = getPortPos(w.to, 0, true);
-            const cpOff = Math.abs(toP.x - fromP.x) * 0.5;
-            const path = new Path2D();
-            path.moveTo(fromP.x, fromP.y);
-            path.bezierCurveTo(fromP.x+cpOff, fromP.y, toP.x-cpOff, toP.y, toP.x, toP.y);
-            const points = [];
-            for(let i=0; i<=100; i++) points.push(pointOnBezier(fromP, toP, cpOff, i/100));
-            return { path, points, color: w.type==='image' ? '#eab308' : '#3b82f6' };
+            const fromP = getPortPos(w.from,0,false), toP = getPortPos(w.to,0,true);
+            const cpOff = Math.abs(toP.x-fromP.x)*0.5;
+            const path = new Path2D(); path.moveTo(fromP.x,fromP.y);
+            path.bezierCurveTo(fromP.x+cpOff,fromP.y,toP.x-cpOff,toP.y,toP.x,toP.y);
+            const pts=[]; for(let i=0;i<=100;i++)pts.push(pointOnBezier(fromP,toP,cpOff,i/100));
+            return {path,points:pts,color:w.type==='image'?'#eab308':'#3b82f6'};
         });
     }
     let wireData = buildWireData();
@@ -466,52 +530,96 @@
     const particles = [];
     function spawnParticles(){
         particles.length = 0;
-        for(let i=0; i<28; i++){
-            const wi = Math.floor(Math.random()*wireData.length);
-            const w = wireData[wi];
-            const prog = Math.random();
-            const idx = Math.floor(prog * (w.points.length-1));
-            const pt = w.points[Math.min(idx, w.points.length-1)];
-            particles.push({ wi, prog, x:pt.x, y:pt.y, r:1.5+Math.random()*2, spd:0.003+Math.random()*0.006, color:w.color });
+        for(let i=0;i<24;i++){
+            const wi=Math.floor(Math.random()*wireData.length),w=wireData[wi];
+            const prog=Math.random(),idx=Math.floor(prog*(w.points.length-1));
+            const pt=w.points[Math.min(idx,w.points.length-1)];
+            particles.push({wi,prog,x:pt.x,y:pt.y,r:1.2+Math.random()*2,spd:0.003+Math.random()*0.006,color:w.color});
         }
     }
     spawnParticles();
 
+    // Slider geometry (relative to node body)
+    function getSliderRects(node) {
+        const bodyTop = node.y + nodeHeight * 0.25;
+        const bodyH = nodeHeight * 0.75;
+        const padX = node.x + 8;
+        const w = nodeWidth - 16;
+        const trackH = 4;
+        const labels = ['Exposure','Contrast','Saturation','Temp (B/Y)','Hue Shift'];
+        const keys = ['exposure','contrast','saturation','temperature','hueShift'];
+        const spacing = bodyH / (labels.length + 0.5);
+        const rects = [];
+        labels.forEach((_, i) => {
+            const cy = bodyTop + spacing * (i + 0.4);
+            rects.push({ label: labels[i], key: keys[i], x: padX, y: cy - 8, w: w, h: 16, trackY: cy, trackH });
+        });
+        return rects;
+    }
+
     function drawNode(n){
-        const {x,y,name,inputs,outputs}=n;
+        const {x,y,name,inputs,outputs,type}=n;
         ctx.save();
-        ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=8;
-        ctx.fillStyle='rgba(20,20,20,0.8)';ctx.strokeStyle='#444';ctx.lineWidth=1;
-        const w=nodeWidth, h=nodeHeight, r=Math.min(8,h*0.15);
+        ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=6;
+        ctx.fillStyle='rgba(20,20,20,0.82)';ctx.strokeStyle='#444';ctx.lineWidth=1;
+        const w=nodeWidth,h=nodeHeight,r=Math.min(7,h*0.12);
         ctx.beginPath();
-        ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);
-        ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+        ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
         ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
         ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
         ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
         ctx.closePath();ctx.fill();ctx.stroke();
-        const headerH=h*0.29;
+
+        const headerH = h*0.25;
         ctx.fillStyle='#1e1e1e';ctx.fillRect(x,y,w,headerH);
         ctx.fillStyle='#fff';
-        const fontSize=Math.min(14,h*0.18);
-        ctx.font=`bold ${fontSize}px Inter,sans-serif`;
-        ctx.fillText(name,x+10,y+headerH*0.65);
-        inputs.forEach((type,idx)=>{
+        const fontSize=Math.min(12,h*0.15);
+        ctx.font=`bold ${fontSize}px Inter,sans-serif`;ctx.fillText(name,x+10,y+headerH*0.62);
+
+        // Node body content
+        ctx.shadowBlur=0;
+        const bodyTop = y + headerH;
+        const bodyH = h - headerH;
+        if (type==='media_in' || type==='media_out') {
+            ctx.fillStyle='#666';ctx.font=`${fontSize*0.85}px Inter,sans-serif`;
+            const txt = type==='media_in'?'Source: Timeline Clip':'Target: Compositor Renderer';
+            ctx.fillText(txt, x+10, bodyTop+bodyH*0.45);
+        } else if (type==='color_corr') {
+            const rects = getSliderRects(n);
+            rects.forEach(sr => {
+                const val = sliderValues[sr.key];
+                const norm = sr.key==='exposure'||sr.key==='hueShift' ? (val+100)/200 : val/100;
+                ctx.fillStyle='#333';ctx.fillRect(sr.x,sr.trackY,sr.w,sr.trackH);
+                const knobX = sr.x + norm*sr.w;
+                ctx.fillStyle='#eab308';ctx.beginPath();ctx.arc(knobX,sr.trackY+sr.trackH/2,4,0,Math.PI*2);ctx.fill();
+                ctx.fillStyle='#999';ctx.font=`${fontSize*0.55}px Inter,sans-serif`;
+                ctx.fillText(sr.label,sr.x,sr.y+4);
+            });
+        } else if (type==='vignette_fx') {
+            ctx.fillStyle='#666';ctx.font=`${fontSize*0.85}px Inter,sans-serif`;
+            ctx.fillText('Intensity', x+10, bodyTop+bodyH*0.35);
+            ctx.fillText('Size', x+10, bodyTop+bodyH*0.7);
+        }
+
+        // Ports
+        inputs.forEach((ptype,idx)=>{
             const py=y+headerH+((h-headerH)/(inputs.length+1))*(idx+1);
             ctx.beginPath();ctx.arc(x,py,5,0,Math.PI*2);
-            ctx.fillStyle=type==='image'?'#eab308':'#3b82f6';ctx.fill();
+            ctx.fillStyle=ptype==='image'?'#eab308':'#3b82f6';ctx.fill();
             ctx.strokeStyle='#222';ctx.lineWidth=1.2;ctx.stroke();
         });
-        outputs.forEach((type,idx)=>{
+        outputs.forEach((ptype,idx)=>{
             const py=y+headerH+((h-headerH)/(outputs.length+1))*(idx+1);
             ctx.beginPath();ctx.arc(x+w,py,5,0,Math.PI*2);
-            ctx.fillStyle=type==='image'?'#eab308':'#3b82f6';ctx.fill();
+            ctx.fillStyle=ptype==='image'?'#eab308':'#3b82f6';ctx.fill();
             ctx.strokeStyle='#222';ctx.lineWidth=1.2;ctx.stroke();
         });
         ctx.restore();
     }
 
     let draggingNode=null, dragOffX=0, dragOffY=0;
+    let activeSlider=null; // { node, key }
+
     function hitTest(mx,my){
         for(let i=nodes.length-1;i>=0;i--){
             const n=nodes[i];
@@ -519,14 +627,45 @@
         }
         return null;
     }
+
     canvas.addEventListener('mousedown',e=>{
         const rect=canvas.getBoundingClientRect();
         const scaleX=width/rect.width, scaleY=height/rect.height;
         const mx=(e.clientX-rect.left)*scaleX, my=(e.clientY-rect.top)*scaleY;
         const hit=hitTest(mx,my);
-        if(hit){draggingNode=hit;dragOffX=mx-hit.x;dragOffY=my-hit.y;canvas.style.cursor='grabbing';}
+        if(hit&&hit.type==='color_corr'){
+            const rects=getSliderRects(hit);
+            for(const sr of rects){
+                if(mx>=sr.x&&mx<=sr.x+sr.w&&my>=sr.y&&my<=sr.y+sr.h){
+                    activeSlider={node:hit,key:sr.key};
+                    canvas.style.cursor='ew-resize';
+                    e.preventDefault();return;
+                }
+            }
+        }
+        if(hit){
+            const headerH=nodeHeight*0.25;
+            if(my>hit.y+headerH&&hit.type==='color_corr')return; // body but not slider
+            draggingNode=hit;dragOffX=mx-hit.x;dragOffY=my-hit.y;
+            canvas.style.cursor='grabbing';
+        }
     });
+
     window.addEventListener('mousemove',e=>{
+        if(activeSlider){
+            const rect=canvas.getBoundingClientRect();
+            const scaleX=width/rect.width, scaleY=height/rect.height;
+            const mx=(e.clientX-rect.left)*scaleX;
+            const sr=getSliderRects(activeSlider.node).find(s=>s.key===activeSlider.key);
+            if(sr){
+                const norm=Math.max(0,Math.min(1,(mx-sr.x)/sr.w));
+                if(activeSlider.key==='exposure')sliderValues.exposure=Math.round(norm*200-100);
+                else if(activeSlider.key==='hueShift')sliderValues.hueShift=Math.round(norm*200-100);
+                else sliderValues[activeSlider.key]=Math.round(norm*100);
+                applyFiltersToPreview();
+            }
+            return;
+        }
         if(!draggingNode)return;
         const rect=canvas.getBoundingClientRect();
         const scaleX=width/rect.width, scaleY=height/rect.height;
@@ -535,16 +674,17 @@
         draggingNode.y=Math.max(0,Math.min(height-nodeHeight,my-dragOffY));
         wireData=buildWireData();
     });
-    window.addEventListener('mouseup',()=>{draggingNode=null;canvas.style.cursor='grab';});
+
+    window.addEventListener('mouseup',()=>{
+        draggingNode=null;activeSlider=null;canvas.style.cursor='grab';
+    });
 
     function animate(){
         ctx.clearRect(0,0,width,height);
         ctx.fillStyle='rgba(5,5,5,0.2)';ctx.fillRect(0,0,width,height);
         wireData.forEach(wd=>{
-            ctx.save();
-            ctx.strokeStyle=wd.color;ctx.lineWidth=Math.max(2,nodeWidth*0.03);
-            ctx.shadowColor=wd.color+'60';ctx.shadowBlur=6;ctx.stroke(wd.path);
-            ctx.restore();
+            ctx.save();ctx.strokeStyle=wd.color;ctx.lineWidth=Math.max(2,nodeWidth*0.03);
+            ctx.shadowColor=wd.color+'60';ctx.shadowBlur=6;ctx.stroke(wd.path);ctx.restore();
         });
         nodes.forEach(drawNode);
         particles.forEach(p=>{
@@ -561,7 +701,7 @@
     }
     animate();
 
-    // ── CAROUSEL ──
+    // ── WRAP‑AROUND CAROUSEL ──
     const track=document.getElementById('carouselTrack');
     const prevBtn=document.getElementById('carouselPrev');
     const nextBtn=document.getElementById('carouselNext');
@@ -570,26 +710,35 @@
     const visibleCards=3.5;
     let currentIndex=0;
     function getItemWidth(){
-        const first=items[0];
-        if(!first)return 300;
+        const first=items[0];if(!first)return 300;
         return first.getBoundingClientRect().width+24;
     }
     function updateCarousel(animate=true){
         const itemWidth=getItemWidth();
-        const translateX=-currentIndex*itemWidth;
+        const maxIndex=Math.max(0,totalItems-Math.floor(visibleCards));
+        let displayIndex=currentIndex;
+        // Wrap-around
+        if(currentIndex<0)displayIndex=maxIndex;
+        else if(currentIndex>maxIndex)displayIndex=0;
+        const translateX=-displayIndex*itemWidth;
         track.style.transition=animate?'transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)':'none';
         track.style.transform=`translateX(${translateX}px)`;
         items.forEach((item,i)=>{
             item.classList.remove('fading-out','semi-transparent');
-            if(i<currentIndex)item.classList.add('fading-out');
-            else if(i>=currentIndex+Math.floor(visibleCards)&&i<currentIndex+Math.floor(visibleCards)+1)
+            if(i<displayIndex)item.classList.add('fading-out');
+            else if(i>=displayIndex+Math.floor(visibleCards)&&i<displayIndex+Math.floor(visibleCards)+1)
                 item.classList.add('semi-transparent');
         });
-        prevBtn.disabled=currentIndex===0;
-        nextBtn.disabled=currentIndex>=totalItems-Math.floor(visibleCards);
     }
-    nextBtn.addEventListener('click',()=>{if(currentIndex<totalItems-Math.floor(visibleCards)){currentIndex++;updateCarousel(true);}});
-    prevBtn.addEventListener('click',()=>{if(currentIndex>0){currentIndex--;updateCarousel(true);}});
+    nextBtn.addEventListener('click',()=>{
+        const maxIndex=Math.max(0,totalItems-Math.floor(visibleCards));
+        if(currentIndex>=maxIndex){currentIndex=0;}else{currentIndex++;}
+        updateCarousel(true);
+    });
+    prevBtn.addEventListener('click',()=>{
+        if(currentIndex<=0){currentIndex=Math.max(0,totalItems-Math.floor(visibleCards));}else{currentIndex--;}
+        updateCarousel(true);
+    });
     updateCarousel(false);
     window.addEventListener('resize',()=>updateCarousel(false));
 })();
