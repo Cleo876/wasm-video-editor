@@ -487,20 +487,69 @@
     
     const sampleVideo = document.createElement('video');
     sampleVideo.crossOrigin = "anonymous";
-    // Direct link to the repository-hosted MP4 file to prevent CORS issues
-    sampleVideo.src = "https://github.com/Cleo876/wasm-video-editor/raw/refs/heads/main/Video/WASM%20Video%20Editor%20Sample%20VIdeo.mp4";
     sampleVideo.muted = true;
     sampleVideo.loop = true;
     sampleVideo.playsInline = true;
 
-    // Fallback if browser entirely blocks video CORS despite headers
-    sampleVideo.onerror = () => {
-        console.warn("WASM Editor: Video blocked by browser network/CORS rules. Falling back to Photo mode.");
-        document.querySelector('.media-btn[data-media="photo"]').click();
-    };
+    let isVideoFetched = false;
+    let isFetchingVideo = false;
+
+    // Fetch as Blob to bypass CORS canvas tainting and ensure it plays
+    function fetchAndPlayVideo() {
+        if (isVideoFetched) {
+            sampleVideo.play().catch(e => console.warn("Play interrupted", e));
+            isVideoPlaying = true;
+            requestAnimationFrame(videoRenderLoop);
+            return;
+        }
+
+        if (isFetchingVideo) return;
+        isFetchingVideo = true;
+        
+        loadingUI.innerText = "FETCHING VIDEO BLOB...";
+        loadingUI.style.display = 'block';
+
+        fetch("https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Video/WASM%20Video%20Editor%20Sample%20VIdeo.mp4", { mode: 'cors' })
+            .then(response => {
+                if (!response.ok) throw new Error("Network response was not ok");
+                return response.blob();
+            })
+            .then(blob => {
+                const objectURL = URL.createObjectURL(blob);
+                sampleVideo.src = objectURL;
+                isVideoFetched = true;
+                isFetchingVideo = false;
+                
+                if (currentMedia === 'video') {
+                    loadingUI.style.display = 'none';
+                    sampleVideo.play().then(() => {
+                        isVideoPlaying = true;
+                        requestAnimationFrame(videoRenderLoop);
+                    }).catch(err => {
+                        console.error("Autoplay prevented:", err);
+                        // Draw error gracefully to canvas without switching tabs
+                        bufferCtx.fillStyle = '#000'; bufferCtx.fillRect(0,0,400,225);
+                        bufferCtx.fillStyle = '#ff4444'; bufferCtx.font = "bold 12px Inter";
+                        bufferCtx.fillText("AUTOPLAY BLOCKED. PLEASE CLICK PLAY.", 70, 115);
+                        applyFiltersToPreview();
+                    });
+                }
+            })
+            .catch(err => {
+                console.error("Fetch error:", err);
+                isFetchingVideo = false;
+                if (currentMedia === 'video') {
+                    loadingUI.innerText = "FAILED TO FETCH MEDIA";
+                    bufferCtx.fillStyle = '#111'; bufferCtx.fillRect(0,0,400,225);
+                    bufferCtx.fillStyle = '#ff4444'; bufferCtx.font = "bold 12px Inter";
+                    bufferCtx.fillText("NETWORK ERROR: COULD NOT LOAD VIDEO", 60, 115);
+                    applyFiltersToPreview();
+                }
+            });
+    }
     
     // Show loading text while buffering
-    sampleVideo.addEventListener('waiting', () => { if(currentMedia === 'video') loadingUI.style.display = 'block'; });
+    sampleVideo.addEventListener('waiting', () => { if(currentMedia === 'video' && isVideoFetched) loadingUI.style.display = 'block'; });
     sampleVideo.addEventListener('playing', () => { loadingUI.style.display = 'none'; });
 
     function drawBasePreview(ctx) {
@@ -603,13 +652,8 @@
             if (renderFrameId) cancelAnimationFrame(renderFrameId);
 
             if (currentMedia === 'video') {
-                sampleVideo.play().then(() => {
-                    isVideoPlaying = true;
-                    requestAnimationFrame(videoRenderLoop);
-                }).catch(err => {
-                    console.log("Video autoplay blocked", err);
-                    document.querySelector('.media-btn[data-media="photo"]').click();
-                });
+                // Call our new Blob fetcher
+                fetchAndPlayVideo();
             } else {
                 isVideoPlaying = false;
                 sampleVideo.pause();
@@ -625,9 +669,9 @@
     // Observer to pause video entirely when scrolling past the section to save battery
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            if (currentMedia === 'video') {
+            if (currentMedia === 'video' && isVideoFetched) {
                 if (entry.isIntersecting) {
-                    sampleVideo.play();
+                    sampleVideo.play().catch(e => {});
                     isVideoPlaying = true;
                     requestAnimationFrame(videoRenderLoop);
                 } else {
