@@ -22,12 +22,14 @@
             overflow-x: hidden; line-height: 1.6;
             -webkit-font-smoothing: antialiased;
         }
+        
         .bg-dynamic { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
         .orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.1; animation: floatOrb 25s infinite alternate ease-in-out; }
         .orb1 { width: 800px; height: 800px; background: var(--accent); top: -350px; left: -250px; }
         .orb2 { width: 700px; height: 700px; background: #6366f1; bottom: -300px; right: -300px; }
         .orb3 { width: 600px; height: 600px; background: var(--yellow); top: 40%; left: 55%; }
         @keyframes floatOrb { 0% { transform: translate(0, 0) scale(1) } 50% { transform: translate(40px, -30px) scale(1.3) } 100% { transform: translate(-20px, 20px) scale(0.9) } }
+        
         .grid-bg {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
@@ -36,6 +38,7 @@
             mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 70%);
         }
         .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 2rem; }
+        
         .gradient-text { background: linear-gradient(135deg, var(--accent), #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .yellow-glow { color: var(--yellow); text-shadow: 0 0 20px rgba(234, 179, 8, 0.6); }
         h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
@@ -45,6 +48,7 @@
             border-radius: 30px; font-weight: 600; font-size: 0.8rem; letter-spacing: 1px;
             display: inline-block; text-transform: uppercase;
         }
+        
         .btn-primary {
             background: var(--accent); color: #000; font-weight: 700; padding: 1rem 2.5rem;
             border-radius: 40px; text-decoration: none; display: inline-block; transition: 0.2s;
@@ -75,6 +79,7 @@
             background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
             padding: 2rem; display: flex; align-items: center; gap: 1rem;
         }
+        
         .section { margin: 5rem 0; }
         .two-col { display: flex; gap: 4rem; align-items: center; flex-wrap: wrap; }
         .two-col > div { flex: 1 1 400px; }
@@ -84,34 +89,55 @@
             position: relative; overflow: hidden; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
         }
 
-        /* Preview image above nodes */
+        .preview-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.8rem; padding: 0 0.5rem; flex-wrap: wrap; gap: 0.5rem;
+        }
+        .media-toggles {
+            display: flex; gap: 0.3rem; background: rgba(0,0,0,0.5); padding: 0.3rem;
+            border-radius: 20px; border: 1px solid var(--border);
+        }
+        .media-btn {
+            background: transparent; color: var(--muted); border: none; padding: 0.3rem 0.8rem;
+            border-radius: 16px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s;
+        }
+        .media-btn.active { background: var(--accent); color: #000; }
+        
+        .toggle-switch {
+            accent-color: var(--accent); cursor: pointer;
+            width: 16px; height: 16px; margin: 0;
+        }
+
         .preview-panel {
             width: 100%; max-width: 400px; margin: 0 auto 0.8rem;
             border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.15);
             box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            background: #000; position: relative;
         }
-        .preview-panel canvas { width: 100%; height: auto; display: block; }
+        .preview-panel canvas { width: 100%; height: auto; display: block; object-fit: cover; }
+        .preview-loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: var(--accent); font-size: 0.8rem; font-weight: 600; letter-spacing: 1px;
+            pointer-events: none; display: none; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
 
         .node-graph-preview {
-            position: relative; width: 100%; min-height: 420px; border-radius: 20px; margin-top: 1rem;
+            position: relative; width: 100%; min-height: 480px; border-radius: 20px; margin-top: 1rem;
             background: radial-gradient(circle at 50% 50%, rgba(0, 210, 190, 0.05) 0%, transparent 70%);
         }
         #rubiconPreviewCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: grab; }
         #rubiconPreviewCanvas:active { cursor: grabbing; }
 
-        /* Carousel */
         .carousel-wrapper { position: relative; margin: 3rem 0; }
         .carousel-viewport { overflow: hidden; border-radius: 20px; }
-        .carousel-track { display: flex; gap: 1.5rem; transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .carousel-track { display: flex; gap: 1.5rem; will-change: transform; }
         .ext-item {
             flex: 0 0 calc((100% - 4.5rem) / 3.5); min-width: 0;
             background: rgba(22, 22, 22, 0.6); backdrop-filter: blur(12px);
             border: 1px solid var(--border); border-radius: 24px;
             padding: clamp(1rem, 2vw, 2rem);
-            transition: opacity 0.4s, border-color 0.3s, transform 0.3s; opacity: 1;
+            transition: border-color 0.3s, transform 0.3s; opacity: 1;
         }
-        .ext-item.fading-out { opacity: 0; pointer-events: none; }
-        .ext-item.semi-transparent { opacity: 0.5; }
         .ext-item:hover { border-color: var(--accent); transform: translateY(-5px); }
         .ext-icon { font-size: clamp(1.8rem, 5vw, 2.5rem); margin-bottom: 0.8rem; line-height: 1; }
         .ext-item h3 { font-size: clamp(1rem, 2.5vw, 1.4rem); margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -126,39 +152,49 @@
         .carousel-btn:hover { background: var(--accent); color: #000; border-color: var(--accent); }
         .carousel-btn.prev { left: -22px; }
         .carousel-btn.next { right: -22px; }
-        .carousel-btn:disabled { opacity: 0.3; pointer-events: none; }
         .carousel-gradient-right {
             position: absolute; right: 0; top: 0; bottom: 0; width: 80px;
             background: linear-gradient(to right, transparent, var(--bg));
             pointer-events: none; z-index: 5; border-radius: 0 20px 20px 0;
         }
 
-        /* Download */
         .download-card {
             background: rgba(18, 18, 18, 0.85); backdrop-filter: blur(16px);
-            border: 1px solid var(--border); border-radius: 24px; padding: 2.5rem 2rem;
-            text-align: center; max-width: 650px; margin: 0 auto;
+            border: 1px solid var(--border); border-radius: 24px; padding: 3rem 2rem;
+            max-width: 950px; margin: 0 auto;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
         }
-        .download-btn-group { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
+        .download-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; text-align: left;
+        }
+        .download-btn-group { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
         .ghost-badge {
             background: rgba(234, 179, 8, 0.15); color: var(--yellow); padding: 0.25rem 0.9rem;
             border-radius: 30px; font-weight: 600; font-size: 0.7rem; letter-spacing: 0.5px;
             display: inline-block; text-transform: uppercase; margin-bottom: 0.8rem;
         }
+        .ghost-info {
+            background: rgba(0, 0, 0, 0.4); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border);
+        }
+
         .cta-section { text-align: center; }
         footer { border-top: 1px solid #222; padding: 2rem 0; color: #666; text-align: center; }
 
+        @media (max-width: 900px) {
+            .download-grid { grid-template-columns: 1fr; text-align: center; gap: 2rem; }
+            .download-btn-group { justify-content: center; }
+            .ghost-info { text-align: left; }
+        }
         @media (max-width: 768px) {
             .two-col { flex-direction: column; gap: 2rem; }
             .carousel-btn.prev { left: 0; } .carousel-btn.next { right: 0; }
-            .node-graph-preview { min-height: 320px; }
+            .node-graph-preview { min-height: 480px; } /* Fits staggered nodes */
             .ext-item { flex: 0 0 calc((100% - 2rem) / 2.2); }
         }
         @media (max-width: 480px) {
             .ext-item { flex: 0 0 calc((100% - 1rem) / 1.5); }
-            .node-graph-preview { min-height: 260px; }
-            .btn-primary, .btn-outline { padding: 0.8rem 1.8rem; font-size: 1rem; }
+            .node-graph-preview { min-height: 520px; }
+            .btn-primary, .btn-outline { padding: 0.8rem 1.8rem; font-size: 1rem; width: 100%; margin-bottom: 0.5rem; }
         }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -196,7 +232,32 @@
         </div>
     </div>
 
-    <!-- RUBICON GRAPH ENGINE (with live preview) -->
+    <section class="section">
+        <div style="text-align:center;margin-bottom:2rem;">
+            <span class="badge" style="margin-bottom:1rem;">EXTENDABLE PLATFORM</span>
+            <h2 class="gradient-text">Powerful Tools, One Click Away</h2>
+            <p style="max-width:680px;margin:1.2rem auto;color:var(--muted);font-size:1.05rem;">
+                The core editor stays lightweight. Pro features come as extensions — install only what you need.
+            </p>
+        </div>
+        <div class="carousel-wrapper">
+            <button class="carousel-btn prev" id="carouselPrev"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="carousel-viewport" id="carouselViewport">
+                <div class="carousel-track" id="carouselTrack">
+                    <!-- Base set of items for JS to clone -->
+                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-volume-high" style="color:#10b981;"></i></div><h3>Audio Mixing</h3><p>Per‑clip volume, fade handles, and one‑click L‑cut extraction.</p></div>
+                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-crop-simple" style="color:#60a5fa;"></i></div><h3>PiP &amp; Transform</h3><p>Drag clips on canvas with smart guides. Shadows, corners, blend modes.</p></div>
+                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-font" style="color:#8b5cf6;"></i></div><h3>Media Manager</h3><p>Inline rename, preview, safe deletion, and Google Fonts integration.</p></div>
+                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-rotate-left" style="color:#f59e0b;"></i></div><h3>Undo &amp; Redo</h3><p>Deep history that remembers every cut. Experiment fearlessly.</p></div>
+                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-wand-magic-sparkles" style="color:#ec4899;"></i></div><h3>Transition Creator</h3><p>Build custom animated transitions as .js modules. Auto‑reverse and export‑ready.</p></div>
+                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-puzzle-piece" style="color:#f59e0b;"></i></div><h3>Hotkey Master</h3><p>Fully customisable shortcuts with automatic conflict resolution.</p></div>
+                </div>
+            </div>
+            <button class="carousel-btn next" id="carouselNext"><i class="fa-solid fa-chevron-right"></i></button>
+            <div class="carousel-gradient-right"></div>
+        </div>
+    </section>
+
     <section class="section" id="compositing">
         <div class="two-col">
             <div>
@@ -213,10 +274,25 @@
                     own to create effects no other editor can match.
                 </p>
             </div>
-            <div class="glass-demo" style="min-height:520px; padding:1.2rem;">
-                <!-- Live preview image that responds to sliders -->
+            <div class="glass-demo" style="min-height:560px; padding:1.2rem;">
+                
+                <div class="preview-header">
+                    <span style="font-size:0.8rem; color:var(--muted); font-weight:600; letter-spacing:1px;"><i class="fa-solid fa-display"></i> RUBICON PREVIEW</span>
+                    <div style="display:flex; align-items:center; gap:1rem;">
+                        <label style="font-size:0.75rem; color:var(--muted); display:flex; align-items:center; gap:0.4rem; cursor:pointer;" title="Bypass Effects">
+                            <input type="checkbox" id="effectsToggle" class="toggle-switch" checked> Enable Nodes
+                        </label>
+                        <div class="media-toggles" id="mediaToggles">
+                            <button class="media-btn active" data-media="graphic">Graphic</button>
+                            <button class="media-btn" data-media="photo">Photo</button>
+                            <button class="media-btn" data-media="video">Video</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="preview-panel">
                     <canvas id="previewCanvas" width="400" height="225"></canvas>
+                    <div class="preview-loading" id="previewLoading">BUFFERING MEDIA...</div>
                 </div>
                 <div class="node-graph-preview">
                     <canvas id="rubiconPreviewCanvas"></canvas>
@@ -228,33 +304,6 @@
         </div>
     </section>
 
-    <!-- EXTENSIONS CAROUSEL -->
-    <section class="section">
-        <div style="text-align:center;margin-bottom:2rem;">
-            <span class="badge" style="margin-bottom:1rem;">EXTENDABLE PLATFORM</span>
-            <h2 class="gradient-text">Powerful Tools, One Click Away</h2>
-            <p style="max-width:680px;margin:1.2rem auto;color:var(--muted);font-size:1.05rem;">
-                The core editor stays lightweight. Pro features come as extensions — install only what you need.
-            </p>
-        </div>
-        <div class="carousel-wrapper">
-            <button class="carousel-btn prev" id="carouselPrev"><i class="fa-solid fa-chevron-left"></i></button>
-            <div class="carousel-viewport" id="carouselViewport">
-                <div class="carousel-track" id="carouselTrack">
-                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-volume-high" style="color:#10b981;"></i></div><h3>Audio Mixing</h3><p>Per‑clip volume, fade handles, and one‑click L‑cut extraction.</p></div>
-                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-crop-simple" style="color:#60a5fa;"></i></div><h3>PiP &amp; Transform</h3><p>Drag clips on canvas with smart guides. Shadows, corners, blend modes.</p></div>
-                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-font" style="color:#8b5cf6;"></i></div><h3>Media Manager</h3><p>Inline rename, preview, safe deletion, and Google Fonts integration.</p></div>
-                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-rotate-left" style="color:#f59e0b;"></i></div><h3>Undo &amp; Redo</h3><p>Deep history that remembers every cut. Experiment fearlessly.</p></div>
-                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-wand-magic-sparkles" style="color:#ec4899;"></i></div><h3>Transition Creator</h3><p>Build custom animated transitions as .js modules. Auto‑reverse and export‑ready.</p></div>
-                    <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-puzzle-piece" style="color:#f59e0b;"></i></div><h3>Hotkey Master</h3><p>Fully customisable shortcuts with automatic conflict resolution.</p></div>
-                </div>
-            </div>
-            <button class="carousel-btn next" id="carouselNext"><i class="fa-solid fa-chevron-right"></i></button>
-            <div class="carousel-gradient-right"></div>
-        </div>
-    </section>
-
-    <!-- EXPORT -->
     <section class="section">
         <div class="two-col">
             <div>
@@ -286,7 +335,6 @@
         </div>
     </section>
 
-    <!-- GHOST APP DOWNLOAD -->
     <section class="section" id="download">
         <div style="text-align:center;margin-bottom:2rem;">
             <span class="badge" style="margin-bottom:1rem;">NEW — DESKTOP EXPERIENCE</span>
@@ -298,30 +346,38 @@
                 editing workspace that behaves exactly like professional desktop software.
             </p>
         </div>
+        
         <div class="download-card">
-            <span class="ghost-badge"><i class="fa-solid fa-ghost"></i> Ghost App™</span>
-            <h3 style="font-size:1.4rem;margin-bottom:0.5rem;">Download for Your System</h3>
-            <p style="color:var(--muted);font-size:0.95rem;margin-bottom:1rem;" id="os-detect-text">Detecting your operating system…</p>
-            <div class="download-btn-group" id="download-btns">
-                <a href="#" class="btn-primary" id="btn-download-primary" style="display:none;"><i class="fa-solid fa-download"></i> <span id="btn-download-label">Download</span></a>
-                <a href="#" class="btn-outline" id="btn-download-other" style="display:none;"><span id="btn-other-label">Other OS</span></a>
+            <div class="download-grid">
+                <div>
+                    <span class="ghost-badge"><i class="fa-solid fa-ghost"></i> Ghost App™</span>
+                    <h3 style="font-size:1.4rem;margin-bottom:0.5rem;">Download for Your System</h3>
+                    <p style="color:var(--muted);font-size:0.95rem;margin-bottom:1rem;" id="os-detect-text">Detecting your operating system…</p>
+                    <div class="download-btn-group" id="download-btns">
+                        <a href="#" class="btn-primary" id="btn-download-primary" style="display:none;"><i class="fa-solid fa-download"></i> <span id="btn-download-label">Download</span></a>
+                        <a href="#" class="btn-outline" id="btn-download-other" style="display:none;"><span id="btn-other-label">Other OS</span></a>
+                    </div>
+                    <p style="color:var(--muted);font-size:0.8rem;margin-top:1.5rem;" id="browser-fallback">
+                        Prefer not to install? <a href="https://cleo876.github.io/wasm-video-editor/" target="_blank" style="color:var(--accent);">Launch the browser version</a> — no download needed.
+                    </p>
+                </div>
+                
+                <div class="ghost-info">
+                    <details open style="text-align:left;color:var(--muted);font-size:0.85rem;">
+                        <summary style="cursor:pointer;color:var(--accent);font-weight:600; font-size:1rem; margin-bottom: 0.5rem;">What is a Ghost App?</summary>
+                        <p style="margin-top:0.5rem;">A <strong>Ghost App</strong> is a real website given a permanent home on your computer.
+                        The installer creates a dedicated, sandboxed browser profile so the editor never touches your
+                        personal browsing data, never conflicts with extensions, and works completely offline after the
+                        first launch.</p>
+                        <p style="margin-top:0.5rem;">It appears in your taskbar, can be pinned to your dock, and feels like a
+                        purpose‑built application — because it is. No Electron wrapper, no heavy downloads, just your
+                        existing browser running in a clean, isolated environment.</p>
+                    </details>
+                </div>
             </div>
-            <p style="color:var(--muted);font-size:0.8rem;margin-top:1rem;" id="browser-fallback">
-                Prefer not to install? <a href="https://cleo876.github.io/wasm-video-editor/" target="_blank" style="color:var(--accent);">Launch the browser version</a> — no download needed.
-            </p>
-            <details style="margin-top:1.2rem;text-align:left;color:var(--muted);font-size:0.85rem;">
-                <summary style="cursor:pointer;color:var(--accent);font-weight:600;">What is a Ghost App?</summary>
-                <p style="margin-top:0.5rem;">A <strong>Ghost App</strong> is a real website given a permanent home on your computer.
-                The installer creates a dedicated, sandboxed browser profile so the editor never touches your
-                personal browsing data, never conflicts with extensions, and works completely offline after the
-                first launch. It appears in your taskbar, can be pinned to your dock, and feels like a
-                purpose‑built application — because it is. No Electron wrapper, no heavy downloads, just your
-                existing browser running in a clean, isolated environment.</p>
-            </details>
         </div>
     </section>
 
-    <!-- PRIVACY -->
     <section class="section" style="text-align:center;">
         <span class="badge" style="margin-bottom:1rem;">YOUR FOOTAGE, YOUR RIGHTS</span>
         <h2 class="gradient-text">100% Client‑Side. 100% Private.</h2>
@@ -333,7 +389,6 @@
         </p>
     </section>
 
-    <!-- EDITOR'S JAM -->
     <section class="section cta-section" id="jam">
         <h2 class="gradient-text" style="font-size:2.6rem;">Editor's Jam 2026</h2>
         <p style="color:var(--muted);max-width:680px;margin:1.2rem auto;font-size:1.05rem;">
@@ -355,19 +410,30 @@
 
 <script>
 (function(){
-    // ── OS Detection & Download ──
     (function() {
         const ua = navigator.userAgent || '';
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+        const isMac = ua.includes('Mac');
         const isWin = ua.includes('Windows');
-        const isLinux = ua.includes('Linux') && !ua.includes('Android');
+        const isLinux = ua.includes('Linux') && !isMobile;
+        
         const winUrl  = 'https://github.com/Cleo876/wasm-video-editor/raw/refs/heads/main/Install/Windows/Windows%20-%20WASM%20EDITOR%20Installer.zip';
         const linUrl  = 'https://github.com/Cleo876/wasm-video-editor/raw/refs/heads/main/Install/Linux/Linux%20-%20WASM%20EDITOR%20Installer.zip';
+        
         const detectEl = document.getElementById('os-detect-text');
         const primaryBtn = document.getElementById('btn-download-primary');
         const primaryLabel = document.getElementById('btn-download-label');
         const otherBtn = document.getElementById('btn-download-other');
         const otherLabel = document.getElementById('btn-other-label');
-        if (isWin) {
+        const browserFallback = document.getElementById('browser-fallback');
+
+        if (isMobile) {
+            detectEl.innerHTML = 'The WASM Video Editor is a desktop-class editing environment.<br>Please visit this page on a computer to download the app or launch the web editor.';
+            document.getElementById('download-btns').style.display = 'none';
+        } else if (isMac) {
+            detectEl.innerHTML = 'The Ghost App™ for macOS is currently in development.<br>You can launch the full browser version instantly below.';
+            document.getElementById('download-btns').style.display = 'none';
+        } else if (isWin) {
             detectEl.innerText = 'We detected Windows — grab the installer below.';
             primaryBtn.style.display = 'inline-block'; primaryBtn.href = winUrl;
             primaryLabel.innerText = 'Download for Windows (.zip)';
@@ -386,112 +452,251 @@
             otherBtn.style.display = 'inline-block'; otherBtn.href = linUrl;
             otherLabel.innerText = 'Linux (.zip)';
         }
-        document.getElementById('browser-fallback').style.display = 'block';
+        browserFallback.style.display = 'block';
     })();
 
-    // ── PREVIEW CANVAS (responsive to slider values) ──
     const previewCanvas = document.getElementById('previewCanvas');
-    const previewCtx = previewCanvas.getContext('2d');
-    // Generate a colourful gradient "test image" that we can filter
-    function drawBasePreview() {
-        const w = previewCanvas.width, h = previewCanvas.height;
-        previewCtx.clearRect(0,0,w,h);
-        // Sky gradient
-        const sky = previewCtx.createLinearGradient(0,0,0,h*0.6);
-        sky.addColorStop(0,'#1e3a5f'); sky.addColorStop(1,'#87ceeb');
-        previewCtx.fillStyle = sky; previewCtx.fillRect(0,0,w,h*0.6);
-        // Sun
-        previewCtx.fillStyle = '#ffd700';
-        previewCtx.beginPath(); previewCtx.arc(w*0.7,h*0.25,40,0,Math.PI*2); previewCtx.fill();
-        // Mountains
-        previewCtx.fillStyle = '#2d5a27';
-        previewCtx.beginPath(); previewCtx.moveTo(0,h*0.6); previewCtx.lineTo(w*0.3,h*0.35);
-        previewCtx.lineTo(w*0.6,h*0.55); previewCtx.lineTo(w*0.8,h*0.3); previewCtx.lineTo(w,h*0.5);
-        previewCtx.lineTo(w,h); previewCtx.lineTo(0,h); previewCtx.closePath(); previewCtx.fill();
-        // Grass
-        previewCtx.fillStyle = '#4a7c3f';
-        previewCtx.fillRect(0,h*0.65,w,h*0.35);
-        // House
-        previewCtx.fillStyle = '#8B4513'; previewCtx.fillRect(w*0.25,h*0.5,60,50);
-        previewCtx.fillStyle = '#A0522D'; previewCtx.beginPath();
-        previewCtx.moveTo(w*0.25-10,h*0.5); previewCtx.lineTo(w*0.25+30,h*0.35); previewCtx.lineTo(w*0.25+70,h*0.5);
-        previewCtx.closePath(); previewCtx.fill();
-    }
-    drawBasePreview();
-    // Store base image for re‑filtering
-    const baseImageData = previewCtx.getImageData(0,0,previewCanvas.width,previewCanvas.height);
+    const previewCtx = previewCanvas.getContext('2d', { willReadFrequently: true });
+    
+    // Offscreen buffer for pulling raw media pixels cleanly
+    const bufferCanvas = document.createElement('canvas');
+    bufferCanvas.width = 400; bufferCanvas.height = 225;
+    const bufferCtx = bufferCanvas.getContext('2d', { willReadFrequently: true });
 
-    // Slider state for Color Corrector
     const sliderValues = { exposure: 0, contrast: 50, saturation: 50, temperature: 50, hueShift: 0 };
+    
+    let currentMedia = 'graphic';
+    let isVideoPlaying = false;
+    let renderFrameId = null;
+    let effectsEnabled = true;
+
+    // Loading State UI
+    const loadingUI = document.getElementById('previewLoading');
+    document.getElementById('effectsToggle').addEventListener('change', (e) => {
+        effectsEnabled = e.target.checked;
+        if (currentMedia !== 'video') applyFiltersToPreview();
+    });
+
+    const photoImg = new Image();
+    photoImg.crossOrigin = "anonymous";
+    photoImg.src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&h=225&q=80";
+    
+    const sampleVideo = document.createElement('video');
+    sampleVideo.crossOrigin = "anonymous";
+    // Highly reliable Wikimedia Commons WebM link specifically supporting open CORS
+    sampleVideo.src = "https://upload.wikimedia.org/wikipedia/commons/transcoded/c/c0/Big_Buck_Bunny_4K.webm/Big_Buck_Bunny_4K.webm-360p.vp9.webm";
+    sampleVideo.muted = true;
+    sampleVideo.loop = true;
+    sampleVideo.playsInline = true;
+
+    // Fallback if browser entirely blocks video CORS despite headers
+    sampleVideo.onerror = () => {
+        console.warn("WASM Editor: Video blocked by browser network/CORS rules. Falling back to Photo mode.");
+        document.querySelector('.media-btn[data-media="photo"]').click();
+    };
+    
+    // Show loading text while buffering
+    sampleVideo.addEventListener('waiting', () => { if(currentMedia === 'video') loadingUI.style.display = 'block'; });
+    sampleVideo.addEventListener('playing', () => { loadingUI.style.display = 'none'; });
+
+    function drawBasePreview(ctx) {
+        const w = bufferCanvas.width, h = bufferCanvas.height;
+        ctx.clearRect(0,0,w,h);
+        const sky = ctx.createLinearGradient(0,0,0,h*0.6);
+        sky.addColorStop(0,'#1e3a5f'); sky.addColorStop(1,'#87ceeb');
+        ctx.fillStyle = sky; ctx.fillRect(0,0,w,h*0.6);
+        ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(w*0.7,h*0.25,40,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#2d5a27'; ctx.beginPath(); ctx.moveTo(0,h*0.6); ctx.lineTo(w*0.3,h*0.35);
+        ctx.lineTo(w*0.6,h*0.55); ctx.lineTo(w*0.8,h*0.3); ctx.lineTo(w,h*0.5);
+        ctx.lineTo(w,h); ctx.lineTo(0,h); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#4a7c3f'; ctx.fillRect(0,h*0.65,w,h*0.35);
+        ctx.fillStyle = '#8B4513'; ctx.fillRect(w*0.25,h*0.5,60,50);
+        ctx.fillStyle = '#A0522D'; ctx.beginPath();
+        ctx.moveTo(w*0.25-10,h*0.5); ctx.lineTo(w*0.25+30,h*0.35); ctx.lineTo(w*0.25+70,h*0.5);
+        ctx.closePath(); ctx.fill();
+    }
 
     function applyFiltersToPreview() {
-        const v = sliderValues;
-        const exposureVal = 1 + v.exposure / 100;          // 0.5 – 1.5
-        const contrastVal = 0.5 + v.contrast / 50;         // 0.5 – 2.5
-        const saturationVal = v.saturation / 50;            // 0 – 2
-        const tempR = 1 + (v.temperature - 50) / 100;      // red shift
-        const tempB = 1 - (v.temperature - 50) / 100;      // blue shift
+        const w = bufferCanvas.width, h = bufferCanvas.height;
+        
+        // 1. Draw requested media to offscreen buffer
+        try {
+            if (currentMedia === 'graphic') { drawBasePreview(bufferCtx); } 
+            else if (currentMedia === 'photo' && photoImg.complete) { bufferCtx.drawImage(photoImg, 0, 0, w, h); } 
+            else if (currentMedia === 'video' && sampleVideo.readyState >= 2) { bufferCtx.drawImage(sampleVideo, 0, 0, w, h); } 
+            else { drawBasePreview(bufferCtx); }
+        } catch (e) {
+            drawBasePreview(bufferCtx);
+        }
 
-        previewCtx.putImageData(baseImageData,0,0);
-        const imgData = previewCtx.getImageData(0,0,previewCanvas.width,previewCanvas.height);
+        // Bypass logic - if unchecked, just draw raw buffer and skip array math
+        if (!effectsEnabled) {
+            previewCtx.drawImage(bufferCanvas, 0, 0);
+            return;
+        }
+
+        // 2. Extract pixels
+        let imgData;
+        try {
+            imgData = bufferCtx.getImageData(0,0,w,h);
+        } catch(e) {
+            previewCtx.drawImage(bufferCanvas, 0, 0); 
+            return;
+        }
+
+        // 3. Apply Node Math
+        const v = sliderValues;
+        const exposureVal = 1 + v.exposure / 100;
+        const contrastVal = 0.5 + v.contrast / 50;
+        const saturationVal = v.saturation / 50;
+        const tempR = 1 + (v.temperature - 50) / 100;
+        const tempB = 1 - (v.temperature - 50) / 100;
+
         const d = imgData.data;
         for (let i=0; i<d.length; i+=4) {
-            // Brightness (exposure)
             d[i]   = Math.min(255, Math.max(0, d[i] * exposureVal));
             d[i+1] = Math.min(255, Math.max(0, d[i+1] * exposureVal));
             d[i+2] = Math.min(255, Math.max(0, d[i+2] * exposureVal));
-            // Contrast
             d[i]   = Math.min(255, Math.max(0, (d[i]-128)*contrastVal + 128));
             d[i+1] = Math.min(255, Math.max(0, (d[i+1]-128)*contrastVal + 128));
             d[i+2] = Math.min(255, Math.max(0, (d[i+2]-128)*contrastVal + 128));
-            // Saturation
             const gray = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
             d[i]   = Math.min(255, Math.max(0, gray + (d[i]-gray)*saturationVal));
             d[i+1] = Math.min(255, Math.max(0, gray + (d[i+1]-gray)*saturationVal));
             d[i+2] = Math.min(255, Math.max(0, gray + (d[i+2]-gray)*saturationVal));
-            // Temperature
             d[i]   = Math.min(255, Math.max(0, d[i] * tempR));
             d[i+2] = Math.min(255, Math.max(0, d[i+2] * tempB));
         }
+        
+        // 4. Output
         previewCtx.putImageData(imgData,0,0);
     }
+
+    let lastFrameTime = 0;
+    const fpsInterval = 1000 / 30; // ~33.3ms for 30 FPS
+
+    function videoRenderLoop(timestamp) {
+        if (currentMedia === 'video' && isVideoPlaying) {
+            renderFrameId = requestAnimationFrame(videoRenderLoop);
+            const elapsed = timestamp - lastFrameTime;
+            
+            // Throttle math to 30 FPS to save user CPU
+            if (elapsed > fpsInterval) {
+                lastFrameTime = timestamp - (elapsed % fpsInterval);
+                applyFiltersToPreview();
+            }
+        }
+    }
+
+    const mediaBtns = document.querySelectorAll('.media-btn');
+    mediaBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            mediaBtns.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            currentMedia = e.target.dataset.media;
+            loadingUI.style.display = 'none';
+            
+            if (renderFrameId) cancelAnimationFrame(renderFrameId);
+
+            if (currentMedia === 'video') {
+                sampleVideo.play().then(() => {
+                    isVideoPlaying = true;
+                    requestAnimationFrame(videoRenderLoop);
+                }).catch(err => {
+                    console.log("Video autoplay blocked", err);
+                    document.querySelector('.media-btn[data-media="photo"]').click();
+                });
+            } else {
+                isVideoPlaying = false;
+                sampleVideo.pause();
+                if (currentMedia === 'photo' && !photoImg.complete) {
+                    photoImg.onload = applyFiltersToPreview;
+                } else {
+                    applyFiltersToPreview();
+                }
+            }
+        });
+    });
+
+    // Observer to pause video entirely when scrolling past the section to save battery
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (currentMedia === 'video') {
+                if (entry.isIntersecting) {
+                    sampleVideo.play();
+                    isVideoPlaying = true;
+                    requestAnimationFrame(videoRenderLoop);
+                } else {
+                    sampleVideo.pause();
+                    isVideoPlaying = false;
+                }
+            }
+        });
+    }, { threshold: 0.1 });
+    observer.observe(document.getElementById('compositing'));
+
     applyFiltersToPreview();
 
-    // ── RUBICON NODE GRAPH (with realistic interiors & slider interaction) ──
     const canvas = document.getElementById('rubiconPreviewCanvas');
     const ctx = canvas.getContext('2d');
     let width, height;
     const container = canvas.parentElement;
-    function resize(){
-        width = container.clientWidth;
-        height = container.clientHeight || 420;
-        canvas.width = width;
-        canvas.height = height;
-    }
-    resize();
-    window.addEventListener('resize', resize);
 
-    const nodeWidth = Math.min(180, width * 0.18);
-    const nodeHeight = nodeWidth * 0.75;
-
+    // Nodes contain their own width and height variables for robust hit testing
     const nodes = [
-        { id:'media_in',   type:'media_in',   name:'Media In',        x:0, y:0, inputs:[], outputs:['image'] },
-        { id:'color_corr', type:'color_corr', name:'Color Corrector', x:0, y:0, inputs:['image'], outputs:['image'] },
-        { id:'vignette',   type:'vignette_fx', name:'Cinematic Vignette', x:0, y:0, inputs:['image'], outputs:['image'] },
-        { id:'media_out',  type:'media_out',  name:'Media Out',       x:0, y:0, inputs:['image'], outputs:[] }
+        { id:'media_in',   type:'media_in',   name:'Media In',        x:0, y:0, w:0, h:0, inputs:[], outputs:['image'] },
+        { id:'color_corr', type:'color_corr', name:'Color Corrector', x:0, y:0, w:0, h:0, inputs:['image'], outputs:['image'] },
+        { id:'vignette',   type:'vignette_fx', name:'Cinematic Vignette', x:0, y:0, w:0, h:0, inputs:['image'], outputs:['image'] },
+        { id:'media_out',  type:'media_out',  name:'Media Out',       x:0, y:0, w:0, h:0, inputs:['image'], outputs:[] }
     ];
 
-    function repositionNodes(){
-        const margin = 35;
-        const totalWidth = width - margin * 2;
-        const spacing = (totalWidth - nodeWidth * nodes.length) / (nodes.length - 1);
-        nodes.forEach((node, i) => {
-            node.x = margin + i * (nodeWidth + spacing);
-            node.y = (height - nodeHeight) / 2;
+    function resize(){
+        width = container.clientWidth;
+        height = container.clientHeight || 480;
+        canvas.width = width;
+        canvas.height = height;
+
+        const dynamicWidth = Math.max(120, Math.min(180, width * 0.2));
+        const baseHeight = dynamicWidth * 0.75;
+
+        nodes.forEach(n => {
+            n.w = dynamicWidth;
+            // The Color Corrector is explicitly taller to comfortably fit sliders
+            n.h = n.type === 'color_corr' ? baseHeight * 1.6 : baseHeight;
+            // Safe clamp
+            n.x = Math.max(0, Math.min(width - n.w, n.x));
+            n.y = Math.max(0, Math.min(height - n.h, n.y));
         });
     }
+
+    function repositionNodes(){
+        const margin = 20;
+        let currentX = margin;
+        const totalW = width - margin * 2;
+        const totalNodesW = nodes.reduce((sum, n) => sum + n.w, 0);
+        const overlapSpacing = (totalW - totalNodesW) / (nodes.length - 1);
+        
+        nodes.forEach((node, i) => {
+            node.x = currentX;
+            node.y = (height - node.h) / 2;
+            
+            // Stagger nodes vertically on small mobile screens
+            if (overlapSpacing < -10) {
+                node.y = margin + (i % 2) * (height / 2 - margin);
+            }
+            currentX += node.w + Math.max(10, overlapSpacing);
+            
+            node.x = Math.max(0, Math.min(width - node.w, node.x));
+            node.y = Math.max(0, Math.min(height - node.h, node.y));
+        });
+    }
+
+    resize();
     repositionNodes();
-    window.addEventListener('resize', () => { resize(); repositionNodes(); wireData = buildWireData(); });
+    
+    window.addEventListener('resize', () => { 
+        resize(); repositionNodes(); wireData = buildWireData(); 
+    });
 
     const wires = [
         { from:'media_in', to:'color_corr', type:'image' },
@@ -502,19 +707,21 @@
     function getPortPos(nodeId, portIdx, isInput){
         const node = nodes.find(n=>n.id===nodeId);
         if(!node) return {x:0,y:0};
-        const header = nodeHeight * 0.25;
-        const body = nodeHeight - header;
+        const header = node.w * 0.25; // Header proportional to width
+        const body = node.h - header;
         const count = isInput ? node.inputs.length : node.outputs.length;
         const spacingY = body/(count+1);
         const portY = node.y + header + spacingY*(portIdx+1);
-        const portX = isInput ? node.x : node.x + nodeWidth;
+        const portX = isInput ? node.x : node.x + node.w;
         return {x:portX, y:portY};
     }
+
     function pointOnBezier(from, to, cpOff, t){
         const x0=from.x,y0=from.y,x1=from.x+cpOff,y1=from.y,x2=to.x-cpOff,y2=to.y,x3=to.x,y3=to.y;
         const mt=1-t,mt2=mt*mt,t2=t*t;
         return {x:mt*mt2*x0+3*mt2*t*x1+3*mt*t2*x2+t2*t*x3, y:mt*mt2*y0+3*mt2*t*y1+3*mt*t2*y2+t2*t*y3};
     }
+
     function buildWireData(){
         return wires.map(w => {
             const fromP = getPortPos(w.from,0,false), toP = getPortPos(w.to,0,true);
@@ -539,12 +746,12 @@
     }
     spawnParticles();
 
-    // Slider geometry (relative to node body)
     function getSliderRects(node) {
-        const bodyTop = node.y + nodeHeight * 0.25;
-        const bodyH = nodeHeight * 0.75;
+        const headerH = node.w * 0.25;
+        const bodyTop = node.y + headerH;
+        const bodyH = node.h - headerH; 
         const padX = node.x + 8;
-        const w = nodeWidth - 16;
+        const w = node.w - 16;
         const trackH = 4;
         const labels = ['Exposure','Contrast','Saturation','Temp (B/Y)','Hue Shift'];
         const keys = ['exposure','contrast','saturation','temperature','hueShift'];
@@ -558,11 +765,11 @@
     }
 
     function drawNode(n){
-        const {x,y,name,inputs,outputs,type}=n;
+        const {x,y,w,h,name,inputs,outputs,type}=n;
         ctx.save();
         ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=6;
         ctx.fillStyle='rgba(20,20,20,0.82)';ctx.strokeStyle='#444';ctx.lineWidth=1;
-        const w=nodeWidth,h=nodeHeight,r=Math.min(7,h*0.12);
+        const r=Math.min(7,h*0.12);
         ctx.beginPath();
         ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
         ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
@@ -570,19 +777,19 @@
         ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
         ctx.closePath();ctx.fill();ctx.stroke();
 
-        const headerH = h*0.25;
+        const headerH = w*0.25; 
         ctx.fillStyle='#1e1e1e';ctx.fillRect(x,y,w,headerH);
         ctx.fillStyle='#fff';
-        const fontSize=Math.min(12,h*0.15);
+        const fontSize=Math.min(12,w*0.15);
         ctx.font=`bold ${fontSize}px Inter,sans-serif`;ctx.fillText(name,x+10,y+headerH*0.62);
 
-        // Node body content
         ctx.shadowBlur=0;
         const bodyTop = y + headerH;
         const bodyH = h - headerH;
+        
         if (type==='media_in' || type==='media_out') {
             ctx.fillStyle='#666';ctx.font=`${fontSize*0.85}px Inter,sans-serif`;
-            const txt = type==='media_in'?'Source: Timeline Clip':'Target: Compositor Renderer';
+            const txt = type==='media_in'?'Source: Timeline':'Target: WebM Render';
             ctx.fillText(txt, x+10, bodyTop+bodyH*0.45);
         } else if (type==='color_corr') {
             const rects = getSliderRects(n);
@@ -601,7 +808,6 @@
             ctx.fillText('Size', x+10, bodyTop+bodyH*0.7);
         }
 
-        // Ports
         inputs.forEach((ptype,idx)=>{
             const py=y+headerH+((h-headerH)/(inputs.length+1))*(idx+1);
             ctx.beginPath();ctx.arc(x,py,5,0,Math.PI*2);
@@ -618,12 +824,13 @@
     }
 
     let draggingNode=null, dragOffX=0, dragOffY=0;
-    let activeSlider=null; // { node, key }
+    let activeSlider=null; 
 
     function hitTest(mx,my){
         for(let i=nodes.length-1;i>=0;i--){
             const n=nodes[i];
-            if(mx>=n.x&&mx<=n.x+nodeWidth&&my>=n.y&&my<=n.y+nodeHeight)return n;
+            // Uses exact node width and height
+            if(mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h)return n;
         }
         return null;
     }
@@ -633,6 +840,7 @@
         const scaleX=width/rect.width, scaleY=height/rect.height;
         const mx=(e.clientX-rect.left)*scaleX, my=(e.clientY-rect.top)*scaleY;
         const hit=hitTest(mx,my);
+        
         if(hit&&hit.type==='color_corr'){
             const rects=getSliderRects(hit);
             for(const sr of rects){
@@ -644,9 +852,11 @@
             }
         }
         if(hit){
-            const headerH=nodeHeight*0.25;
-            if(my>hit.y+headerH&&hit.type==='color_corr')return; // body but not slider
-            draggingNode=hit;dragOffX=mx-hit.x;dragOffY=my-hit.y;
+            const headerH = hit.w*0.25;
+            if(my>hit.y+headerH&&hit.type==='color_corr')return; 
+            draggingNode=hit;
+            dragOffX=mx-hit.x;
+            dragOffY=my-hit.y;
             canvas.style.cursor='grabbing';
         }
     });
@@ -654,7 +864,7 @@
     window.addEventListener('mousemove',e=>{
         if(activeSlider){
             const rect=canvas.getBoundingClientRect();
-            const scaleX=width/rect.width, scaleY=height/rect.height;
+            const scaleX=width/rect.width;
             const mx=(e.clientX-rect.left)*scaleX;
             const sr=getSliderRects(activeSlider.node).find(s=>s.key===activeSlider.key);
             if(sr){
@@ -662,16 +872,23 @@
                 if(activeSlider.key==='exposure')sliderValues.exposure=Math.round(norm*200-100);
                 else if(activeSlider.key==='hueShift')sliderValues.hueShift=Math.round(norm*200-100);
                 else sliderValues[activeSlider.key]=Math.round(norm*100);
-                applyFiltersToPreview();
+                
+                // Real-time render update on slide for static media
+                if (currentMedia !== 'video' && effectsEnabled) {
+                    applyFiltersToPreview();
+                }
             }
             return;
         }
         if(!draggingNode)return;
+        
         const rect=canvas.getBoundingClientRect();
         const scaleX=width/rect.width, scaleY=height/rect.height;
         const mx=(e.clientX-rect.left)*scaleX, my=(e.clientY-rect.top)*scaleY;
-        draggingNode.x=Math.max(0,Math.min(width-nodeWidth,mx-dragOffX));
-        draggingNode.y=Math.max(0,Math.min(height-nodeHeight,my-dragOffY));
+        
+        // Exact clamp utilizing draggingNode.w and draggingNode.h
+        draggingNode.x=Math.max(0,Math.min(width-draggingNode.w, mx-dragOffX));
+        draggingNode.y=Math.max(0,Math.min(height-draggingNode.h, my-dragOffY));
         wireData=buildWireData();
     });
 
@@ -683,7 +900,7 @@
         ctx.clearRect(0,0,width,height);
         ctx.fillStyle='rgba(5,5,5,0.2)';ctx.fillRect(0,0,width,height);
         wireData.forEach(wd=>{
-            ctx.save();ctx.strokeStyle=wd.color;ctx.lineWidth=Math.max(2,nodeWidth*0.03);
+            ctx.save();ctx.strokeStyle=wd.color;ctx.lineWidth=Math.max(2, wd.points[0] ? 3 : 2);
             ctx.shadowColor=wd.color+'60';ctx.shadowBlur=6;ctx.stroke(wd.path);ctx.restore();
         });
         nodes.forEach(drawNode);
@@ -701,46 +918,67 @@
     }
     animate();
 
-    // ── WRAP‑AROUND CAROUSEL ──
-    const track=document.getElementById('carouselTrack');
-    const prevBtn=document.getElementById('carouselPrev');
-    const nextBtn=document.getElementById('carouselNext');
-    const items=Array.from(track.querySelectorAll('.ext-item'));
-    const totalItems=items.length;
-    const visibleCards=3.5;
-    let currentIndex=0;
+    const track = document.getElementById('carouselTrack');
+    const prevBtn = document.getElementById('carouselPrev');
+    const nextBtn = document.getElementById('carouselNext');
+    let originalItems = Array.from(track.querySelectorAll('.ext-item'));
+    
+    // Clone for true infinity
+    originalItems.forEach(item => {
+        let clone = item.cloneNode(true);
+        track.appendChild(clone);
+    });
+    
+    let allItems = Array.from(track.querySelectorAll('.ext-item'));
+    const totalOriginal = originalItems.length;
+    let currentIndex = 0;
+    let isTransitioning = false;
+
     function getItemWidth(){
-        const first=items[0];if(!first)return 300;
-        return first.getBoundingClientRect().width+24;
+        return allItems[0].getBoundingClientRect().width + 24; 
     }
-    function updateCarousel(animate=true){
-        const itemWidth=getItemWidth();
-        const maxIndex=Math.max(0,totalItems-Math.floor(visibleCards));
-        let displayIndex=currentIndex;
-        // Wrap-around
-        if(currentIndex<0)displayIndex=maxIndex;
-        else if(currentIndex>maxIndex)displayIndex=0;
-        const translateX=-displayIndex*itemWidth;
-        track.style.transition=animate?'transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)':'none';
-        track.style.transform=`translateX(${translateX}px)`;
-        items.forEach((item,i)=>{
-            item.classList.remove('fading-out','semi-transparent');
-            if(i<displayIndex)item.classList.add('fading-out');
-            else if(i>=displayIndex+Math.floor(visibleCards)&&i<displayIndex+Math.floor(visibleCards)+1)
-                item.classList.add('semi-transparent');
-        });
+
+    function updateCarouselPosition(animate = true){
+        const itemWidth = getItemWidth();
+        if(!animate) {
+            track.style.transition = 'none';
+        } else {
+            track.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
+        }
+        track.style.transform = `translateX(-${currentIndex * itemWidth}px)`;
     }
-    nextBtn.addEventListener('click',()=>{
-        const maxIndex=Math.max(0,totalItems-Math.floor(visibleCards));
-        if(currentIndex>=maxIndex){currentIndex=0;}else{currentIndex++;}
-        updateCarousel(true);
+
+    nextBtn.addEventListener('click', () => {
+        if(isTransitioning) return;
+        isTransitioning = true;
+        currentIndex++;
+        updateCarouselPosition(true);
     });
-    prevBtn.addEventListener('click',()=>{
-        if(currentIndex<=0){currentIndex=Math.max(0,totalItems-Math.floor(visibleCards));}else{currentIndex--;}
-        updateCarousel(true);
+
+    prevBtn.addEventListener('click', () => {
+        if(isTransitioning) return;
+        isTransitioning = true;
+        if(currentIndex === 0) {
+            currentIndex = totalOriginal;
+            updateCarouselPosition(false);
+            track.offsetHeight; 
+        }
+        currentIndex--;
+        updateCarouselPosition(true);
     });
-    updateCarousel(false);
-    window.addEventListener('resize',()=>updateCarousel(false));
+
+    track.addEventListener('transitionend', () => {
+        isTransitioning = false;
+        if(currentIndex >= totalOriginal) {
+            track.style.transition = 'none';
+            currentIndex = currentIndex % totalOriginal;
+            updateCarouselPosition(false);
+        }
+    });
+
+    window.addEventListener('resize', () => { updateCarouselPosition(false); });
+    updateCarouselPosition(false);
+
 })();
 </script>
 </body>
