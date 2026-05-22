@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forge™ WASM Video Editor – Professional, Client‑Side, Open‑Source</title>
     <meta name="description" content="The most powerful browser‑based video editor. Node compositing, real‑time effects, WebM export, and a full extension ecosystem — all running offline on your machine. Free forever.">
+    <!-- Load marked.js for our Markdown rendering engine -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
             --bg: #0a0a0a;
@@ -37,18 +39,18 @@
             background-size: 80px 80px;
             mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 70%);
         }
-        .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 2rem; }
         
+        .wrapper { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 0 2rem; }
         .gradient-text { background: linear-gradient(135deg, var(--accent), #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         .yellow-glow { color: var(--yellow); text-shadow: 0 0 20px rgba(234, 179, 8, 0.6); }
         h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
         h2 { font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 700; }
+        
         .badge {
             background: rgba(0, 210, 190, 0.15); color: var(--accent); padding: 0.4rem 1.2rem;
             border-radius: 30px; font-weight: 600; font-size: 0.8rem; letter-spacing: 1px;
             display: inline-block; text-transform: uppercase;
         }
-        
         .btn-primary {
             background: var(--accent); color: #000; font-weight: 700; padding: 1rem 2.5rem;
             border-radius: 40px; text-decoration: none; display: inline-block; transition: 0.2s;
@@ -57,7 +59,7 @@
         .btn-primary:hover { background: #00e6cf; transform: scale(1.05); }
         .btn-outline {
             border: 1px solid #333; color: #ccc; padding: 0.9rem 2.3rem; border-radius: 40px;
-            text-decoration: none; display: inline-block; transition: 0.2s; font-size: 1.1rem;
+            text-decoration: none; display: inline-block; transition: 0.2s; font-size: 1.1rem; cursor: pointer;
         }
         .btn-outline:hover { border-color: var(--accent); color: #fff; }
 
@@ -67,59 +69,50 @@
             filter: blur(8px) brightness(0.4); opacity: 0.9;
         }
         .hero-section { position: relative; padding: 6rem 0 4rem; text-align: center; overflow: hidden; border-radius: 0 0 24px 24px; }
+        
+        .section { margin: 5rem 0; }
+        .cta-section { text-align: center; }
+        .full-bleed { width: 100vw; margin-left: calc(50% - 50vw); max-width: 100vw; }
+        .two-col-standard { display: flex; gap: 4rem; align-items: center; flex-wrap: wrap; }
+        .two-col-standard > div { flex: 1 1 400px; }
 
         .video-banner {
-            position: relative; border-radius: 24px; overflow: hidden;
+            position: relative; overflow: hidden; background: #000;
             box-shadow: 0 0 60px rgba(0, 210, 190, 0.15), 0 20px 40px rgba(0, 0, 0, 0.6);
-            border: 1px solid var(--border); aspect-ratio: 16/9; width: 100%; max-width: 1200px; margin: 4rem auto;
+            border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+            aspect-ratio: 16/9; margin: 2rem calc(50% - 50vw) 4rem; /* Adjusted margins for new flow */
         }
-        .video-banner video { width: 100%; height: 100%; object-fit: cover; }
+        .video-banner video { width: 100%; height: 100%; object-fit: cover; opacity: 0.6; }
         .video-overlay {
             position: absolute; bottom: 0; left: 0; right: 0;
             background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
             padding: 2rem; display: flex; align-items: center; gap: 1rem;
         }
+
+        #compositing {
+            padding: 4rem 2rem; background: rgba(12, 12, 12, 0.3);
+            border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+        }
+        #compositing .two-col { max-width: 1400px; margin: 0 auto; display: flex; gap: 4rem; align-items: center; flex-wrap: wrap; }
+        #compositing .two-col > div { flex: 1 1 400px; }
         
-        .section { margin: 5rem 0; }
-        .two-col { display: flex; gap: 4rem; align-items: center; flex-wrap: wrap; }
-        .two-col > div { flex: 1 1 400px; }
         .glass-demo {
             background: rgba(15, 15, 15, 0.5); backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 24px;
             position: relative; overflow: hidden; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
         }
 
-        .preview-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 0.8rem; padding: 0 0.5rem; flex-wrap: wrap; gap: 0.5rem;
-        }
-        .media-toggles {
-            display: flex; gap: 0.3rem; background: rgba(0,0,0,0.5); padding: 0.3rem;
-            border-radius: 20px; border: 1px solid var(--border);
-        }
-        .media-btn {
-            background: transparent; color: var(--muted); border: none; padding: 0.3rem 0.8rem;
-            border-radius: 16px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s;
-        }
-        .media-btn.active { background: var(--accent); color: #000; }
-        
-        .toggle-switch {
-            accent-color: var(--accent); cursor: pointer;
-            width: 16px; height: 16px; margin: 0;
-        }
+        .media-btn { background: #1a1a1a; border: 1px solid #333; color: #aaa; padding: 0.4rem 0.8rem; border-radius: 8px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.2s; }
+        .media-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .media-btn:hover:not(.active) { background: #2a2a2a; color: #fff; }
 
         .preview-panel {
-            width: 100%; max-width: 400px; margin: 0 auto 0.8rem;
+            width: 100%; max-width: 400px; margin: 0 auto 0.8rem; position: relative;
             border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.15);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-            background: #000; position: relative;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4); background: #000;
         }
-        .preview-panel canvas { width: 100%; height: auto; display: block; object-fit: cover; }
-        .preview-loading {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: var(--accent); font-size: 0.8rem; font-weight: 600; letter-spacing: 1px;
-            pointer-events: none; display: none; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        }
+        .preview-panel canvas { width: 100%; height: auto; display: block; }
+        #loadingUI { position: absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); color:var(--accent); display:none; align-items:center; justify-content:center; font-weight:700; font-size:0.9rem; text-align:center; padding:1rem; z-index: 10; }
 
         .node-graph-preview {
             position: relative; width: 100%; min-height: 480px; border-radius: 20px; margin-top: 1rem;
@@ -128,15 +121,24 @@
         #rubiconPreviewCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: grab; }
         #rubiconPreviewCanvas:active { cursor: grabbing; }
 
+        /* Animated Interactive Pulse */
+        .interactive-pulse {
+            position: absolute; bottom: 16px; right: 16px; color: #000; font-size: 0.75rem; font-weight: 700;
+            background: var(--yellow); padding: 0.4rem 1rem; border-radius: 30px; pointer-events: none; z-index: 20;
+            box-shadow: 0 0 15px rgba(234, 179, 8, 0.6);
+            animation: pulse-ring 2s infinite; display: flex; align-items: center; gap: 0.5rem;
+        }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(234, 179, 8, 0); } 100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); } }
+
         .carousel-wrapper { position: relative; margin: 3rem 0; }
         .carousel-viewport { overflow: hidden; border-radius: 20px; }
-        .carousel-track { display: flex; gap: 1.5rem; will-change: transform; }
+        .carousel-track { display: flex; gap: 1.5rem; transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
         .ext-item {
             flex: 0 0 calc((100% - 4.5rem) / 3.5); min-width: 0;
             background: rgba(22, 22, 22, 0.6); backdrop-filter: blur(12px);
             border: 1px solid var(--border); border-radius: 24px;
             padding: clamp(1rem, 2vw, 2rem);
-            transition: border-color 0.3s, transform 0.3s; opacity: 1;
+            transition: border-color 0.3s, transform 0.3s;
         }
         .ext-item:hover { border-color: var(--accent); transform: translateY(-5px); }
         .ext-icon { font-size: clamp(1.8rem, 5vw, 2.5rem); margin-bottom: 0.8rem; line-height: 1; }
@@ -160,41 +162,91 @@
 
         .download-card {
             background: rgba(18, 18, 18, 0.85); backdrop-filter: blur(16px);
-            border: 1px solid var(--border); border-radius: 24px; padding: 3rem 2rem;
-            max-width: 950px; margin: 0 auto;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border); border-radius: 24px; padding: 2.5rem;
+            max-width: 1000px; margin: 0 auto; box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
         }
-        .download-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; text-align: left;
-        }
+        .download-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; text-align: left; }
         .download-btn-group { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
         .ghost-badge {
             background: rgba(234, 179, 8, 0.15); color: var(--yellow); padding: 0.25rem 0.9rem;
             border-radius: 30px; font-weight: 600; font-size: 0.7rem; letter-spacing: 0.5px;
             display: inline-block; text-transform: uppercase; margin-bottom: 0.8rem;
         }
-        .ghost-info {
-            background: rgba(0, 0, 0, 0.4); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--border);
+        .ghost-info { padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
+        
+        /* Markdown Slide-out Sheet Styles */
+        .slide-sheet-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
+            z-index: 999; opacity: 0; pointer-events: none; transition: 0.3s;
         }
+        .slide-sheet-overlay.active { opacity: 1; pointer-events: auto; }
+        .slide-sheet {
+            position: fixed; top: 0; right: -100%; width: 100vw; max-width: 1000px; height: 100vh;
+            background: var(--bg); border-left: 1px solid var(--border);
+            z-index: 1000; transition: right 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            display: flex; flex-direction: column; box-shadow: -20px 0 50px rgba(0,0,0,0.8);
+        }
+        .slide-sheet.open { right: 0; }
+        .sheet-header {
+            padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center; background: rgba(10,10,10,0.95);
+        }
+        .sheet-close {
+            background: none; border: none; color: var(--muted); font-size: 1.5rem; cursor: pointer; transition: 0.2s;
+        }
+        .sheet-close:hover { color: var(--accent); transform: scale(1.1); }
+        
+        .sheet-layout { display: flex; flex: 1; overflow: hidden; }
+        .sheet-sidebar { width: 250px; border-right: 1px solid var(--border); padding: 1.5rem; overflow-y: auto; background: rgba(15,15,15,0.5); }
+        .doc-nav-btn {
+            display: block; width: 100%; text-align: left; background: none; border: none;
+            color: var(--muted); padding: 0.8rem 1rem; border-radius: 8px; cursor: pointer;
+            transition: 0.2s; font-size: 0.9rem; margin-bottom: 0.5rem; font-weight: 600;
+        }
+        .doc-nav-btn:hover, .doc-nav-btn.active { background: rgba(0,210,190,0.1); color: var(--accent); }
+        
+        .sheet-content-wrapper { flex: 1; padding: 2rem; overflow-y: auto; scroll-behavior: smooth; }
+        
+        /* Custom Markdown Renderer Styling */
+        .md-prose { color: #d1d5db; font-size: 1.05rem; line-height: 1.7; max-width: 800px; margin: 0 auto; }
+        .md-prose h1 { font-size: 2.2rem; color: #fff; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        .md-prose h2 { font-size: 1.6rem; color: #fff; margin: 2rem 0 1rem; }
+        .md-prose h3 { font-size: 1.3rem; color: var(--accent); margin: 1.5rem 0 0.8rem; }
+        .md-prose p { margin-bottom: 1.2rem; }
+        .md-prose a { color: #60a5fa; text-decoration: underline; text-underline-offset: 4px; }
+        .md-prose ul, .md-prose ol { margin-bottom: 1.2rem; padding-left: 1.5rem; }
+        .md-prose li { margin-bottom: 0.5rem; }
+        .md-prose blockquote { border-left: 4px solid var(--accent); padding-left: 1rem; color: var(--muted); background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 0 8px 8px 0; }
+        .md-prose code { background: rgba(255,255,255,0.1); color: var(--yellow); padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        .md-prose pre { background: #111; border: 1px solid #333; padding: 1.2rem; border-radius: 12px; overflow-x: auto; margin-bottom: 1.5rem; }
+        .md-prose pre code { background: none; color: #e5e7eb; padding: 0; }
+        .md-prose img { max-width: 100%; border-radius: 12px; border: 1px solid #333; margin: 1rem 0; }
+        .md-loader { display: flex; justify-content: center; align-items: center; height: 100%; color: var(--accent); font-weight: 700; }
 
-        .cta-section { text-align: center; }
         footer { border-top: 1px solid #222; padding: 2rem 0; color: #666; text-align: center; }
 
         @media (max-width: 900px) {
             .download-grid { grid-template-columns: 1fr; text-align: center; gap: 2rem; }
             .download-btn-group { justify-content: center; }
             .ghost-info { text-align: left; }
+            .sheet-layout { flex-direction: column; }
+            .sheet-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); display: flex; overflow-x: auto; padding: 1rem; }
+            .doc-nav-btn { white-space: nowrap; margin-bottom: 0; margin-right: 0.5rem; width: auto; }
         }
         @media (max-width: 768px) {
-            .two-col { flex-direction: column; gap: 2rem; }
+            .two-col-standard, #compositing .two-col { flex-direction: column; gap: 2rem; }
+            #compositing { padding: 2rem 0; }
+            #compositing > .two-col > div:first-child { padding: 0 1.5rem; }
+            #compositing .glass-demo { border-radius: 0; border-left: none; border-right: none; }
             .carousel-btn.prev { left: 0; } .carousel-btn.next { right: 0; }
-            .node-graph-preview { min-height: 480px; } /* Fits staggered nodes */
+            .node-graph-preview { min-height: 480px; }
             .ext-item { flex: 0 0 calc((100% - 2rem) / 2.2); }
+            .interactive-pulse { bottom: auto; top: 10px; right: 10px; font-size: 0.65rem; }
         }
         @media (max-width: 480px) {
             .ext-item { flex: 0 0 calc((100% - 1rem) / 1.5); }
-            .node-graph-preview { min-height: 520px; }
-            .btn-primary, .btn-outline { padding: 0.8rem 1.8rem; font-size: 1rem; width: 100%; margin-bottom: 0.5rem; }
+            .btn-primary, .btn-outline { padding: 0.8rem 1.8rem; font-size: 1rem; }
         }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -205,23 +257,37 @@
 <div class="bg-dynamic"><div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div><div class="grid-bg"></div></div>
 
 <div class="wrapper">
-    <!-- HERO -->
     <header class="hero-section">
         <div class="hero-bg"></div>
         <span class="badge" style="position:relative;">FORGE™ PROFESSIONAL VIDEO EDITING</span>
         <h1 class="gradient-text" style="margin:1.2rem 0; position:relative;">Professional Editing, <br>Any Machine. Zero Cost.</h1>
         <p style="font-size:1.2rem;color:var(--muted);max-width:720px;margin:1.2rem auto;position:relative;">
-            A full‑featured, client‑side <strong>WASM Video Editor</strong> with node‑based compositing, real‑time effects,
+            A full‑featured, client‑side editing suite. Node compositing, real‑time effects,
             and WebM export — all running in your browser, offline, with no accounts and no uploads.
             <br><strong>Download the native‑feeling desktop app or start editing instantly online.</strong>
         </p>
-        <div style="margin-top:1.8rem; position:relative;">
+        <div style="margin-top:1.8rem; position:relative; display:flex; justify-content:center; gap:1rem; flex-wrap:wrap;">
             <a href="#compositing" class="btn-primary"><i class="fa-solid fa-film"></i> See What's Inside</a>
-            <a href="#download" class="btn-outline"><i class="fa-solid fa-download"></i> Get the App</a>
+            <button class="btn-outline" onclick="openDocsSheet()"><i class="fa-solid fa-book-open"></i> Docs & About WASM</button>
         </div>
     </header>
 
-    <div class="video-banner">
+    <section class="section cta-section" id="jam" style="margin-top: 3rem; margin-bottom: 1rem;">
+        <span class="badge" style="margin-bottom:1rem; background: rgba(234, 179, 8, 0.15); color: var(--yellow);"><i class="fa-solid fa-trophy"></i> UPCOMING COMMUNITY EVENT</span>
+        <h2 class="gradient-text" style="font-size:2.6rem;">Editor's Jam 2026</h2>
+        <p style="color:var(--muted);max-width:680px;margin:1.2rem auto;font-size:1.05rem;">
+            <strong>Coming August 2026.</strong> A 48‑hour online competition where video editors craft
+            stunning short films and developers build custom extensions or Rubicon nodes
+            for the <strong>WASM Video Editor</strong>. Footage graciously donated by <strong>Just Wright Studio</strong>.
+            Prizes include curated LUTs, SFX packs, and Steam keys.
+            <br><br><strong>The winning video will be featured right here on this page.</strong>
+        </p>
+        <!-- Jam Page on Itch.io when the time is right -->
+        <a href="#" class="btn-primary" style="background:#fa5c5c; color:#fff; border-radius:8px;"><i class="fa-brands fa-itch-io"></i> Learn More Soon</a>
+        <p style="color:#666;margin-top:1rem;font-size:0.85rem;">Sponsored by <strong>Just Wright Studio</strong> and the <a href="https://jgds.org" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">JGDS</a> community.</p>
+    </section>
+
+    <div class="video-banner full-bleed">
         <video muted autoplay loop playsinline poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080' viewBox='0 0 1920 1080'%3E%3Crect width='100%25' height='100%25' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23555' font-family='sans-serif' font-size='28'%3EJam Winner's Reel — Coming August 2026%3C/text%3E%3C/svg%3E">
             <source src="" type="video/mp4">
         </video>
@@ -231,20 +297,19 @@
         </div>
     </div>
 
-    <!-- EXTENSIONS CAROUSEL -->
     <section class="section">
         <div style="text-align:center;margin-bottom:2rem;">
             <span class="badge" style="margin-bottom:1rem;">EXTENDABLE PLATFORM</span>
             <h2 class="gradient-text">Powerful Tools, One Click Away</h2>
             <p style="max-width:680px;margin:1.2rem auto;color:var(--muted);font-size:1.05rem;">
-                The core editor stays lightweight. Pro features come as extensions — install only what you need to build your ideal <strong>WASM Video Editor</strong> setup.
+                The core of the <strong>WASM Video Editor</strong> stays lightweight. Pro features come as modular extensions — install only what you need, or build your own.
             </p>
         </div>
         <div class="carousel-wrapper">
             <button class="carousel-btn prev" id="carouselPrev"><i class="fa-solid fa-chevron-left"></i></button>
             <div class="carousel-viewport" id="carouselViewport">
                 <div class="carousel-track" id="carouselTrack">
-                    <!-- Base set of items for JS to clone -->
+                    <!-- Base Items -->
                     <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-volume-high" style="color:#10b981;"></i></div><h3>Audio Mixing</h3><p>Per‑clip volume, fade handles, and one‑click L‑cut extraction.</p></div>
                     <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-crop-simple" style="color:#60a5fa;"></i></div><h3>PiP &amp; Transform</h3><p>Drag clips on canvas with smart guides. Shadows, corners, blend modes.</p></div>
                     <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-font" style="color:#8b5cf6;"></i></div><h3>Media Manager</h3><p>Inline rename, preview, safe deletion, and Google Fonts integration.</p></div>
@@ -258,63 +323,61 @@
         </div>
     </section>
 
-    <section class="section" id="compositing">
+    <section class="section full-bleed" id="compositing">
         <div class="two-col">
             <div>
-                <span class="badge" style="margin-bottom:1rem;">VISUAL EFFECTS</span>
-                <h2 class="gradient-text">Node‑Based Compositing</h2>
+                <span class="badge" style="margin-bottom:1rem;">ADVANCED EXTENSION</span>
+                <h2 class="gradient-text">Rubicon Graph Engine</h2>
                 <p style="font-size:1.15rem;margin:1.2rem 0;color:var(--muted);">
-                    Build professional compositing chains directly on your clips inside the <strong>WASM Video Editor</strong>. Connect nodes for
-                    colour grading, glows, vignettes, masks, and merges — and see the result in real time.
-                    The graph overlays on top of your original media; toggle it off anytime to compare.
+                    Traditional video editors stack effects in layers, which quickly becomes a tangled, restrictive mess. 
+                    The <strong>WASM Video Editor</strong> breaks those limits with the Rubicon Graph Engine—a true, professional node-based compositing workspace.
                 </p>
-                <p style="color:var(--muted);">
-                    Colour‑coded ports (yellow for image, blue for mask, green for value) make complex
-                    graphs readable at a glance. Import custom .js nodes from the community, or write your
-                    own to create effects no other editor can match.
+                <p style="color:var(--muted); margin-bottom: 1.5rem;">
+                    Like the industry-standard tools used in Hollywood feature films, nodes allow you to wire media, masks, and color corrections together visually. 
+                    You aren't just applying an effect; you are building a custom pipeline. Because it's powered by WebAssembly, this complex math happens instantly in your browser.
                 </p>
+                <div style="padding: 1rem; background: rgba(0, 210, 190, 0.1); border-left: 4px solid var(--accent); border-radius: 4px;">
+                    <strong style="color: var(--accent); display:block; margin-bottom: 0.3rem;"><i class="fa-solid fa-hand-pointer"></i> Try it yourself right now:</strong>
+                    <span style="font-size: 0.9rem; color: #ddd;">Switch the media buttons to load a looping video, then drag the sliders on the Color Corrector node to see zero-latency, real-time rendering.</span>
+                </div>
             </div>
-            <div class="glass-demo" style="min-height:560px; padding:1.2rem;">
+            <div class="glass-demo" style="padding:1.2rem;">
                 
-                <div class="preview-header">
-                    <span style="font-size:0.8rem; color:var(--muted); font-weight:600; letter-spacing:1px;"><i class="fa-solid fa-display"></i> RUBICON PREVIEW</span>
-                    <div style="display:flex; align-items:center; gap:1rem;">
-                        <label style="font-size:0.75rem; color:var(--muted); display:flex; align-items:center; gap:0.4rem; cursor:pointer;" title="Bypass Effects">
-                            <input type="checkbox" id="effectsToggle" class="toggle-switch" checked> Enable Nodes
-                        </label>
-                        <div class="media-toggles" id="mediaToggles">
-                            <button class="media-btn active" data-media="graphic">Graphic</button>
-                            <button class="media-btn" data-media="photo">Photo</button>
-                            <button class="media-btn" data-media="video">Video</button>
-                        </div>
+                <div style="width:100%; max-width:400px; margin: 0 auto 0.5rem; display:flex; justify-content:space-between; align-items:center;">
+                    <label style="font-size:0.75rem; color:var(--muted); display:flex; align-items:center; gap:0.4rem; cursor:pointer;" title="Bypass Effects (A/B Test)">
+                        <input type="checkbox" id="effectsToggle" checked> Enable Nodes
+                    </label>
+                    <div class="media-toggles" id="mediaToggles" style="display:flex; gap:0.4rem;">
+                        <button class="media-btn active" data-media="graphic">Graphic</button>
+                        <button class="media-btn" data-media="photo">Photo</button>
+                        <button class="media-btn" data-media="video1">Vid 1 (MP4)</button>
+                        <button class="media-btn" data-media="video2">Vid 2 (WebM)</button>
                     </div>
                 </div>
 
                 <div class="preview-panel">
                     <canvas id="previewCanvas" width="400" height="225"></canvas>
-                    <div class="preview-loading" id="previewLoading">BUFFERING MEDIA...</div>
+                    <div id="loadingUI">FETCHING VIDEO BLOB...</div>
                 </div>
+                
                 <div class="node-graph-preview">
+                    <div class="interactive-pulse"><i class="fa-solid fa-arrow-pointer"></i> INTERACTIVE: DRAG NODES & SLIDERS</div>
                     <canvas id="rubiconPreviewCanvas"></canvas>
-                </div>
-                <div style="position:absolute;bottom:10px;right:16px;color:var(--yellow);font-size:0.6rem;background:rgba(0,0,0,0.7);padding:0.2rem 0.6rem;border-radius:20px;pointer-events:none;">
-                    <i class="fa-solid fa-dice-d20"></i> DRAG NODES — ADJUST SLIDERS
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- EXPORT -->
     <section class="section">
-        <div class="two-col">
+        <div class="two-col-standard">
             <div>
                 <span class="badge" style="margin-bottom:1rem;">DELIVER</span>
                 <h2 class="gradient-text">Export to WebM — Your Timeline, Your Format</h2>
                 <p style="font-size:1.15rem;margin:1.2rem 0;color:var(--muted);">
                     Render a high‑quality WebM file directly in the browser in real time.
                     The same VP9 codec used by YouTube and Netflix, at bitrates that preserve
-                    every detail of your edit inside the <strong>WASM Video Editor</strong>. Your colour grades, fades, transitions, and audio
-                    mix are all baked into the final output.
+                    every detail of your edit. Your colour grades, fades, transitions, and audio
+                    mix are all baked into the final output via the <strong>WASM Video Editor</strong> exporter.
                 </p>
                 <p style="color:var(--muted);">
                     All encoding happens on your device — no server, no watermark, no file‑size limit.
@@ -343,37 +406,34 @@
             <p style="max-width:680px;margin:1.2rem auto;color:var(--muted);font-size:1.05rem;">
                 The <strong>WASM Video Editor</strong> now ships with a <strong>Ghost App™</strong> installer — a single‑click
                 setup that gives the editor its own dedicated window, desktop shortcut, and isolated
-                browser profile. No Electron bloat, no admin rights required. Just a clean, focused
-                editing workspace that behaves exactly like professional desktop software.
+                browser profile. No Electron bloat, no admin rights required. 
             </p>
         </div>
-        
         <div class="download-card">
             <div class="download-grid">
                 <div>
                     <span class="ghost-badge"><i class="fa-solid fa-ghost"></i> Ghost App™</span>
                     <h3 style="font-size:1.4rem;margin-bottom:0.5rem;">Download for Your System</h3>
                     <p style="color:var(--muted);font-size:0.95rem;margin-bottom:1rem;" id="os-detect-text">Detecting your operating system…</p>
+                    
                     <div class="download-btn-group" id="download-btns">
                         <a href="#" class="btn-primary" id="btn-download-primary" style="display:none;"><i class="fa-solid fa-download"></i> <span id="btn-download-label">Download</span></a>
                         <a href="#" class="btn-outline" id="btn-download-other" style="display:none;"><span id="btn-other-label">Other OS</span></a>
                     </div>
-                    <p style="color:var(--muted);font-size:0.8rem;margin-top:1.5rem;" id="browser-fallback">
+                    
+                    <p style="color:var(--muted);font-size:0.8rem;margin-top:1.5rem; display:none;" id="browser-fallback">
                         Prefer not to install? <a href="https://cleo876.github.io/wasm-video-editor/" target="_blank" style="color:var(--accent);">Launch the browser version</a> — no download needed.
                     </p>
                 </div>
-                
                 <div class="ghost-info">
-                    <details open style="text-align:left;color:var(--muted);font-size:0.85rem;">
-                        <summary style="cursor:pointer;color:var(--accent);font-weight:600; font-size:1rem; margin-bottom: 0.5rem;">What is a Ghost App?</summary>
-                        <p style="margin-top:0.5rem;">A <strong>Ghost App</strong> is a real website given a permanent home on your computer.
-                        The installer creates a dedicated, sandboxed browser profile so the editor never touches your
+                    <h4 style="color:var(--accent); font-size:1.1rem; margin-bottom:0.5rem;"><i class="fa-solid fa-shield-halved"></i> What is a Ghost App?</h4>
+                    <p style="font-size:0.85rem; color:var(--text); opacity:0.9; line-height:1.5;">
+                        A Ghost App is a real website given a permanent home on your computer.
+                        The installer creates a dedicated, sandboxed browser profile so the <strong>WASM Video Editor</strong> never touches your
                         personal browsing data, never conflicts with extensions, and works completely offline after the
-                        first launch.</p>
-                        <p style="margin-top:0.5rem;">It appears in your taskbar, can be pinned to your dock, and feels like a
-                        purpose‑built application — because it is. No Electron wrapper, no heavy downloads, just your
-                        existing browser running in a clean, isolated environment.</p>
-                    </details>
+                        first launch. It feels like a purpose‑built application — because it is. No Electron wrapper, just your
+                        existing browser running clean.
+                    </p>
                 </div>
             </div>
         </div>
@@ -390,35 +450,44 @@
         </p>
     </section>
 
-    <!-- EDITOR'S JAM -->
-    <section class="section cta-section" id="jam">
-        <h2 class="gradient-text" style="font-size:2.6rem;">Editor's Jam 2026</h2>
-        <p style="color:var(--muted);max-width:680px;margin:1.2rem auto;font-size:1.05rem;">
-            <strong>Coming August 2026.</strong> A 48‑hour online competition where video editors craft
-            stunning short films and developers build custom extensions, transitions, or Rubicon nodes
-            for the <strong>WASM Video Editor</strong>. Sample footage generously donated by <strong>Just Wright Studio</strong>. Prizes include curated LUTs,
-            SFX packs, and Steam keys.
-            <br><br><strong>The winning video will be featured right here on this page.</strong>
-        </p>
-        <!-- Link for the Jam Page on Itch.io when the time is right -->
-        <a href="#" class="btn-primary"><i class="fa-brands fa-itch-io"></i> Learn More Soon</a>
-        <p style="color:#666;margin-top:1rem;font-size:0.85rem;">Sponsored by <strong>Just Wright Studio</strong> and the <a href="https://jgds.org" target="_blank" style="color:var(--accent);text-decoration:none;">JGDS (Jamaica Game Developer Society)</a> community.</p>
-    </section>
-
     <footer>
         <p>Forge™ <strong>WASM Video Editor</strong> — Open Source, Client‑Side, Professional. <span class="yellow-glow">Forge™. Own. Forever.</span></p>
-        <p style="margin-top:0.5rem;">© 2026 Forge™. Built with <i class="fa-solid fa-heart" style="color:var(--accent);"></i> for storytellers everywhere.</p>
+        <div style="margin-top:1rem; display:flex; justify-content:center; gap:1rem;">
+            <button class="btn-outline" style="padding: 0.5rem 1rem; font-size: 0.9rem;" onclick="openDocsSheet()"><i class="fa-solid fa-file-lines"></i> Documentation</button>
+            <a href="https://github.com/Cleo876/wasm-video-editor" target="_blank" class="btn-outline" style="padding: 0.5rem 1rem; font-size: 0.9rem;"><i class="fa-brands fa-github"></i> GitHub</a>
+        </div>
+        <p style="margin-top:1.5rem;">© 2026 Forge™. Built with <i class="fa-solid fa-heart" style="color:var(--accent);"></i> for storytellers everywhere.</p>
     </footer>
+</div>
+
+<div class="slide-sheet-overlay" id="docsOverlay" onclick="closeDocsSheet()"></div>
+<div class="slide-sheet" id="docsSheet">
+    <div class="sheet-header">
+        <h3 class="gradient-text" style="font-size: 1.5rem; margin:0;"><i class="fa-solid fa-book-journal-whills"></i> WASM Editor Docs</h3>
+        <button class="sheet-close" onclick="closeDocsSheet()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="sheet-layout">
+        <div class="sheet-sidebar">
+            <button class="doc-nav-btn active" data-url="https://raw.githubusercontent.com/Cleo876/wasm-video-editor/refs/heads/main/README.md"><i class="fa-solid fa-circle-info"></i> About & Overview</button>
+            <button class="doc-nav-btn" data-url="https://raw.githubusercontent.com/Cleo876/wasm-video-editor/refs/heads/main/Graph%20Compositing/Rubicon%20Developer%20Guide.md"><i class="fa-solid fa-diagram-project"></i> Rubicon Graph Guide</button>
+            <button class="doc-nav-btn" data-url="https://raw.githubusercontent.com/Cleo876/wasm-video-editor/refs/heads/main/Extensions/Modules%20Developer%20Guide.md"><i class="fa-solid fa-puzzle-piece"></i> Extensions API</button>
+        </div>
+        <div class="sheet-content-wrapper" id="docsContentWrapper">
+            <div class="md-prose" id="mdTarget">
+                <!-- Markdown renders here -->
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
 (function(){
     (function() {
         const ua = navigator.userAgent || '';
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
-        const isMac = ua.includes('Mac');
         const isWin = ua.includes('Windows');
-        const isLinux = ua.includes('Linux') && !isMobile;
+        const isLinux = ua.includes('Linux') && !ua.includes('Android');
+        const isMac = ua.includes('Macintosh');
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
         
         const winUrl  = 'https://github.com/Cleo876/wasm-video-editor/raw/refs/heads/main/Install/Windows/Windows%20-%20WASM%20EDITOR%20Installer.zip';
         const linUrl  = 'https://github.com/Cleo876/wasm-video-editor/raw/refs/heads/main/Install/Linux/Linux%20-%20WASM%20EDITOR%20Installer.zip';
@@ -428,176 +497,136 @@
         const primaryLabel = document.getElementById('btn-download-label');
         const otherBtn = document.getElementById('btn-download-other');
         const otherLabel = document.getElementById('btn-other-label');
-        const browserFallback = document.getElementById('browser-fallback');
-
+        const fallbackText = document.getElementById('browser-fallback');
+        
         if (isMobile) {
-            detectEl.innerHTML = 'The <strong>WASM Video Editor</strong> is a desktop-class editing environment.<br>Please visit this page on a computer to download the app or launch the web editor.';
-            document.getElementById('download-btns').style.display = 'none';
+            detectEl.innerHTML = '<span style="color:var(--yellow);"><i class="fa-solid fa-triangle-exclamation"></i> Mobile Device Detected</span><br>The <strong>WASM Video Editor</strong> is a desktop-class editing environment relying on powerful desktop APIs. Please visit this page on a Windows, Linux, or macOS computer to download the app or launch the web editor.';
+            // Hide everything else
+            primaryBtn.style.display = 'none';
+            otherBtn.style.display = 'none';
+            fallbackText.style.display = 'none'; // NEVER show web launch link on mobile
         } else if (isMac) {
-            detectEl.innerHTML = 'The Ghost App™ for macOS is currently in development.<br>You can launch the full browser version instantly below.';
-            document.getElementById('download-btns').style.display = 'none';
+            detectEl.innerText = 'The Ghost App™ for macOS is currently in development. You can launch the full browser version instantly below.';
+            fallbackText.style.display = 'block';
         } else if (isWin) {
             detectEl.innerText = 'We detected Windows — grab the installer below.';
-            primaryBtn.style.display = 'inline-block'; primaryBtn.href = winUrl;
-            primaryLabel.innerText = 'Download for Windows (.zip)';
-            otherBtn.style.display = 'inline-block'; otherBtn.href = linUrl;
-            otherLabel.innerText = 'Linux Installer';
+            primaryBtn.style.display = 'inline-block'; primaryBtn.href = winUrl; primaryLabel.innerText = 'Download for Windows (.zip)';
+            otherBtn.style.display = 'inline-block'; otherBtn.href = linUrl; otherLabel.innerText = 'Linux Installer';
+            fallbackText.style.display = 'block';
         } else if (isLinux) {
             detectEl.innerText = 'We detected Linux — grab the installer below.';
-            primaryBtn.style.display = 'inline-block'; primaryBtn.href = linUrl;
-            primaryLabel.innerText = 'Download for Linux (.zip)';
-            otherBtn.style.display = 'inline-block'; otherBtn.href = winUrl;
-            otherLabel.innerText = 'Windows Installer';
+            primaryBtn.style.display = 'inline-block'; primaryBtn.href = linUrl; primaryLabel.innerText = 'Download for Linux (.zip)';
+            otherBtn.style.display = 'inline-block'; otherBtn.href = winUrl; otherLabel.innerText = 'Windows Installer';
+            fallbackText.style.display = 'block';
         } else {
             detectEl.innerText = 'Choose your platform below.';
-            primaryBtn.style.display = 'inline-block'; primaryBtn.href = winUrl;
-            primaryLabel.innerText = 'Windows (.zip)';
-            otherBtn.style.display = 'inline-block'; otherBtn.href = linUrl;
-            otherLabel.innerText = 'Linux (.zip)';
+            primaryBtn.style.display = 'inline-block'; primaryBtn.href = winUrl; primaryLabel.innerText = 'Windows (.zip)';
+            otherBtn.style.display = 'inline-block'; otherBtn.href = linUrl; otherLabel.innerText = 'Linux (.zip)';
+            fallbackText.style.display = 'block';
         }
-        browserFallback.style.display = 'block';
     })();
 
     const previewCanvas = document.getElementById('previewCanvas');
     const previewCtx = previewCanvas.getContext('2d', { willReadFrequently: true });
     
-    // Offscreen buffer for pulling raw media pixels cleanly
-    const bufferCanvas = document.createElement('canvas');
-    bufferCanvas.width = 400; bufferCanvas.height = 225;
-    const bufferCtx = bufferCanvas.getContext('2d', { willReadFrequently: true });
-
-    const sliderValues = { exposure: 0, contrast: 50, saturation: 50, temperature: 50, hueShift: 0 };
+    function drawBasePreview(targetCtx = previewCtx) {
+        const w = previewCanvas.width, h = previewCanvas.height;
+        targetCtx.clearRect(0,0,w,h);
+        const sky = targetCtx.createLinearGradient(0,0,0,h*0.6);
+        sky.addColorStop(0,'#1e3a5f'); sky.addColorStop(1,'#87ceeb');
+        targetCtx.fillStyle = sky; targetCtx.fillRect(0,0,w,h*0.6);
+        targetCtx.fillStyle = '#ffd700'; targetCtx.beginPath(); targetCtx.arc(w*0.7,h*0.25,40,0,Math.PI*2); targetCtx.fill();
+        targetCtx.fillStyle = '#2d5a27'; targetCtx.beginPath(); targetCtx.moveTo(0,h*0.6); targetCtx.lineTo(w*0.3,h*0.35); targetCtx.lineTo(w*0.6,h*0.55); targetCtx.lineTo(w*0.8,h*0.3); targetCtx.lineTo(w,h*0.5); targetCtx.lineTo(w,h); targetCtx.lineTo(0,h); targetCtx.closePath(); targetCtx.fill();
+        targetCtx.fillStyle = '#4a7c3f'; targetCtx.fillRect(0,h*0.65,w,h*0.35);
+        targetCtx.fillStyle = '#8B4513'; targetCtx.fillRect(w*0.25,h*0.5,60,50);
+        targetCtx.fillStyle = '#A0522D'; targetCtx.beginPath(); targetCtx.moveTo(w*0.25-10,h*0.5); targetCtx.lineTo(w*0.25+30,h*0.35); targetCtx.lineTo(w*0.25+70,h*0.5); targetCtx.closePath(); targetCtx.fill();
+    }
     
-    let currentMedia = 'graphic';
-    let isVideoPlaying = false;
-    let renderFrameId = null;
-    let effectsEnabled = true;
-
-    // Loading State UI
-    const loadingUI = document.getElementById('previewLoading');
-    document.getElementById('effectsToggle').addEventListener('change', (e) => {
-        effectsEnabled = e.target.checked;
-        if (currentMedia !== 'video') applyFiltersToPreview();
-    });
-
-    // Profile photo of a real person (16:9 ratio, loaded safely with CORS)
     const photoImg = new Image();
     photoImg.crossOrigin = "anonymous";
     photoImg.src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=400&h=225&q=80";
     
+    let currentMedia = 'graphic';
+    const enableEffectsToggle = document.getElementById('effectsToggle');
+    const loadingUI = document.getElementById('loadingUI');
+
     const sampleVideo = document.createElement('video');
-    sampleVideo.crossOrigin = "anonymous";
-    sampleVideo.muted = true;
-    sampleVideo.loop = true;
-    sampleVideo.playsInline = true;
+    sampleVideo.muted = true; sampleVideo.loop = true; sampleVideo.playsInline = true;
+    
+    const videoUrls = {
+        video1: "https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Video/WASM%20Video%20Editor%20Sample%20VIdeo.mp4",
+        video2: "https://upload.wikimedia.org/wikipedia/commons/transcoded/a/a4/BBH_gravitational_lensing_of_gw150914.webm/BBH_gravitational_lensing_of_gw150914.webm.480p.vp9.webm"
+    };
+    
+    const isVideoFetched = { video1: false, video2: false };
+    const isFetchingVideo = { video1: false, video2: false };
+    const videoBlobs = { video1: null, video2: null };
+    let isVideoPlaying = false;
+    let renderFrameId = null;
 
-    let isVideoFetched = false;
-    let isFetchingVideo = false;
-
-    // Fetch as Blob to bypass CORS canvas tainting and ensure it plays
-    function fetchAndPlayVideo() {
-        if (isVideoFetched) {
-            sampleVideo.play().catch(e => console.warn("Play interrupted", e));
+    function fetchAndPlayVideo(vidKey) {
+        if (isVideoFetched[vidKey]) {
+            sampleVideo.src = videoBlobs[vidKey];
+            sampleVideo.play().catch(()=>{});
             isVideoPlaying = true;
             requestAnimationFrame(videoRenderLoop);
             return;
         }
-
-        if (isFetchingVideo) return;
-        isFetchingVideo = true;
+        if (isFetchingVideo[vidKey]) return;
+        isFetchingVideo[vidKey] = true;
         
         loadingUI.innerText = "FETCHING VIDEO BLOB...";
-        loadingUI.style.display = 'block';
+        loadingUI.style.display = 'flex';
 
-        fetch("https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/Video/WASM%20Video%20Editor%20Sample%20VIdeo.mp4", { mode: 'cors' })
-            .then(response => {
-                if (!response.ok) throw new Error("Network response was not ok");
-                return response.blob();
-            })
+        fetch(videoUrls[vidKey])
+            .then(res => { if(!res.ok) throw new Error("Network issue"); return res.blob(); })
             .then(blob => {
                 const objectURL = URL.createObjectURL(blob);
-                sampleVideo.src = objectURL;
-                isVideoFetched = true;
-                isFetchingVideo = false;
+                videoBlobs[vidKey] = objectURL;
+                isVideoFetched[vidKey] = true;
+                isFetchingVideo[vidKey] = false;
                 
-                if (currentMedia === 'video') {
+                if (currentMedia === vidKey) {
                     loadingUI.style.display = 'none';
+                    sampleVideo.src = objectURL;
                     sampleVideo.play().then(() => {
                         isVideoPlaying = true;
                         requestAnimationFrame(videoRenderLoop);
-                    }).catch(err => {
-                        console.error("Autoplay prevented:", err);
-                        // Draw error gracefully to canvas without switching tabs
-                        bufferCtx.fillStyle = '#000'; bufferCtx.fillRect(0,0,400,225);
-                        bufferCtx.fillStyle = '#ff4444'; bufferCtx.font = "bold 12px Inter";
-                        bufferCtx.fillText("AUTOPLAY BLOCKED. PLEASE CLICK PLAY.", 70, 115);
-                        applyFiltersToPreview();
+                    }).catch(()=>{
+                        drawErrorState("CLICK TO PLAY");
                     });
                 }
             })
             .catch(err => {
-                console.error("Fetch error:", err);
-                isFetchingVideo = false;
-                if (currentMedia === 'video') {
-                    loadingUI.innerText = "FAILED TO FETCH MEDIA";
-                    bufferCtx.fillStyle = '#111'; bufferCtx.fillRect(0,0,400,225);
-                    bufferCtx.fillStyle = '#ff4444'; bufferCtx.font = "bold 12px Inter";
-                    bufferCtx.fillText("NETWORK ERROR: COULD NOT LOAD VIDEO", 60, 115);
-                    applyFiltersToPreview();
+                isFetchingVideo[vidKey] = false;
+                if (currentMedia === vidKey) {
+                    loadingUI.style.display = 'none';
+                    drawErrorState("VIDEO BLOCKED BY BROWSER / NETWORK RULES");
                 }
             });
     }
-    
-    // Show loading text while buffering
-    sampleVideo.addEventListener('waiting', () => { if(currentMedia === 'video' && isVideoFetched) loadingUI.style.display = 'block'; });
-    sampleVideo.addEventListener('playing', () => { loadingUI.style.display = 'none'; });
 
-    function drawBasePreview(ctx) {
-        const w = bufferCanvas.width, h = bufferCanvas.height;
-        ctx.clearRect(0,0,w,h);
-        const sky = ctx.createLinearGradient(0,0,0,h*0.6);
-        sky.addColorStop(0,'#1e3a5f'); sky.addColorStop(1,'#87ceeb');
-        ctx.fillStyle = sky; ctx.fillRect(0,0,w,h*0.6);
-        ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(w*0.7,h*0.25,40,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#2d5a27'; ctx.beginPath(); ctx.moveTo(0,h*0.6); ctx.lineTo(w*0.3,h*0.35);
-        ctx.lineTo(w*0.6,h*0.55); ctx.lineTo(w*0.8,h*0.3); ctx.lineTo(w,h*0.5);
-        ctx.lineTo(w,h); ctx.lineTo(0,h); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = '#4a7c3f'; ctx.fillRect(0,h*0.65,w,h*0.35);
-        ctx.fillStyle = '#8B4513'; ctx.fillRect(w*0.25,h*0.5,60,50);
-        ctx.fillStyle = '#A0522D'; ctx.beginPath();
-        ctx.moveTo(w*0.25-10,h*0.5); ctx.lineTo(w*0.25+30,h*0.35); ctx.lineTo(w*0.25+70,h*0.5);
-        ctx.closePath(); ctx.fill();
+    function drawErrorState(msg) {
+        previewCtx.fillStyle='#111'; previewCtx.fillRect(0,0,400,225);
+        previewCtx.fillStyle='#ff4444'; previewCtx.font = "bold 12px Inter";
+        previewCtx.textAlign = "center";
+        previewCtx.fillText(msg, 200, 115);
+        previewCtx.textAlign = "left";
     }
 
+    const sliderValues = { exposure: 0, contrast: 50, saturation: 50, temperature: 50, hueShift: 0 };
+    
     function applyFiltersToPreview() {
-        const w = bufferCanvas.width, h = bufferCanvas.height;
-        
-        // 1. Draw requested media to offscreen buffer
+        const w = previewCanvas.width, h = previewCanvas.height;
         try {
-            if (currentMedia === 'graphic') { drawBasePreview(bufferCtx); } 
-            else if (currentMedia === 'photo' && photoImg.complete) { bufferCtx.drawImage(photoImg, 0, 0, w, h); } 
-            else if (currentMedia === 'video' && sampleVideo.readyState >= 2) { bufferCtx.drawImage(sampleVideo, 0, 0, w, h); } 
-            else { drawBasePreview(bufferCtx); }
-        } catch (e) {
-            drawBasePreview(bufferCtx);
-        }
+            if (currentMedia === 'graphic') { drawBasePreview(); } 
+            else if (currentMedia === 'photo' && photoImg.complete) { previewCtx.drawImage(photoImg, 0, 0, w, h); } 
+            else if (currentMedia.startsWith('video') && sampleVideo.readyState >= 2) { previewCtx.drawImage(sampleVideo, 0, 0, w, h); } 
+            else if (!currentMedia.startsWith('video')) { drawBasePreview(); }
+        } catch (e) { drawBasePreview(); }
 
-        // Bypass logic - if unchecked, just draw raw buffer and skip array math
-        if (!effectsEnabled) {
-            previewCtx.drawImage(bufferCanvas, 0, 0);
-            return;
-        }
+        if (!enableEffectsToggle.checked) return;
 
-        // 2. Extract pixels
-        let imgData;
-        try {
-            imgData = bufferCtx.getImageData(0,0,w,h);
-        } catch(e) {
-            previewCtx.drawImage(bufferCanvas, 0, 0); 
-            return;
-        }
-
-        // 3. Apply Node Math
         const v = sliderValues;
         const exposureVal = 1 + v.exposure / 100;
         const contrastVal = 0.5 + v.contrast / 50;
@@ -605,73 +634,66 @@
         const tempR = 1 + (v.temperature - 50) / 100;
         const tempB = 1 - (v.temperature - 50) / 100;
 
+        const imgData = previewCtx.getImageData(0,0,w,h);
         const d = imgData.data;
         for (let i=0; i<d.length; i+=4) {
             d[i]   = Math.min(255, Math.max(0, d[i] * exposureVal));
             d[i+1] = Math.min(255, Math.max(0, d[i+1] * exposureVal));
             d[i+2] = Math.min(255, Math.max(0, d[i+2] * exposureVal));
+            
             d[i]   = Math.min(255, Math.max(0, (d[i]-128)*contrastVal + 128));
             d[i+1] = Math.min(255, Math.max(0, (d[i+1]-128)*contrastVal + 128));
             d[i+2] = Math.min(255, Math.max(0, (d[i+2]-128)*contrastVal + 128));
+            
             const gray = d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114;
             d[i]   = Math.min(255, Math.max(0, gray + (d[i]-gray)*saturationVal));
             d[i+1] = Math.min(255, Math.max(0, gray + (d[i+1]-gray)*saturationVal));
             d[i+2] = Math.min(255, Math.max(0, gray + (d[i+2]-gray)*saturationVal));
+            
             d[i]   = Math.min(255, Math.max(0, d[i] * tempR));
             d[i+2] = Math.min(255, Math.max(0, d[i+2] * tempB));
         }
-        
-        // 4. Output
         previewCtx.putImageData(imgData,0,0);
     }
 
+    // 30 FPS Render Lock Loop
     let lastFrameTime = 0;
-    const fpsInterval = 1000 / 30; // ~33.3ms for 30 FPS
-
+    const frameDelay = 1000 / 30; // 33.3ms
     function videoRenderLoop(timestamp) {
-        if (currentMedia === 'video' && isVideoPlaying) {
-            renderFrameId = requestAnimationFrame(videoRenderLoop);
-            const elapsed = timestamp - lastFrameTime;
-            
-            // Throttle math to 30 FPS to save user CPU
-            if (elapsed > fpsInterval) {
-                lastFrameTime = timestamp - (elapsed % fpsInterval);
-                applyFiltersToPreview();
-            }
+        if (!isVideoPlaying || !currentMedia.startsWith('video')) return;
+        renderFrameId = requestAnimationFrame(videoRenderLoop);
+        const elapsed = timestamp - lastFrameTime;
+        if (elapsed > frameDelay) {
+            lastFrameTime = timestamp - (elapsed % frameDelay);
+            applyFiltersToPreview();
         }
     }
 
-    const mediaBtns = document.querySelectorAll('.media-btn');
-    mediaBtns.forEach(btn => {
+    enableEffectsToggle.addEventListener('change', () => { if (!currentMedia.startsWith('video')) applyFiltersToPreview(); });
+    
+    document.querySelectorAll('.media-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            mediaBtns.forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.media-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
             currentMedia = e.target.dataset.media;
             loadingUI.style.display = 'none';
-            
             if (renderFrameId) cancelAnimationFrame(renderFrameId);
 
-            if (currentMedia === 'video') {
-                // Call our new Blob fetcher
-                fetchAndPlayVideo();
+            if (currentMedia.startsWith('video')) {
+                fetchAndPlayVideo(currentMedia);
             } else {
                 isVideoPlaying = false;
                 sampleVideo.pause();
-                if (currentMedia === 'photo' && !photoImg.complete) {
-                    photoImg.onload = applyFiltersToPreview;
-                } else {
-                    applyFiltersToPreview();
-                }
+                applyFiltersToPreview();
             }
         });
     });
 
-    // Observer to pause video entirely when scrolling past the section to save battery
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            if (currentMedia === 'video' && isVideoFetched) {
+            if (currentMedia.startsWith('video') && isVideoFetched[currentMedia]) {
                 if (entry.isIntersecting) {
-                    sampleVideo.play().catch(e => {});
+                    sampleVideo.play().catch(()=>{});
                     isVideoPlaying = true;
                     requestAnimationFrame(videoRenderLoop);
                 } else {
@@ -683,91 +705,57 @@
     }, { threshold: 0.1 });
     observer.observe(document.getElementById('compositing'));
 
-    applyFiltersToPreview();
-
     const canvas = document.getElementById('rubiconPreviewCanvas');
     const ctx = canvas.getContext('2d');
     let width, height;
     const container = canvas.parentElement;
-
-    // Nodes contain their own width and height variables for robust hit testing
+    
+    const baseNodeWidthR = 0.18;
     const nodes = [
-        { id:'media_in',   type:'media_in',   name:'Media In',        x:0, y:0, w:0, h:0, inputs:[], outputs:['image'] },
-        { id:'color_corr', type:'color_corr', name:'Color Corrector', x:0, y:0, w:0, h:0, inputs:['image'], outputs:['image'] },
-        { id:'vignette',   type:'vignette_fx', name:'Cinematic Vignette', x:0, y:0, w:0, h:0, inputs:['image'], outputs:['image'] },
-        { id:'media_out',  type:'media_out',  name:'Media Out',       x:0, y:0, w:0, h:0, inputs:['image'], outputs:[] }
+        { id:'media_in',   type:'media_in',   name:'Media In',        x:0, y:0, inputs:[], outputs:['image'], w:0, h:0 },
+        { id:'color_corr', type:'color_corr', name:'Color Corrector', x:0, y:0, inputs:['image'], outputs:['image'], w:0, h:0 },
+        { id:'vignette',   type:'vignette_fx', name:'Cinematic Vignette', x:0, y:0, inputs:['image'], outputs:['image'], w:0, h:0 },
+        { id:'media_out',  type:'media_out',  name:'Media Out',       x:0, y:0, inputs:['image'], outputs:[], w:0, h:0 }
     ];
 
     function resize(){
         width = container.clientWidth;
         height = container.clientHeight || 480;
-        canvas.width = width;
-        canvas.height = height;
-
-        const dynamicWidth = Math.max(120, Math.min(180, width * 0.2));
-        const baseHeight = dynamicWidth * 0.75;
-
-        nodes.forEach(n => {
-            n.w = dynamicWidth;
-            // The Color Corrector is explicitly taller to comfortably fit sliders
-            n.h = n.type === 'color_corr' ? baseHeight * 1.6 : baseHeight;
-            // Safe clamp
-            n.x = Math.max(0, Math.min(width - n.w, n.x));
-            n.y = Math.max(0, Math.min(height - n.h, n.y));
-        });
-    }
-
-    function repositionNodes(){
-        const margin = 20;
-        let currentX = margin;
-        const totalW = width - margin * 2;
-        const totalNodesW = nodes.reduce((sum, n) => sum + n.w, 0);
-        const overlapSpacing = (totalW - totalNodesW) / (nodes.length - 1);
+        canvas.width = width; canvas.height = height;
         
-        nodes.forEach((node, i) => {
-            node.x = currentX;
-            node.y = (height - node.h) / 2;
-            
-            // Stagger nodes vertically on small mobile screens
-            if (overlapSpacing < -10) {
-                node.y = margin + (i % 2) * (height / 2 - margin);
-            }
-            currentX += node.w + Math.max(10, overlapSpacing);
-            
-            node.x = Math.max(0, Math.min(width - node.w, node.x));
-            node.y = Math.max(0, Math.min(height - node.h, node.y));
+        const nW = Math.max(130, Math.min(180, width * baseNodeWidthR));
+        nodes.forEach(n => {
+            n.w = nW;
+            n.h = n.type === 'color_corr' ? nW * 1.3 : nW * 0.75; 
         });
     }
-
-    resize();
-    repositionNodes();
     
-    window.addEventListener('resize', () => { 
-        resize(); repositionNodes(); wireData = buildWireData(); 
-    });
+    function repositionNodes(){
+        const margin = width < 600 ? 10 : 35;
+        const totalW = width - margin * 2;
+        const nW = nodes[0].w;
+        if (width > 700) {
+            const spacing = (totalW - nW * nodes.length) / Math.max(1, nodes.length - 1);
+            nodes.forEach((n, i) => { n.x = margin + i * (nW + spacing); n.y = (height - n.h) / 2; });
+        } else {
+            const spacingY = (height - (nodes.length * nW * 0.8)) / nodes.length;
+            nodes.forEach((n, i) => { n.x = (width - n.w)/2 + (i%2==0?-20:20); n.y = 20 + i * (nW * 0.8 + spacingY); });
+        }
+    }
 
-    const wires = [
-        { from:'media_in', to:'color_corr', type:'image' },
-        { from:'color_corr', to:'vignette', type:'image' },
-        { from:'vignette', to:'media_out', type:'image' }
-    ];
+    resize(); repositionNodes();
+    window.addEventListener('resize', () => { resize(); repositionNodes(); wireData = buildWireData(); });
+
+    const wires = [ { from:'media_in', to:'color_corr', type:'image' }, { from:'color_corr', to:'vignette', type:'image' }, { from:'vignette', to:'media_out', type:'image' } ];
 
     function getPortPos(nodeId, portIdx, isInput){
         const node = nodes.find(n=>n.id===nodeId);
         if(!node) return {x:0,y:0};
-        const header = node.w * 0.25; // Header proportional to width
+        const header = 35; 
         const body = node.h - header;
         const count = isInput ? node.inputs.length : node.outputs.length;
         const spacingY = body/(count+1);
-        const portY = node.y + header + spacingY*(portIdx+1);
-        const portX = isInput ? node.x : node.x + node.w;
-        return {x:portX, y:portY};
-    }
-
-    function pointOnBezier(from, to, cpOff, t){
-        const x0=from.x,y0=from.y,x1=from.x+cpOff,y1=from.y,x2=to.x-cpOff,y2=to.y,x3=to.x,y3=to.y;
-        const mt=1-t,mt2=mt*mt,t2=t*t;
-        return {x:mt*mt2*x0+3*mt2*t*x1+3*mt*t2*x2+t2*t*x3, y:mt*mt2*y0+3*mt2*t*y1+3*mt*t2*y2+t2*t*y3};
+        return { x: isInput ? node.x : node.x + node.w, y: node.y + header + spacingY*(portIdx+1) };
     }
 
     function buildWireData(){
@@ -776,257 +764,210 @@
             const cpOff = Math.abs(toP.x-fromP.x)*0.5;
             const path = new Path2D(); path.moveTo(fromP.x,fromP.y);
             path.bezierCurveTo(fromP.x+cpOff,fromP.y,toP.x-cpOff,toP.y,toP.x,toP.y);
-            const pts=[]; for(let i=0;i<=100;i++)pts.push(pointOnBezier(fromP,toP,cpOff,i/100));
+            const pts=[]; for(let i=0;i<=100;i++){ 
+                const t=i/100, mt=1-t;
+                pts.push({x:mt*mt*mt*fromP.x+3*mt*mt*t*(fromP.x+cpOff)+3*mt*t*t*(toP.x-cpOff)+t*t*t*toP.x, y:mt*mt*mt*fromP.y+3*mt*mt*t*fromP.y+3*mt*t*t*toP.y+t*t*t*toP.y});
+            }
             return {path,points:pts,color:w.type==='image'?'#eab308':'#3b82f6'};
         });
     }
     let wireData = buildWireData();
 
-    const particles = [];
-    function spawnParticles(){
-        particles.length = 0;
-        for(let i=0;i<24;i++){
-            const wi=Math.floor(Math.random()*wireData.length),w=wireData[wi];
-            const prog=Math.random(),idx=Math.floor(prog*(w.points.length-1));
-            const pt=w.points[Math.min(idx,w.points.length-1)];
-            particles.push({wi,prog,x:pt.x,y:pt.y,r:1.2+Math.random()*2,spd:0.003+Math.random()*0.006,color:w.color});
-        }
-    }
-    spawnParticles();
-
     function getSliderRects(node) {
-        const headerH = node.w * 0.25;
-        const bodyTop = node.y + headerH;
-        const bodyH = node.h - headerH; 
-        const padX = node.x + 8;
-        const w = node.w - 16;
-        const trackH = 4;
+        const bodyTop = node.y + 35;
+        const bodyH = node.h - 35;
         const labels = ['Exposure','Contrast','Saturation','Temp (B/Y)','Hue Shift'];
         const keys = ['exposure','contrast','saturation','temperature','hueShift'];
         const spacing = bodyH / (labels.length + 0.5);
-        const rects = [];
-        labels.forEach((_, i) => {
+        return labels.map((lbl, i) => {
             const cy = bodyTop + spacing * (i + 0.4);
-            rects.push({ label: labels[i], key: keys[i], x: padX, y: cy - 8, w: w, h: 16, trackY: cy, trackH });
+            return { label: lbl, key: keys[i], x: node.x + 8, y: cy - 8, w: node.w - 16, h: 16, trackY: cy, trackH: 4 };
         });
-        return rects;
     }
 
     function drawNode(n){
-        const {x,y,w,h,name,inputs,outputs,type}=n;
-        ctx.save();
-        ctx.shadowColor='rgba(0,0,0,0.4)';ctx.shadowBlur=6;
-        ctx.fillStyle='rgba(20,20,20,0.82)';ctx.strokeStyle='#444';ctx.lineWidth=1;
-        const r=Math.min(7,h*0.12);
-        ctx.beginPath();
-        ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-        ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-        ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-        ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
-        ctx.closePath();ctx.fill();ctx.stroke();
-
-        const headerH = w*0.25; 
-        ctx.fillStyle='#1e1e1e';ctx.fillRect(x,y,w,headerH);
-        ctx.fillStyle='#fff';
-        const fontSize=Math.min(12,w*0.15);
-        ctx.font=`bold ${fontSize}px Inter,sans-serif`;ctx.fillText(name,x+10,y+headerH*0.62);
+        ctx.save(); ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=6;
+        ctx.fillStyle='rgba(20,20,20,0.82)'; ctx.strokeStyle='#444'; ctx.lineWidth=1;
+        const r=7;
+        ctx.beginPath(); ctx.moveTo(n.x+r,n.y); ctx.lineTo(n.x+n.w-r,n.y); ctx.quadraticCurveTo(n.x+n.w,n.y,n.x+n.w,n.y+r); ctx.lineTo(n.x+n.w,n.y+n.h-r); ctx.quadraticCurveTo(n.x+n.w,n.y+n.h,n.x+n.w-r,n.y+n.h); ctx.lineTo(n.x+r,n.y+n.h); ctx.quadraticCurveTo(n.x,n.y+n.h,n.x,n.y+n.h-r); ctx.lineTo(n.x,n.y+r); ctx.quadraticCurveTo(n.x,n.y,n.x+r,n.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+        
+        ctx.fillStyle='#1e1e1e'; ctx.fillRect(n.x,n.y,n.w,35);
+        ctx.fillStyle='#fff'; ctx.font='bold 11px Inter,sans-serif'; ctx.fillText(n.name,n.x+10,n.y+22);
 
         ctx.shadowBlur=0;
-        const bodyTop = y + headerH;
-        const bodyH = h - headerH;
-        
-        if (type==='media_in' || type==='media_out') {
-            ctx.fillStyle='#666';ctx.font=`${fontSize*0.85}px Inter,sans-serif`;
-            const txt = type==='media_in'?'Source: Timeline':'Target: WebM Render';
-            ctx.fillText(txt, x+10, bodyTop+bodyH*0.45);
-        } else if (type==='color_corr') {
-            const rects = getSliderRects(n);
-            rects.forEach(sr => {
-                const val = sliderValues[sr.key];
-                const norm = sr.key==='exposure'||sr.key==='hueShift' ? (val+100)/200 : val/100;
-                ctx.fillStyle='#333';ctx.fillRect(sr.x,sr.trackY,sr.w,sr.trackH);
-                const knobX = sr.x + norm*sr.w;
-                ctx.fillStyle='#eab308';ctx.beginPath();ctx.arc(knobX,sr.trackY+sr.trackH/2,4,0,Math.PI*2);ctx.fill();
-                ctx.fillStyle='#999';ctx.font=`${fontSize*0.55}px Inter,sans-serif`;
-                ctx.fillText(sr.label,sr.x,sr.y+4);
+        if (n.type==='media_in' || n.type==='media_out') {
+            ctx.fillStyle='#666'; ctx.font='10px Inter'; ctx.fillText(n.type==='media_in'?'Source Clip':'Target Renderer', n.x+10, n.y+35+(n.h-35)*0.45);
+        } else if (n.type==='color_corr') {
+            getSliderRects(n).forEach(sr => {
+                const val = sliderValues[sr.key], norm = sr.key==='exposure'||sr.key==='hueShift' ? (val+100)/200 : val/100;
+                ctx.fillStyle='#333'; ctx.fillRect(sr.x,sr.trackY,sr.w,sr.trackH);
+                ctx.fillStyle='#eab308'; ctx.beginPath(); ctx.arc(sr.x + norm*sr.w,sr.trackY+2,4,0,Math.PI*2); ctx.fill();
+                ctx.fillStyle='#999'; ctx.font='9px Inter'; ctx.fillText(sr.label,sr.x,sr.y+4);
             });
-        } else if (type==='vignette_fx') {
-            ctx.fillStyle='#666';ctx.font=`${fontSize*0.85}px Inter,sans-serif`;
-            ctx.fillText('Intensity', x+10, bodyTop+bodyH*0.35);
-            ctx.fillText('Size', x+10, bodyTop+bodyH*0.7);
+        } else if (n.type==='vignette_fx') {
+            ctx.fillStyle='#666'; ctx.font='10px Inter'; ctx.fillText('Intensity', n.x+10, n.y+35+(n.h-35)*0.35); ctx.fillText('Size', n.x+10, n.y+35+(n.h-35)*0.7);
         }
 
-        inputs.forEach((ptype,idx)=>{
-            const py=y+headerH+((h-headerH)/(inputs.length+1))*(idx+1);
-            ctx.beginPath();ctx.arc(x,py,5,0,Math.PI*2);
-            ctx.fillStyle=ptype==='image'?'#eab308':'#3b82f6';ctx.fill();
-            ctx.strokeStyle='#222';ctx.lineWidth=1.2;ctx.stroke();
-        });
-        outputs.forEach((ptype,idx)=>{
-            const py=y+headerH+((h-headerH)/(outputs.length+1))*(idx+1);
-            ctx.beginPath();ctx.arc(x+w,py,5,0,Math.PI*2);
-            ctx.fillStyle=ptype==='image'?'#eab308':'#3b82f6';ctx.fill();
-            ctx.strokeStyle='#222';ctx.lineWidth=1.2;ctx.stroke();
+        [n.inputs, n.outputs].forEach((ports, isOut) => {
+            ports.forEach((ptype,idx)=>{
+                const py = n.y+35+((n.h-35)/(ports.length+1))*(idx+1);
+                ctx.beginPath(); ctx.arc(isOut?n.x+n.w:n.x, py, 5, 0, Math.PI*2);
+                ctx.fillStyle=ptype==='image'?'#eab308':'#3b82f6'; ctx.fill(); ctx.strokeStyle='#222'; ctx.stroke();
+            });
         });
         ctx.restore();
     }
 
-    let draggingNode=null, dragOffX=0, dragOffY=0;
-    let activeSlider=null; 
-
-    function hitTest(mx,my){
-        for(let i=nodes.length-1;i>=0;i--){
-            const n=nodes[i];
-            // Uses exact node width and height
-            if(mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h)return n;
-        }
-        return null;
-    }
+    let draggingNode=null, dragOffX=0, dragOffY=0, activeSlider=null;
 
     canvas.addEventListener('mousedown',e=>{
         const rect=canvas.getBoundingClientRect();
-        const scaleX=width/rect.width, scaleY=height/rect.height;
-        const mx=(e.clientX-rect.left)*scaleX, my=(e.clientY-rect.top)*scaleY;
-        const hit=hitTest(mx,my);
-        
+        const mx=(e.clientX-rect.left)*(width/rect.width), my=(e.clientY-rect.top)*(height/rect.height);
+        const hit = nodes.find(n => mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h);
         if(hit&&hit.type==='color_corr'){
-            const rects=getSliderRects(hit);
-            for(const sr of rects){
-                if(mx>=sr.x&&mx<=sr.x+sr.w&&my>=sr.y&&my<=sr.y+sr.h){
-                    activeSlider={node:hit,key:sr.key};
-                    canvas.style.cursor='ew-resize';
-                    e.preventDefault();return;
-                }
-            }
+            const sr = getSliderRects(hit).find(s => mx>=s.x&&mx<=s.x+s.w&&my>=s.y&&my<=s.y+s.h);
+            if (sr) { activeSlider={node:hit,key:sr.key}; canvas.style.cursor='ew-resize'; e.preventDefault(); return; }
         }
-        if(hit){
-            const headerH = hit.w*0.25;
-            if(my>hit.y+headerH&&hit.type==='color_corr')return; 
-            draggingNode=hit;
-            dragOffX=mx-hit.x;
-            dragOffY=my-hit.y;
-            canvas.style.cursor='grabbing';
+        if(hit && !(hit.type==='color_corr' && my>hit.y+35)){
+            draggingNode=hit; dragOffX=mx-hit.x; dragOffY=my-hit.y; canvas.style.cursor='grabbing';
+            // Hide the hint pulse when they successfully interact
+            const pulse = document.querySelector('.interactive-pulse');
+            if(pulse) pulse.style.display = 'none';
         }
     });
 
     window.addEventListener('mousemove',e=>{
+        const rect=canvas.getBoundingClientRect();
+        const mx=(e.clientX-rect.left)*(width/rect.width), my=(e.clientY-rect.top)*(height/rect.height);
         if(activeSlider){
-            const rect=canvas.getBoundingClientRect();
-            const scaleX=width/rect.width;
-            const mx=(e.clientX-rect.left)*scaleX;
             const sr=getSliderRects(activeSlider.node).find(s=>s.key===activeSlider.key);
             if(sr){
                 const norm=Math.max(0,Math.min(1,(mx-sr.x)/sr.w));
-                if(activeSlider.key==='exposure')sliderValues.exposure=Math.round(norm*200-100);
-                else if(activeSlider.key==='hueShift')sliderValues.hueShift=Math.round(norm*200-100);
+                if(activeSlider.key==='exposure'||activeSlider.key==='hueShift') sliderValues[activeSlider.key]=Math.round(norm*200-100);
                 else sliderValues[activeSlider.key]=Math.round(norm*100);
-                
-                // Real-time render update on slide for static media
-                if (currentMedia !== 'video' && effectsEnabled) {
-                    applyFiltersToPreview();
-                }
+                if(!currentMedia.startsWith('video')) applyFiltersToPreview();
             }
             return;
         }
-        if(!draggingNode)return;
-        
-        const rect=canvas.getBoundingClientRect();
-        const scaleX=width/rect.width, scaleY=height/rect.height;
-        const mx=(e.clientX-rect.left)*scaleX, my=(e.clientY-rect.top)*scaleY;
-        
-        // Exact clamp utilizing draggingNode.w and draggingNode.h
+        if(!draggingNode) return;
         draggingNode.x=Math.max(0,Math.min(width-draggingNode.w, mx-dragOffX));
         draggingNode.y=Math.max(0,Math.min(height-draggingNode.h, my-dragOffY));
         wireData=buildWireData();
     });
+    window.addEventListener('mouseup',()=>{ draggingNode=null; activeSlider=null; canvas.style.cursor='grab'; });
 
-    window.addEventListener('mouseup',()=>{
-        draggingNode=null;activeSlider=null;canvas.style.cursor='grab';
-    });
-
-    function animate(){
-        ctx.clearRect(0,0,width,height);
-        ctx.fillStyle='rgba(5,5,5,0.2)';ctx.fillRect(0,0,width,height);
-        wireData.forEach(wd=>{
-            ctx.save();ctx.strokeStyle=wd.color;ctx.lineWidth=Math.max(2, wd.points[0] ? 3 : 2);
-            ctx.shadowColor=wd.color+'60';ctx.shadowBlur=6;ctx.stroke(wd.path);ctx.restore();
-        });
-        nodes.forEach(drawNode);
-        particles.forEach(p=>{
-            p.prog+=p.spd;if(p.prog>1)p.prog-=1;
-            const wd=wireData[p.wi];if(!wd)return;
-            const idx=Math.floor(p.prog*(wd.points.length-1));
-            const pt=wd.points[Math.min(idx,wd.points.length-1)];
-            p.x=pt.x;p.y=pt.y;
-            ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-            ctx.fillStyle=p.color;ctx.shadowColor=p.color;ctx.shadowBlur=6;ctx.fill();
-        });
-        ctx.shadowBlur=0;
-        requestAnimationFrame(animate);
-    }
-    animate();
-
-    const track = document.getElementById('carouselTrack');
-    const prevBtn = document.getElementById('carouselPrev');
-    const nextBtn = document.getElementById('carouselNext');
-    let originalItems = Array.from(track.querySelectorAll('.ext-item'));
-    
-    // Clone for true infinity
-    originalItems.forEach(item => {
-        let clone = item.cloneNode(true);
-        track.appendChild(clone);
-    });
-    
-    let allItems = Array.from(track.querySelectorAll('.ext-item'));
-    const totalOriginal = originalItems.length;
-    let currentIndex = 0;
-    let isTransitioning = false;
-
-    function getItemWidth(){
-        return allItems[0].getBoundingClientRect().width + 24; 
-    }
-
-    function updateCarouselPosition(animate = true){
-        const itemWidth = getItemWidth();
-        if(!animate) {
-            track.style.transition = 'none';
-        } else {
-            track.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    let particles = [];
+    setInterval(() => {
+        if(particles.length<20) {
+            const wi = Math.floor(Math.random()*wireData.length);
+            particles.push({ wi, prog:0, spd:0.005+Math.random()*0.005 });
         }
-        track.style.transform = `translateX(-${currentIndex * itemWidth}px)`;
+    }, 200);
+
+    function animateGraph(){
+        ctx.clearRect(0,0,width,height);
+        wireData.forEach(wd=>{ ctx.save(); ctx.strokeStyle=wd.color; ctx.lineWidth=3; ctx.stroke(wd.path); ctx.restore(); });
+        nodes.forEach(drawNode);
+        for (let i=particles.length-1; i>=0; i--) {
+            let p=particles[i]; p.prog+=p.spd;
+            if(p.prog>=1) { particles.splice(i,1); continue; }
+            const wd=wireData[p.wi]; if(!wd) continue;
+            const pt=wd.points[Math.floor(p.prog*(wd.points.length-1))];
+            ctx.beginPath(); ctx.arc(pt.x,pt.y, 2, 0, Math.PI*2); ctx.fillStyle=wd.color; ctx.shadowColor=wd.color; ctx.shadowBlur=8; ctx.fill();
+        }
+        ctx.shadowBlur=0;
+        requestAnimationFrame(animateGraph);
+    }
+    animateGraph(); applyFiltersToPreview();
+
+    const track=document.getElementById('carouselTrack');
+    const prevBtn=document.getElementById('carouselPrev');
+    const nextBtn=document.getElementById('carouselNext');
+    let items=Array.from(track.querySelectorAll('.ext-item'));
+    const originalCount=items.length;
+    
+    items.forEach(item => track.appendChild(item.cloneNode(true)));
+    items=Array.from(track.querySelectorAll('.ext-item'));
+
+    let currentIndex=0;
+    function updateCarousel(animate=true){
+        const itemW = items[0].getBoundingClientRect().width + 24; 
+        track.style.transition = animate ? 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none';
+        track.style.transform = `translateX(${-currentIndex * itemW}px)`;
     }
 
-    nextBtn.addEventListener('click', () => {
-        if(isTransitioning) return;
-        isTransitioning = true;
+    nextBtn.addEventListener('click',()=>{
+        if(currentIndex >= originalCount) {
+            track.style.transition = 'none';
+            currentIndex = 0;
+            track.style.transform = `translateX(0px)`;
+            track.offsetHeight; 
+        }
         currentIndex++;
-        updateCarouselPosition(true);
+        updateCarousel(true);
     });
 
-    prevBtn.addEventListener('click', () => {
-        if(isTransitioning) return;
-        isTransitioning = true;
-        if(currentIndex === 0) {
-            currentIndex = totalOriginal;
-            updateCarouselPosition(false);
+    prevBtn.addEventListener('click',()=>{
+        if(currentIndex <= 0) {
+            track.style.transition = 'none';
+            currentIndex = originalCount;
+            const itemW = items[0].getBoundingClientRect().width + 24;
+            track.style.transform = `translateX(${-currentIndex * itemW}px)`;
             track.offsetHeight; 
         }
         currentIndex--;
-        updateCarouselPosition(true);
+        updateCarousel(true);
     });
 
-    track.addEventListener('transitionend', () => {
-        isTransitioning = false;
-        if(currentIndex >= totalOriginal) {
-            track.style.transition = 'none';
-            currentIndex = currentIndex % totalOriginal;
-            updateCarouselPosition(false);
+    window.addEventListener('resize',()=>updateCarousel(false));
+
+    window.openDocsSheet = function() {
+        document.getElementById('docsOverlay').classList.add('active');
+        document.getElementById('docsSheet').classList.add('open');
+        document.body.style.overflow = 'hidden';
+        // Auto-load the first tab if empty
+        const target = document.getElementById('mdTarget');
+        if(target.innerHTML.trim() === '') {
+            document.querySelector('.doc-nav-btn').click();
         }
+    };
+    
+    window.closeDocsSheet = function() {
+        document.getElementById('docsOverlay').classList.remove('active');
+        document.getElementById('docsSheet').classList.remove('open');
+        document.body.style.overflow = 'auto';
+    };
+
+    const docBtns = document.querySelectorAll('.doc-nav-btn');
+    docBtns.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            docBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const url = btn.getAttribute('data-url');
+            const target = document.getElementById('mdTarget');
+            target.innerHTML = '<div class="md-loader"><i class="fa-solid fa-circle-notch fa-spin fa-2x"></i></div>';
+            
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("Network response was not ok");
+                const text = await res.text();
+                // Parse markdown and inject
+                if(typeof marked !== 'undefined') {
+                    target.innerHTML = marked.parse(text);
+                } else {
+                    target.innerHTML = '<p style="color:red;">Error: Markdown parser failed to load.</p>';
+                }
+                document.getElementById('docsContentWrapper').scrollTo(0,0);
+            } catch (err) {
+                target.innerHTML = `<div style="text-align:center; padding: 2rem;">
+                    <i class="fa-solid fa-triangle-exclamation fa-3x" style="color:var(--yellow); margin-bottom:1rem;"></i>
+                    <h3>Unable to load documentation</h3>
+                    <p style="color:var(--muted); font-size:0.9rem;">The GitHub repository file could not be fetched. Check your network or ad-blocker.</p>
+                </div>`;
+            }
+        });
     });
-
-    window.addEventListener('resize', () => { updateCarouselPosition(false); });
-    updateCarouselPosition(false);
-
 })();
 </script>
 </body>
