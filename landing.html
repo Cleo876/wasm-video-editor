@@ -80,7 +80,7 @@
             position: relative; overflow: hidden; background: #000;
             box-shadow: 0 0 60px rgba(0, 210, 190, 0.15), 0 20px 40px rgba(0, 0, 0, 0.6);
             border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-            aspect-ratio: 16/9; margin: 2rem calc(50% - 50vw) 4rem; /* Adjusted margins for new flow */
+            aspect-ratio: 16/9; margin: 2rem calc(50% - 50vw) 4rem;
         }
         .video-banner video { width: 100%; height: 100%; object-fit: cover; opacity: 0.6; }
         .video-overlay {
@@ -102,9 +102,38 @@
             position: relative; overflow: hidden; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
         }
 
-        .media-btn { background: #1a1a1a; border: 1px solid #333; color: #aaa; padding: 0.4rem 0.8rem; border-radius: 8px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: 0.2s; }
-        .media-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
-        .media-btn:hover:not(.active) { background: #2a2a2a; color: #fff; }
+        .media-toggles-tube {
+            display: inline-flex;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 4px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        .active-pill {
+            position: absolute;
+            top: 4px; bottom: 4px;
+            background: var(--accent);
+            border-radius: 36px;
+            box-shadow: 0 2px 10px rgba(0, 210, 190, 0.3);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 0;
+            pointer-events: none;
+        }
+        .media-btn { 
+            background: transparent; 
+            border: none; 
+            color: var(--muted); 
+            padding: 0.4rem 1rem; 
+            cursor: pointer; 
+            font-size: 0.75rem; 
+            font-weight: 600; 
+            transition: color 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+        .media-btn.active { color: #000; }
+        .media-btn:hover:not(.active) { color: #fff; }
 
         .preview-panel {
             width: 100%; max-width: 400px; margin: 0 auto 0.8rem; position: relative;
@@ -121,7 +150,6 @@
         #rubiconPreviewCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: grab; }
         #rubiconPreviewCanvas:active { cursor: grabbing; }
 
-        /* Animated Interactive Pulse */
         .interactive-pulse {
             position: absolute; bottom: 16px; right: 16px; color: #000; font-size: 0.75rem; font-weight: 700;
             background: var(--yellow); padding: 0.4rem 1rem; border-radius: 30px; pointer-events: none; z-index: 20;
@@ -174,7 +202,6 @@
         }
         .ghost-info { padding: 1.5rem; background: rgba(0,0,0,0.3); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
         
-        /* Markdown Slide-out Sheet Styles */
         .slide-sheet-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0,0,0,0.7); backdrop-filter: blur(5px);
@@ -208,7 +235,6 @@
         
         .sheet-content-wrapper { flex: 1; padding: 2rem; overflow-y: auto; scroll-behavior: smooth; }
         
-        /* Custom Markdown Renderer Styling */
         .md-prose { color: #d1d5db; font-size: 1.05rem; line-height: 1.7; max-width: 800px; margin: 0 auto; }
         .md-prose h1 { font-size: 2.2rem; color: #fff; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
         .md-prose h2 { font-size: 1.6rem; color: #fff; margin: 2rem 0 1rem; }
@@ -238,6 +264,7 @@
             .two-col-standard, #compositing .two-col { flex-direction: column; gap: 2rem; }
             #compositing { padding: 2rem 0; }
             #compositing > .two-col > div:first-child { padding: 0 1.5rem; }
+            /* Strip borders for edge-to-edge mobile feel */
             #compositing .glass-demo { border-radius: 0; border-left: none; border-right: none; }
             .carousel-btn.prev { left: 0; } .carousel-btn.next { right: 0; }
             .node-graph-preview { min-height: 480px; }
@@ -247,6 +274,7 @@
         @media (max-width: 480px) {
             .ext-item { flex: 0 0 calc((100% - 1rem) / 1.5); }
             .btn-primary, .btn-outline { padding: 0.8rem 1.8rem; font-size: 1rem; }
+            .media-btn { padding: 0.3rem 0.6rem; font-size: 0.7rem; }
         }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -262,7 +290,7 @@
         <span class="badge" style="position:relative;">FORGE™ PROFESSIONAL VIDEO EDITING</span>
         <h1 class="gradient-text" style="margin:1.2rem 0; position:relative;">Professional Editing, <br>Any Machine. Zero Cost.</h1>
         <p style="font-size:1.2rem;color:var(--muted);max-width:720px;margin:1.2rem auto;position:relative;">
-            A full‑featured, client‑side editing suite. Node compositing, real‑time effects,
+            A full‑featured, client‑side video editor. Node compositing, real‑time effects,
             and WebM export — all running in your browser, offline, with no accounts and no uploads.
             <br><strong>Download the native‑feeling desktop app or start editing instantly online.</strong>
         </p>
@@ -271,31 +299,6 @@
             <button class="btn-outline" onclick="openDocsSheet()"><i class="fa-solid fa-book-open"></i> Docs & About WASM</button>
         </div>
     </header>
-
-    <section class="section cta-section" id="jam" style="margin-top: 3rem; margin-bottom: 1rem;">
-        <span class="badge" style="margin-bottom:1rem; background: rgba(234, 179, 8, 0.15); color: var(--yellow);"><i class="fa-solid fa-trophy"></i> UPCOMING COMMUNITY EVENT</span>
-        <h2 class="gradient-text" style="font-size:2.6rem;">Editor's Jam 2026</h2>
-        <p style="color:var(--muted);max-width:680px;margin:1.2rem auto;font-size:1.05rem;">
-            <strong>Coming August 2026.</strong> A 48‑hour online competition where video editors craft
-            stunning short films and developers build custom extensions or Rubicon nodes
-            for the <strong>WASM Video Editor</strong>. Footage graciously donated by <strong>Just Wright Studio</strong>.
-            Prizes include curated LUTs, SFX packs, and Steam keys.
-            <br><br><strong>The winning video will be featured right here on this page.</strong>
-        </p>
-        <!-- Jam Page on Itch.io when the time is right -->
-        <a href="#" class="btn-primary" style="background:#fa5c5c; color:#fff; border-radius:8px;"><i class="fa-brands fa-itch-io"></i> Learn More Soon</a>
-        <p style="color:#666;margin-top:1rem;font-size:0.85rem;">Sponsored by <strong>Just Wright Studio</strong> and the <a href="https://jgds.org" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">JGDS</a> community.</p>
-    </section>
-
-    <div class="video-banner full-bleed">
-        <video muted autoplay loop playsinline poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080' viewBox='0 0 1920 1080'%3E%3Crect width='100%25' height='100%25' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23555' font-family='sans-serif' font-size='28'%3EJam Winner's Reel — Coming August 2026%3C/text%3E%3C/svg%3E">
-            <source src="" type="video/mp4">
-        </video>
-        <div class="video-overlay">
-            <span class="badge" style="background:var(--yellow);color:#000;"><i class="fa-solid fa-crown"></i> JAM WINNER 2026</span>
-            <span style="font-size:1rem;">This spot reserved for the Editor's Jam champion — August 2026</span>
-        </div>
-    </div>
 
     <section class="section">
         <div style="text-align:center;margin-bottom:2rem;">
@@ -347,11 +350,12 @@
                     <label style="font-size:0.75rem; color:var(--muted); display:flex; align-items:center; gap:0.4rem; cursor:pointer;" title="Bypass Effects (A/B Test)">
                         <input type="checkbox" id="effectsToggle" checked> Enable Nodes
                     </label>
-                    <div class="media-toggles" id="mediaToggles" style="display:flex; gap:0.4rem;">
+                    <div class="media-toggles-tube" id="mediaToggles">
+                        <div class="active-pill" id="mediaPill"></div>
                         <button class="media-btn active" data-media="graphic">Graphic</button>
                         <button class="media-btn" data-media="photo">Photo</button>
-                        <button class="media-btn" data-media="video1">Vid 1 (MP4)</button>
-                        <button class="media-btn" data-media="video2">Vid 2 (WebM)</button>
+                        <button class="media-btn" data-media="video1">Vid 1</button>
+                        <button class="media-btn" data-media="video2">Vid 2</button>
                     </div>
                 </div>
 
@@ -399,6 +403,31 @@
         </div>
     </section>
 
+    <section class="section cta-section" id="jam" style="margin-top: 3rem; margin-bottom: 1rem;">
+        <span class="badge" style="margin-bottom:1rem; background: rgba(234, 179, 8, 0.15); color: var(--yellow);"><i class="fa-solid fa-trophy"></i> UPCOMING COMMUNITY EVENT</span>
+        <h2 class="gradient-text" style="font-size:2.6rem;">Editor's Jam 2026</h2>
+        <p style="color:var(--muted);max-width:680px;margin:1.2rem auto;font-size:1.05rem;">
+            <strong>Coming August 2026.</strong> A 48‑hour online competition where video editors craft
+            stunning short films and developers build custom extensions or Rubicon nodes
+            for the <strong>WASM Video Editor</strong>. Footage graciously donated by <strong>Just Wright Studio</strong>.
+            Prizes include curated LUTs, SFX packs, and Steam keys.
+            <br><br><strong>The winning video will be featured right here on this page.</strong>
+        </p>
+        <!-- Jam Page on Itch.io when the time is right -->
+        <a href="#" class="btn-primary" style="background:#fa5c5c; color:#fff; border-radius:8px;"><i class="fa-brands fa-itch-io"></i> Learn More Soon</a>
+        <p style="color:#666;margin-top:1rem;font-size:0.85rem;">Sponsored by <strong>Just Wright Studio</strong> and the <a href="https://jgds.org" target="_blank" style="color:var(--accent); text-decoration:none; font-weight:bold;">JGDS</a> community.</p>
+    </section>
+
+    <div class="video-banner full-bleed">
+        <video muted autoplay loop playsinline poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080' viewBox='0 0 1920 1080'%3E%3Crect width='100%25' height='100%25' fill='%23111'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23555' font-family='sans-serif' font-size='28'%3EJam Winner's Reel — Coming August 2026%3C/text%3E%3C/svg%3E">
+            <source src="" type="video/mp4">
+        </video>
+        <div class="video-overlay">
+            <span class="badge" style="background:var(--yellow);color:#000;"><i class="fa-solid fa-crown"></i> JAM WINNER 2026</span>
+            <span style="font-size:1rem;">This spot reserved for the Editor's Jam champion — August 2026</span>
+        </div>
+    </div>
+
     <section class="section" id="download">
         <div style="text-align:center;margin-bottom:2rem;">
             <span class="badge" style="margin-bottom:1rem;">NEW — DESKTOP EXPERIENCE</span>
@@ -417,8 +446,13 @@
                     <p style="color:var(--muted);font-size:0.95rem;margin-bottom:1rem;" id="os-detect-text">Detecting your operating system…</p>
                     
                     <div class="download-btn-group" id="download-btns">
-                        <a href="#" class="btn-primary" id="btn-download-primary" style="display:none;"><i class="fa-solid fa-download"></i> <span id="btn-download-label">Download</span></a>
-                        <a href="#" class="btn-outline" id="btn-download-other" style="display:none;"><span id="btn-other-label">Other OS</span></a>
+                        <a href="#" class="btn-primary" id="btn-download-primary" style="display:none;" target="_blank"><i class="fa-solid fa-download"></i> <span id="btn-download-label">Download</span></a>
+                        <a href="#" class="btn-outline" id="btn-download-other" style="display:none;" target="_blank"><span id="btn-other-label">Other OS</span></a>
+                    </div>
+                    
+                    <!-- Global Download Counter (Abacus API) -->
+                    <div style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--muted); display:flex; align-items:center; gap:0.5rem;" id="counter-wrapper">
+                        <i class="fa-solid fa-chart-line" style="color:var(--accent);"></i> Global Downloads: <strong id="download-count-display" style="color:#fff;">...</strong>
                     </div>
                     
                     <p style="color:var(--muted);font-size:0.8rem;margin-top:1.5rem; display:none;" id="browser-fallback">
@@ -498,13 +532,14 @@
         const otherBtn = document.getElementById('btn-download-other');
         const otherLabel = document.getElementById('btn-other-label');
         const fallbackText = document.getElementById('browser-fallback');
+        const counterWrapper = document.getElementById('counter-wrapper');
         
         if (isMobile) {
             detectEl.innerHTML = '<span style="color:var(--yellow);"><i class="fa-solid fa-triangle-exclamation"></i> Mobile Device Detected</span><br>The <strong>WASM Video Editor</strong> is a desktop-class editing environment relying on powerful desktop APIs. Please visit this page on a Windows, Linux, or macOS computer to download the app or launch the web editor.';
-            // Hide everything else
             primaryBtn.style.display = 'none';
             otherBtn.style.display = 'none';
-            fallbackText.style.display = 'none'; // NEVER show web launch link on mobile
+            fallbackText.style.display = 'none';
+            counterWrapper.style.display = 'none';
         } else if (isMac) {
             detectEl.innerText = 'The Ghost App™ for macOS is currently in development. You can launch the full browser version instantly below.';
             fallbackText.style.display = 'block';
@@ -523,6 +558,29 @@
             primaryBtn.style.display = 'inline-block'; primaryBtn.href = winUrl; primaryLabel.innerText = 'Windows (.zip)';
             otherBtn.style.display = 'inline-block'; otherBtn.href = linUrl; otherLabel.innerText = 'Linux (.zip)';
             fallbackText.style.display = 'block';
+        }
+
+        // Global Counter via reliable zero-auth Abacus API
+        const counterNamespace = 'forge-wasm-editor';
+        const counterKey = 'global-downloads';
+        const countDisplay = document.getElementById('download-count-display');
+
+        if (!isMobile && countDisplay) {
+            // Fetch initial count securely via Abacus GET
+            fetch(`https://abacus.jasoncameron.dev/get/${counterNamespace}/${counterKey}`)
+                .then(res => res.json())
+                .then(data => { countDisplay.innerText = (data.value || 0).toLocaleString(); })
+                .catch(() => { countDisplay.innerText = "Unavailable"; });
+
+            // Increment on click via Abacus HIT
+            const incrementCount = () => {
+                fetch(`https://abacus.jasoncameron.dev/hit/${counterNamespace}/${counterKey}`)
+                    .then(res => res.json())
+                    .then(data => { countDisplay.innerText = data.value.toLocaleString(); })
+                    .catch(err => console.error(err));
+            };
+            primaryBtn.addEventListener('click', incrementCount);
+            otherBtn.addEventListener('click', incrementCount);
         }
     })();
 
@@ -656,9 +714,8 @@
         previewCtx.putImageData(imgData,0,0);
     }
 
-    // 30 FPS Render Lock Loop
     let lastFrameTime = 0;
-    const frameDelay = 1000 / 30; // 33.3ms
+    const frameDelay = 1000 / 30; // 30fps lock
     function videoRenderLoop(timestamp) {
         if (!isVideoPlaying || !currentMedia.startsWith('video')) return;
         renderFrameId = requestAnimationFrame(videoRenderLoop);
@@ -671,10 +728,21 @@
 
     enableEffectsToggle.addEventListener('change', () => { if (!currentMedia.startsWith('video')) applyFiltersToPreview(); });
     
+    function updateMediaPill() {
+        const activeBtn = document.querySelector('.media-btn.active');
+        const pill = document.getElementById('mediaPill');
+        if (activeBtn && pill) {
+            pill.style.width = activeBtn.offsetWidth + 'px';
+            pill.style.left = activeBtn.offsetLeft + 'px';
+        }
+    }
+
     document.querySelectorAll('.media-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('.media-btn').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
+            updateMediaPill();
+            
             currentMedia = e.target.dataset.media;
             loadingUI.style.display = 'none';
             if (renderFrameId) cancelAnimationFrame(renderFrameId);
@@ -688,6 +756,10 @@
             }
         });
     });
+    
+    // Set initial pill placement
+    setTimeout(updateMediaPill, 100);
+    window.addEventListener('resize', updateMediaPill);
 
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -830,7 +902,6 @@
         }
         if(hit && !(hit.type==='color_corr' && my>hit.y+35)){
             draggingNode=hit; dragOffX=mx-hit.x; dragOffY=my-hit.y; canvas.style.cursor='grabbing';
-            // Hide the hint pulse when they successfully interact
             const pulse = document.querySelector('.interactive-pulse');
             if(pulse) pulse.style.display = 'none';
         }
@@ -925,7 +996,6 @@
         document.getElementById('docsOverlay').classList.add('active');
         document.getElementById('docsSheet').classList.add('open');
         document.body.style.overflow = 'hidden';
-        // Auto-load the first tab if empty
         const target = document.getElementById('mdTarget');
         if(target.innerHTML.trim() === '') {
             document.querySelector('.doc-nav-btn').click();
@@ -952,7 +1022,6 @@
                 const res = await fetch(url);
                 if (!res.ok) throw new Error("Network response was not ok");
                 const text = await res.text();
-                // Parse markdown and inject
                 if(typeof marked !== 'undefined') {
                     target.innerHTML = marked.parse(text);
                 } else {
