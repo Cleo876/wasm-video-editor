@@ -30,9 +30,6 @@
     <!-- Custom SVG Layers Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='120' fill='%230a0a0a'/%3E%3Cpath fill='%2300d2be' d='M246.6 47.4c5.3-2.8 11.4-2.8 16.8 0l224 112c5.2 2.6 8.6 7.9 8.6 13.6s-3.4 11-8.6 13.6l-224 112c-5.3 2.8-11.4 2.8-16.8 0l-224-112C7.4 184 4 178.7 4 173s3.4-11 8.6-13.6l224-112zm16.8 264.7c-5.3 2.8-11.4 2.8-16.8 0l-189.6-94.8L12.5 241.6c-5.2 2.6-8.6 7.9-8.6 13.6s3.4 11 8.6 13.6l224 112c5.3 2.8 11.4 2.8 16.8 0l224-112c5.2-2.6 8.6-7.9 8.6-13.6s-3.4-11-8.6-13.6l-44.5-24.3-189.6 94.8zM12.5 353.6c-5.2 2.6-8.6 7.9-8.6 13.6s3.4 11 8.6 13.6l224 112c5.3 2.8 11.4 2.8 16.8 0l224-112c5.2-2.6 8.6-7.9 8.6-13.6s-3.4-11-8.6-13.6l-44.5-24.3-189.6 94.8c-5.3 2.8-11.4 2.8-16.8 0L57 329.3 12.5 353.6z' transform='translate(64, 64) scale(0.75)'/%3E%3C/svg%3E">
 
-    <!-- Custom SVG Layers Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='120' fill='%230a0a0a'/%3E%3Cpath fill='%2300d2be' d='M246.6 47.4c5.3-2.8 11.4-2.8 16.8 0l224 112c5.2 2.6 8.6 7.9 8.6 13.6s-3.4 11-8.6 13.6l-224 112c-5.3 2.8-11.4 2.8-16.8 0l-224-112C7.4 184 4 178.7 4 173s3.4-11 8.6-13.6l224-112zm16.8 264.7c-5.3 2.8-11.4 2.8-16.8 0l-189.6-94.8L12.5 241.6c-5.2 2.6-8.6 7.9-8.6 13.6s3.4 11 8.6 13.6l224 112c5.3 2.8 11.4 2.8 16.8 0l224-112c5.2-2.6 8.6-7.9 8.6-13.6s-3.4-11-8.6-13.6l-44.5-24.3-189.6 94.8zM12.5 353.6c-5.2 2.6-8.6 7.9-8.6 13.6s3.4 11 8.6 13.6l224 112c5.3 2.8 11.4 2.8 16.8 0l224-112c5.2-2.6 8.6-7.9 8.6-13.6s-3.4-11-8.6-13.6l-44.5-24.3-189.6 94.8c-5.3 2.8-11.4 2.8-16.8 0L57 329.3 12.5 353.6z' transform='translate(64, 64) scale(0.75)'/%3E%3C/svg%3E">
-
     <!-- Load marked.js for our Markdown rendering engine -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
@@ -95,7 +92,7 @@
 
         .hero-bg {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
-            background: url('https://github.com/Cleo876/wasm-video-editor/blob/main/IMG\'s/Banners/Wallpaper%201_WASM%20Video%20Editor_website.png?raw=true') center/cover no-repeat;
+            background: url('https://github.com/Cleo876/wasm-video-editor/blob/main/IMGs/Banners/Wallpaper%201_WASM%20Video%20Editor_website.png?raw=true') center/cover no-repeat;
             filter: blur(8px) brightness(0.4); opacity: 0.9;
         }
         .hero-section { position: relative; padding: 6rem 0 4rem; text-align: center; overflow: hidden; }
@@ -298,7 +295,7 @@
             #compositing > .two-col > div:first-child { padding: 0 1.5rem; }
             #compositing .glass-demo { border-radius: 0; border-left: none; border-right: none; }
             .carousel-btn.prev { left: 0; } .carousel-btn.next { right: 0; }
-            .node-graph-preview { min-height: 480px; }
+            .node-graph-preview { min-height: 750px; } /* Increased vertical height for mobile nodes */
             .ext-item { flex: 0 0 calc((100% - 2rem) / 2.0); }
             .interactive-pulse { bottom: auto; top: 10px; right: 10px; font-size: 0.65rem; }
         }
@@ -903,7 +900,7 @@
 
     function resize(){
         width = container.clientWidth;
-        height = container.clientHeight || 480;
+        height = container.clientHeight || (width < 768 ? 750 : 480);
         canvas.width = width; canvas.height = height;
         
         const nW = Math.max(130, Math.min(180, width * baseNodeWidthR));
@@ -921,8 +918,15 @@
             const spacing = (totalW - nW * nodes.length) / Math.max(1, nodes.length - 1);
             nodes.forEach((n, i) => { n.x = margin + i * (nW + spacing); n.y = (height - n.h) / 2; });
         } else {
-            const spacingY = (height - (nodes.length * nW * 0.8)) / nodes.length;
-            nodes.forEach((n, i) => { n.x = (width - n.w)/2 + (i%2==0?-20:20); n.y = 20 + i * (nW * 0.8 + spacingY); });
+            let totalH = 0;
+            nodes.forEach(n => totalH += n.h);
+            const spacingY = Math.max(15, (height - totalH) / (nodes.length + 1));
+            let currY = spacingY;
+            nodes.forEach((n, i) => { 
+                n.x = (width - n.w)/2 + (i%2==0?-15:15); 
+                n.y = currY; 
+                currY += n.h + spacingY; 
+            });
         }
     }
 
@@ -1003,25 +1007,36 @@
 
     let draggingNode=null, dragOffX=0, dragOffY=0, activeSlider=null;
 
-    canvas.addEventListener('mousedown',e=>{
+    const getEventPos = (e) => e.touches && e.touches.length > 0 ? e.touches[0] : e;
+
+    const handlePointerDown = (e) => {
+        const pos = getEventPos(e);
         const rect=canvas.getBoundingClientRect();
-        const mx=(e.clientX-rect.left)*(width/rect.width), my=(e.clientY-rect.top)*(height/rect.height);
+        const mx=(pos.clientX-rect.left)*(width/rect.width), my=(pos.clientY-rect.top)*(height/rect.height);
         const hit = nodes.find(n => mx>=n.x&&mx<=n.x+n.w&&my>=n.y&&my<=n.y+n.h);
         if(hit&&hit.type==='color_corr'){
             const sr = getSliderRects(hit).find(s => mx>=s.x&&mx<=s.x+s.w&&my>=s.y&&my<=s.y+s.h);
-            if (sr) { activeSlider={node:hit,key:sr.key}; canvas.style.cursor='ew-resize'; e.preventDefault(); return; }
+            if (sr) { 
+                activeSlider={node:hit,key:sr.key}; 
+                canvas.style.cursor='ew-resize'; 
+                if (e.cancelable && e.type === 'touchstart') e.preventDefault(); 
+                return; 
+            }
         }
         if(hit && !(hit.type==='color_corr' && my>hit.y+35)){
             draggingNode=hit; dragOffX=mx-hit.x; dragOffY=my-hit.y; canvas.style.cursor='grabbing';
             const pulse = document.querySelector('.interactive-pulse');
             if(pulse) pulse.style.display = 'none';
+            if (e.cancelable && e.type === 'touchstart') e.preventDefault();
         }
-    });
+    };
 
-    window.addEventListener('mousemove',e=>{
+    const handlePointerMove = (e) => {
+        const pos = getEventPos(e);
         const rect=canvas.getBoundingClientRect();
-        const mx=(e.clientX-rect.left)*(width/rect.width), my=(e.clientY-rect.top)*(height/rect.height);
+        const mx=(pos.clientX-rect.left)*(width/rect.width), my=(pos.clientY-rect.top)*(height/rect.height);
         if(activeSlider){
+            if (e.cancelable && e.type === 'touchmove') e.preventDefault();
             const sr=getSliderRects(activeSlider.node).find(s=>s.key===activeSlider.key);
             if(sr){
                 const norm=Math.max(0,Math.min(1,(mx-sr.x)/sr.w));
@@ -1032,11 +1047,20 @@
             return;
         }
         if(!draggingNode) return;
+        if (e.cancelable && e.type === 'touchmove') e.preventDefault();
         draggingNode.x=Math.max(0,Math.min(width-draggingNode.w, mx-dragOffX));
         draggingNode.y=Math.max(0,Math.min(height-draggingNode.h, my-dragOffY));
         wireData=buildWireData();
-    });
-    window.addEventListener('mouseup',()=>{ draggingNode=null; activeSlider=null; canvas.style.cursor='grab'; });
+    };
+
+    const handlePointerUp = () => { draggingNode=null; activeSlider=null; canvas.style.cursor='grab'; };
+
+    canvas.addEventListener('mousedown', handlePointerDown);
+    canvas.addEventListener('touchstart', handlePointerDown, {passive: false});
+    window.addEventListener('mousemove', handlePointerMove);
+    window.addEventListener('touchmove', handlePointerMove, {passive: false});
+    window.addEventListener('mouseup', handlePointerUp);
+    window.addEventListener('touchend', handlePointerUp);
 
     let particles = [];
     setInterval(() => {
