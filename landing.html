@@ -170,11 +170,12 @@
             border: 1px solid var(--border); border-radius: 24px;
             padding: clamp(1rem, 2vw, 2rem);
             transition: border-color 0.3s, transform 0.3s;
+            display: flex; flex-direction: column;
         }
         .ext-item:hover { border-color: var(--accent); transform: translateY(-5px); }
         .ext-icon { font-size: clamp(1.8rem, 5vw, 2.5rem); margin-bottom: 0.8rem; line-height: 1; }
         .ext-item h3 { font-size: clamp(1rem, 2.5vw, 1.4rem); margin-bottom: 0.5rem; line-height: 1.2; }
-        .ext-item p { font-size: clamp(0.7rem, 1.5vw, 0.9rem); line-height: 1.4; color: var(--muted); }
+        .ext-item p { font-size: clamp(0.7rem, 1.5vw, 0.9rem); line-height: 1.4; color: var(--muted); flex-grow: 1; }
         .carousel-btn {
             position: absolute; top: 50%; transform: translateY(-50%);
             background: rgba(20, 20, 20, 0.8); backdrop-filter: blur(8px);
@@ -315,6 +316,16 @@
             <button class="carousel-btn prev" id="carouselPrev"><i class="fa-solid fa-chevron-left"></i></button>
             <div class="carousel-viewport" id="carouselViewport">
                 <div class="carousel-track" id="carouselTrack">
+                    <div class="ext-item">
+                        <div>
+                            <div class="ext-icon"><i class="fa-solid fa-dice-d20" style="color:#eab308;"></i></div>
+                            <h3>Rubicon Graph Engine</h3>
+                            <p>Break free from restrictive layer stacking. Build custom Hollywood-grade visual pipelines using a true node-based compositing workspace, featuring zero-latency rendering and seamless Render &amp; Replace FX baking.</p>
+                        </div>
+                        <div style="margin-top: auto; padding-top: 1.2rem;">
+                            <a href="#compositing" style="color:var(--accent); font-weight:700; font-size:0.85rem; text-decoration:none; transition:color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--accent)'">Give it a try <i class="fa-solid fa-arrow-right ml-1 text-[0.75rem]"></i></a>
+                        </div>
+                    </div>
                     <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-rotate-left" style="color:#f59e0b;"></i></div><h3>Undo &amp; Redo</h3><p>Unlike standard editors that wipe your history when closed, our IndexedDB engine provides a persistent, project-based undo stack. Close your browser, return tomorrow, and fearlessly undo yesterday's mistakes.</p></div>
                     <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-keyboard" style="color:#ec4899;"></i></div><h3>Hotkey Master</h3><p>Take absolute control of your editing speed. Bind any action to custom keyboard shortcuts, dodge overlapping keys with our Rogue Shield, and edit at the speed of thought without touching your mouse.</p></div>
                     <div class="ext-item"><div class="ext-icon"><i class="fa-solid fa-wand-magic-sparkles" style="color:#8b5cf6;"></i></div><h3>Transition Creator</h3><p>Go beyond basic crossfades. Access a Hollywood-grade transition ecosystem featuring drag-to-snap placement, cinematic S-curve easing, and programmable WebGL effects that render instantly.</p></div>
