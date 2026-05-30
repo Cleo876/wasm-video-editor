@@ -48,22 +48,7 @@ Let users customize it in the inspector!
     getParams: () =&gt; ({ color: document.getElementById('wipe_color').value }),
 ```
 
-### Step 4: Spatial Movement (Delta Transforms)
-If you want to physically move, scale, or rotate the video clips (like a Push, Slide, or Zoom), use `getClipTransform`. 
-
-**The Magic:** You do NOT override the user's manual placement. Instead, you return **Delta Offsets** (how much to add/subtract). The engine automatically resurrects dead clips for you and feeds these offsets into the PiP Engine.
-```javascript
-    // Engine automatically feeds these offsets into the PiP Transform Engine!
-    // No need to manually manipulate the canvas for X, Y, Scale, Rotation, or Opacity.
-    getClipTransform: (progress, edge, params) =&gt; {
-        let delta = { x: 0, y: 0, scale: 0, rotation: 0 };
-        if (edge === 'in') delta.x = (1 - progress) * 100; // Slide in from right
-        if (edge === 'out') delta.x = progress * -100;     // Slide out to left
-        return delta;
-    },
-```
-
-### Step 5: The Canvas Render (Preview)
+### Step 4: The Canvas Render (Preview)
 This is the visual magic! It runs 60 times a second during preview playback. 
 The Editor handles dynamic time scaling for you: `progress` is a decimal that always goes from `0.0` (start) to `1.0` (end) exactly over the duration of the transition block.
 ```javascript
@@ -74,7 +59,7 @@ The Editor handles dynamic time scaling for you: `progress` is a decimal that al
     },
 ```
 
-### Step 6: FFmpeg Export
+### Step 5: FFmpeg Export
 Translate your effect into FFmpeg string format for the final MP4 render.
 ```javascript
     getFFmpeg: (edge, duration, params, alignment) =&gt; {
@@ -87,67 +72,107 @@ Translate your effect into FFmpeg string format for the final MP4 render.
 
 ---
 
-## 🏆 Full Code Example: The Push Transition
+## 🚀 Advanced Section: Spatial Transitions &amp; Delta Transforms
 
-Here is a complete, production-ready example of a physical transition using Delta Transforms. Copy and paste this to start building!
+### Why is this a thing?
+Historically, if you wanted to build a transition that physically moved a video (like a Slide, Push, or Zoom), you had to write complex `onRender` canvas math to manually translate and scale the clip. 
+
+**The Problem:** What if a video editor manually placed their clip in the bottom-right corner using the **PiP Transform Extension**? If your transition uses hardcoded canvas coordinates, it will violently overwrite the user's custom placement, teleporting their PiP clip to the center of the screen during the transition!
+
+### What does it mean for developers and editors?
+Enter the **Delta Transform Matrix**. Instead of fighting for control of the canvas, you simply return a mathematical *offset* (e.g., "Add 50 to X, Subtract 20 from Scale"). 
+
+The Engine safely injects these offsets directly into the PiP Transform Engine. **This means your spatial transitions will flawlessly combine with the user's custom PiP layouts without breaking them!** Let's walk through building a completely new transition step-by-step: the **"Whirlwind" (Spin &amp; Zoom)**.
+
+### Step 6: Add the Delta Transform Method
+Instead of `onRender`, we add the `getClipTransform` method to our registry object. This method runs 60 times a second and asks you: "How much should I shift the X, Y, Scale, Rotation, and Opacity right now?"
+
+```javascript
+    // Engine automatically feeds these offsets into the PiP Transform Engine!
+    getClipTransform: (progress, edge, params) =&gt; {
+        let delta = { x: 0, y: 0, scale: 0, rotation: 0, opacity: 0 };
+        // We will do our math here!
+        return delta;
+    },
+```
+
+### Step 7: Disable Auto-Reverse for Predictable Math
+Spatial movement is much easier to program if `progress` *always* runs linearly from `0.0` to `1.0`, regardless of whether the transition is at the start or the end of a clip.
+
+```javascript
+    autoReverse: false, // Ensures 'progress' is always 0.0 -&gt; 1.0
+    pingPong: false,    // Disables peaking in the middle
+```
+
+### Step 8: Handle the Incoming ('in') Edge
+When `edge === 'in'`, the transition is at the START of the clip. For a Whirlwind effect, we want the incoming clip to start tiny (`scale: -100`), spun backwards (`rotation: -180`), and invisible (`opacity: -100`). As `progress` reaches `1.0`, the offsets should resolve to `0` so the clip returns to normal.
+
+```javascript
+        if (edge === 'in') {
+            // At progress 0, (1 - 0) * -100 = -100 scale offset
+            // At progress 1, (1 - 1) * -100 = 0 scale offset
+            delta.scale = (1 - progress) * -100; 
+            delta.rotation = (1 - progress) * -180;
+            delta.opacity = (1 - progress) * -100; // Fades in smoothly
+        }
+```
+
+### Step 9: Handle the Outgoing ('out') Edge
+When `edge === 'out'`, the transition is at the END of the clip. We want it to spin forward and shrink away.
+
+```javascript
+        if (edge === 'out') {
+            // At progress 0, (0 * -100) = 0 scale offset
+            // At progress 1, (1 * -100) = -100 scale offset (shrinks away)
+            delta.scale = progress * -100; 
+            delta.rotation = progress * 180;
+            delta.opacity = progress * -100; 
+        }
+```
+
+### Step 10: Assemble the Final Whirlwind Code
+Here is the complete, production-ready code for our new Whirlwind transition! You can copy-paste this directly into the engine.
 
 ```javascript
 /**
- * @name Push Transition
+ * @name Whirlwind Transition
  * @version 1.0.0
  * @developer Forge™
- * @description Pushes the current clip off the screen while pushing the new clip into view.
+ * @description A dynamic spin and zoom effect. Powered by Delta Transforms.
  */
-window.TRANSITION_REGISTRY['push'] = {
-    name: 'Push Transition',
-    description: 'Pushes the current clip off the screen while pushing the new clip into view.',
+window.TRANSITION_REGISTRY['whirlwind'] = {
+    name: 'Whirlwind',
+    description: 'Spins and zooms the clip onto the screen.',
     defaultDuration: 1.0,
     maxDuration: 5.0,
     
-    // K.I.S.S. Method: Disable auto-reverse and pingPong so 'progress' reliably flows 0.0 -&gt; 1.0
+    // Disable auto-reverse so 'progress' reliably flows 0.0 -&gt; 1.0
     autoReverse: false, 
     pingPong: false,
     
-    getUI: (params) =&gt; `
-        <div class="mt-3 border-t border-[#333] pt-3">
-            <label class="block text-[10px] text-gray-500 font-bold mb-1 uppercase">Push Direction</label>
-            <select id="trans_push_dir" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm rounded outline-none focus:border-teal-500">
-                <option value="left" ${params.direction="==" 'left'="" ?="" 'selected'="" :="" ''}="">Push Left</option>
-                <option value="right" ${params.direction="==" 'right'="" ?="" 'selected'="" :="" ''}="">Push Right</option>
-                <option value="up" ${params.direction="==" 'up'="" ?="" 'selected'="" :="" ''}="">Push Up</option>
-                <option value="down" ${params.direction="==" 'down'="" ?="" 'selected'="" :="" ''}="">Push Down</option>
-            </select>
-        </div>
-    `,
-    
-    getParams: () =&gt; ({ direction: document.getElementById('trans_push_dir').value }),
+    getUI: (params) =&gt; `<div class="text-xs text-gray-500 italic mt-2">Spins and zooms dynamically.</div>`,
+    getParams: () =&gt; ({}),
     
     // The Delta Transform Matrix
     getClipTransform: (progress, edge, params) =&gt; {
-        const dir = params.direction || 'left';
         let delta = { x: 0, y: 0, scale: 0, rotation: 0, opacity: 0 };
         
-        if (dir === 'left') {
-            if (edge === 'in') delta.x = (1 - progress) * 100; 
-            if (edge === 'out') delta.x = progress * -100;     
+        if (edge === 'in') {
+            delta.scale = (1 - progress) * -100; 
+            delta.rotation = (1 - progress) * -180;
+            delta.opacity = (1 - progress) * -100; 
         } 
-        else if (dir === 'right') {
-            if (edge === 'in') delta.x = (1 - progress) * -100; 
-            if (edge === 'out') delta.x = progress * 100;       
-        }
-        else if (dir === 'up') {
-            if (edge === 'in') delta.y = (1 - progress) * 100;  
-            if (edge === 'out') delta.y = progress * -100;      
-        }
-        else if (dir === 'down') {
-            if (edge === 'in') delta.y = (1 - progress) * -100; 
-            if (edge === 'out') delta.y = progress * 100;       
+        else if (edge === 'out') {
+            delta.scale = progress * -100; 
+            delta.rotation = progress * 180;
+            delta.opacity = progress * -100;       
         }
 
         return delta;
     },
     
     getFFmpeg: (edge, duration, params, align) =&gt; {
+        // Fallback for FFmpeg export
         return `fade=t=${edge}:st=0:d=${duration}:alpha=1`;
     }
 };
