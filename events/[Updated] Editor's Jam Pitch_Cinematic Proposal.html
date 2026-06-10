@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forge™ Editor's Jam 2026 - Just Wright Studio Pitch</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        forge: {
+                            bg: '#0a0a0c',        /* Deep dark background */
+                            panel: '#15151a',     /* Slightly lighter dark for panels */
+                            amber: '#f59e0b',     /* Warm candlelight accent */
+                            glow: '#d97706',      /* Deeper amber glow */
+                            purple: '#7c3aed',    /* Editor UI purple */
+                            teal: '#0ea5e9',      /* Editor UI teal */
+                            text: '#f8fafc',
+                            muted: '#94a3b8'
+                        }
+                    },
+                    fontFamily: { 
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Josefin Sans', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Dynamic viewport scaling to ensure visibility outside fullscreen */
+        html { font-size: 16px; }
+        @media (max-width: 1440px) { html { font-size: 14px; } }
+        @media (max-width: 1024px) { html { font-size: 12px; } }
+        @media (max-height: 900px) { html { font-size: 14px; } }
+        @media (max-height: 800px) { html { font-size: 12px; } }
+        @media (max-height: 700px) { html { font-size: 10px; } }
+        @media (max-height: 600px) { html { font-size: 8.5px; } }
+
+        body { 
+            background-color: #0a0a0c; 
+            color: #f8fafc; 
+            margin: 0; 
+            overflow: hidden; 
+        }
+
+        /* Abstract Procedural Background Grid */
+        .bg-grid {
+            background-image: 
+                linear-gradient(rgba(245, 158, 11, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(245, 158, 11, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Slide Container */
+        .slide { 
+            display: none; 
+            height: 100vh; 
+            width: 100vw; 
+            position: absolute; 
+            top: 0; left: 0;
+            z-index: 1;
+            padding: 4rem;
+            box-sizing: border-box;
+            overflow-y: auto;
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+        .slide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .slide.active { 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center;
+            z-index: 10;
+        }
+
+        /* Premium Glassmorphism */
+        .glass {
+            background: rgba(21, 21, 26, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Advanced Procedural Animations */
+        @keyframes customFadeUp {
+            0% { opacity: 0; transform: translateY(40px) scale(0.95); filter: blur(10px); }
+            100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+
+        .slide .anim-el { opacity: 0; will-change: transform, opacity, filter; }
+        
+        /* Cubic-bezier gives that premium, organic, snappy-then-smooth feel */
+        .slide.active .anim-el { 
+            animation: customFadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+        }
+        
+        .delay-100 { animation-delay: 0.1s !important; }
+        .delay-200 { animation-delay: 0.2s !important; }
+        .delay-300 { animation-delay: 0.3s !important; }
+        .delay-400 { animation-delay: 0.4s !important; }
+        .delay-500 { animation-delay: 0.5s !important; }
+        .delay-600 { animation-delay: 0.6s !important; }
+        .delay-700 { animation-delay: 0.7s !important; }
+        .delay-800 { animation-delay: 0.8s !important; }
+
+        /* Typography Highlights */
+        .text-gradient {
+            background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #d97706 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .text-gradient-purple {
+            background: linear-gradient(135deg, #c084fc 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Cover Slide Specifics */
+        #cover-bg {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center;
+            z-index: -1;
+            transition: filter 0.3s ease;
+        }
+        
+        #cover-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, #0a0a0c 10%, rgba(10, 10, 12, 0.6) 100%);
+            z-index: -1;
+        }
+
+        /* Blur Control Widget */
+        #blur-control-widget {
+            position: fixed;
+            top: 1.5rem;
+            left: 1.5rem;
+            z-index: 100;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        .fullscreen-active #blur-control-widget {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-20px);
+        }
+
+        /* Custom Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px; width: 16px;
+            border-radius: 50%;
+            background: #f59e0b;
+            cursor: pointer;
+            margin-top: -6px; 
+            box-shadow: 0 0 10px rgba(245,158,11,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+        }
+
+        /* Progress & Navigation */
+        .progress-container {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: rgba(255,255,255,0.05);
+            z-index: 50;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #f59e0b, #7c3aed);
+            width: 0%;
+            transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 22rem; /* Dynamically scales with the viewport */
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-center-text {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        /* Highlight box */
+        .highlight-box {
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        .highlight-box:hover {
+            transform: translateY(-5px);
+        }
+        .highlight-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: #f59e0b;
+            box-shadow: 0 0 15px #f59e0b;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Blur Control Widget (Hidden in Fullscreen) -->
+    <div id="blur-control-widget" class="glass px-5 py-4 rounded-xl border border-white/10 flex flex-col gap-3 shadow-2xl">
+        <label for="blur-slider" class="text-[10px] font-bold tracking-widest text-forge-muted uppercase flex items-center justify-between">
+            <span>Cover Blur</span>
+            <i class="fa-solid fa-droplet text-forge-amber ml-4"></i>
+        </label>
+        <input type="range" id="blur-slider" min="0" max="20" value="0" class="w-40" oninput="updateBlur(this.value)">
+    </div>
+
+    <!-- Top Right Controls -->
+    <button onclick="toggleFullScreen()" class="fixed top-6 right-6 z-50 glass px-5 py-2.5 rounded-xl shadow-lg transition-all hover:bg-white/5 flex items-center gap-3 text-xs font-bold text-forge-text border border-white/10 hover:border-forge-amber/50 group">
+        <i class="fa-solid fa-expand text-forge-amber group-hover:scale-110 transition-transform" id="fs-icon"></i> 
+        <span id="fs-text" class="tracking-widest uppercase">Present</span>
+    </button>
+
+    <!-- Slide Counter -->
+    <div class="fixed bottom-6 left-6 z-50 glass px-6 py-3 rounded-full text-xs font-bold tracking-widest text-forge-muted shadow-lg border border-white/5">
+        <span class="text-forge-amber"><span id="current-slide-num">1</span></span> / <span id="total-slides" class="text-white">15</span>
+    </div>
+
+    <!-- Navigation -->
+    <div class="fixed bottom-6 right-6 flex gap-3 z-50">
+        <button onclick="prevSlide()" class="glass text-forge-text w-12 h-12 rounded-full shadow-lg hover:bg-white/10 transition-all border border-white/10 flex items-center justify-center">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button onclick="nextSlide()" class="bg-forge-amber text-forge-bg w-12 h-12 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:bg-forge-glow transition-all font-bold flex items-center justify-center">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+        <div id="progress" class="progress-bar"></div>
+    </div>
+
+    <!-- Presentation Canvas -->
+    <div id="presentation" class="relative w-full h-full">
+        
+        <div class="bg-grid"></div>
+
+        <!-- Slide 1: Cover -->
+        <section class="slide active items-center text-center">
+            <div id="cover-bg"></div>
+            <div id="cover-overlay"></div>
+            
+            <div class="max-w-6xl relative z-10 w-full mt-16">
+                <div class="anim-el delay-100 inline-flex items-center gap-3 px-6 py-2 rounded-full glass border border-forge-amber/30 text-forge-amber text-xs font-bold tracking-[0.3em] uppercase mb-8 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                    <i class="fa-solid fa-video"></i> Cinematic Partnership Proposal
+                </div>
+                
+                <h1 class="anim-el delay-200 font-display text-7xl md:text-8xl lg:text-9xl font-bold leading-none mb-6 tracking-tight text-white drop-shadow-2xl">
+                    Forge™ <span class="text-gradient">Editor's Jam</span>
+                </h1>
+                
+                <p class="anim-el delay-300 text-2xl text-gray-300 font-light tracking-wide mb-12 drop-shadow-lg max-w-3xl mx-auto">
+                    August 14–16, 2026 • 48-Hour Global Marathon
+                </p>
+
+                <div class="anim-el delay-400 glass inline-flex flex-col items-center px-12 py-8 rounded-3xl border border-white/10 mx-auto mt-12 shadow-2xl backdrop-blur-md">
+                    <span class="text-[10px] uppercase tracking-widest text-forge-muted font-bold mb-4">Prepared For</span>
+                    <div class="flex items-center gap-6">
+                        <div class="text-right border-r border-white/10 pr-6">
+                            <h3 class="text-2xl font-bold text-white mb-1">Ownership & Leadership</h3>
+                            <p class="text-sm font-bold text-forge-amber tracking-wide uppercase">Just Wright Studio</p>
+                        </div>
+                        <div class="text-left pl-2">
+                            <p class="text-base font-bold text-white mb-1">Official Feature Sponsor</p>
+                            <p class="text-xs text-forge-muted tracking-wide">Jamaican Film & Production</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 2: The Architect -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full grid grid-cols-12 gap-16 items-center h-full">
+                <div class="col-span-5 anim-el delay-100 flex flex-col items-center">
+                    <div class="relative w-full aspect-square rounded-[3rem] overflow-hidden border border-forge-amber/30 shadow-[0_0_40px_rgba(245,158,11,0.15)] group">
+                        <img src="https://github.com/Cleo876/build5e-schools/blob/main/image_2026-01-12_215558291.png?raw=true" alt="Cleon Williams" class="w-full h-full object-cover filter contrast-110 saturate-100 group-hover:scale-105 transition-all duration-700" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-forge-bg via-forge-bg/20 to-transparent"></div>
+                        <div class="absolute bottom-8 left-8 right-8">
+                            <span class="bg-forge-amber text-forge-bg text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded border border-forge-amber/50 shadow-lg block w-max mb-3">The Architect</span>
+                            <h4 class="text-3xl font-bold text-white leading-tight">Cleon Williams</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-span-7 anim-el delay-200">
+                    <h2 class="text-xs font-bold tracking-[0.3em] text-forge-amber uppercase mb-4">Introductions</h2>
+                    <h3 class="text-5xl font-sans font-extrabold leading-tight mb-8">Animator from <br><span class="text-gradient">Jamaica.</span></h3>
+                    
+                    <div class="glass p-10 rounded-3xl border-l-4 border-forge-amber bg-gradient-to-r from-forge-amber/5 to-transparent relative overflow-hidden">
+                        <i class="fa-solid fa-pen-nib absolute -right-6 -bottom-6 text-9xl text-forge-amber/10"></i>
+                        <p class="text-lg text-forge-muted leading-relaxed font-light mb-6 relative z-10">
+                            I am a professional Animator and Web Developer. My career exists at the direct intersection of creative storytelling and advanced software engineering.
+                        </p>
+                        <p class="text-lg text-forge-muted leading-relaxed font-light relative z-10">
+                            Having worked intimately with timelines, keyframes, and rendering engines, I understand exactly what filmmakers and creators need. I've seen firsthand how corporate software actively locks artists out of their own creative history.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: The Forge Philosophy -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full grid grid-cols-12 gap-16 items-center h-full">
+                <div class="col-span-5 anim-el">
+                    <h2 class="text-xs font-bold tracking-[0.3em] text-forge-purple uppercase mb-4">The Mission</h2>
+                    <h3 class="text-5xl font-sans font-extrabold leading-tight mb-8">The Forge <br><span class="text-gradient-purple">Philosophy.</span></h3>
+                    <p class="text-lg text-forge-muted leading-relaxed mb-6 font-light">
+                        The "why" behind Forge is deeply personal to me. I view this mission as a <strong>charge from God</strong> to build tools that empower rather than entrap.
+                    </p>
+                    <p class="text-lg text-forge-muted leading-relaxed font-light">
+                        It is an active counter-narrative to the dominant "rent-seeking" SaaS model, fighting against digital dispossession—where your access to your <em>own work</em> can be revoked by a corporate price hike or policy change.
+                    </p>
+                </div>
+                <div class="col-span-7 anim-el delay-200">
+                    <div class="grid grid-cols-1 gap-6">
+                        <div class="glass p-8 rounded-3xl border border-white/5 hover:border-forge-purple/50 transition-colors group shadow-lg">
+                            <div class="flex items-center gap-5 mb-4">
+                                <div class="w-12 h-12 rounded-full bg-forge-purple/20 flex items-center justify-center text-forge-purple group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-gift"></i>
+                                </div>
+                                <h4 class="text-xl font-bold text-white">The Public Good</h4>
+                            </div>
+                            <p class="text-sm text-forge-muted font-light leading-relaxed">The Community Edition tools are a gift. They are free forever, and by their very client-side architecture, they <em>cannot</em> be taken back or paywalled.</p>
+                        </div>
+                        <div class="glass p-8 rounded-3xl border border-white/5 hover:border-forge-teal/50 transition-colors group shadow-lg">
+                            <div class="flex items-center gap-5 mb-4">
+                                <div class="w-12 h-12 rounded-full bg-forge-teal/20 flex items-center justify-center text-forge-teal group-hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-server"></i>
+                                </div>
+                                <h4 class="text-xl font-bold text-white">The Sustainable Engine</h4>
+                            </div>
+                            <p class="text-sm text-forge-muted font-light leading-relaxed">The Partner Program is the engine that funds the dream. Revenue from businesses who need custom, server-side solutions directly pays for the R&D to create the next generation of open-source tools for everyone.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: The Tool -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full h-full flex flex-col justify-center">
+                <div class="text-center anim-el mb-16">
+                    <div class="inline-block w-16 h-16 bg-white/5 rounded-2xl mb-6 flex items-center justify-center border border-white/10">
+                        <i class="fa-solid fa-microchip text-2xl text-forge-purple"></i>
+                    </div>
+                    <h2 class="text-xs font-bold tracking-[0.3em] text-forge-purple uppercase mb-4">The Engine</h2>
+                    <h3 class="text-5xl font-sans font-extrabold">WASM Video Editor</h3>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-8">
+                    <div class="glass p-10 rounded-3xl anim-el delay-200 highlight-box border border-white/5 bg-gradient-to-br from-white/5 to-transparent">
+                        <i class="fa-brands fa-chrome text-4xl text-forge-amber mb-8 block drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]"></i>
+                        <h4 class="text-2xl font-bold text-white mb-4">100% Client-Side</h4>
+                        <p class="text-base text-forge-muted leading-relaxed font-light">Powered by WebAssembly. Edit anywhere, even offline on set. No servers, no accounts, no expensive cloud rendering. The user's browser is the entire render farm.</p>
+                    </div>
+                    <div class="glass p-10 rounded-3xl anim-el delay-300 highlight-box border border-white/5 bg-gradient-to-br from-white/5 to-transparent" style="--tw-shadow-color: #7c3aed; box-shadow: inset 4px 0 0 var(--tw-shadow-color);">
+                        <i class="fa-solid fa-database text-4xl text-forge-purple mb-8 block drop-shadow-[0_0_10px_rgba(124,58,237,0.5)]"></i>
+                        <h4 class="text-2xl font-bold text-white mb-4">IndexedDB Auto-Save</h4>
+                        <p class="text-base text-forge-muted leading-relaxed font-light">Continuous native saves. If a tab closes or the browser crashes, zero timeline progress is ever lost.</p>
+                    </div>
+                    <div class="glass p-10 rounded-3xl anim-el delay-400 highlight-box border border-white/5 bg-gradient-to-br from-white/5 to-transparent" style="--tw-shadow-color: #0ea5e9; box-shadow: inset 4px 0 0 var(--tw-shadow-color);">
+                        <i class="fa-solid fa-shield-halved text-4xl text-forge-teal mb-8 block drop-shadow-[0_0_10px_rgba(14,165,233,0.5)]"></i>
+                        <h4 class="text-2xl font-bold text-white mb-4">Safe Mode Engineering</h4>
+                        <p class="text-base text-forge-muted leading-relaxed font-light">Built for hackers. Append <code class="bg-forge-bg px-2 py-1 rounded text-sm text-forge-teal">?safemode=true</code> to bypass broken custom extensions without crashing the UI.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: Open Source Philosophy -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full grid grid-cols-12 gap-16 items-center h-full">
+                <div class="col-span-5 anim-el">
+                    <h2 class="text-xs font-bold tracking-[0.3em] text-forge-teal uppercase mb-4">The Philosophy</h2>
+                    <h3 class="text-5xl font-sans font-extrabold leading-tight mb-8">What is <br><span class="text-gradient">Open Source?</span></h3>
+                    <p class="text-lg text-forge-muted leading-relaxed mb-6 font-light">
+                        In the film world, "Open Source" is equivalent to a <strong>community-owned studio backlot</strong>. 
+                    </p>
+                    <p class="text-lg text-forge-muted leading-relaxed font-light">
+                        Instead of renting expensive equipment hidden behind corporate paywalls (like Adobe Premiere), the blueprints for the tools are completely public. If a filmmaker needs a better lighting rig, a developer builds it, shares the blueprint, and suddenly <em>every</em> indie filmmaker globally has access to it for free, forever.
+                    </p>
+                </div>
+                <div class="col-span-7 anim-el delay-200">
+                    <div class="grid grid-cols-1 gap-6">
+                        <div class="glass p-8 rounded-3xl border-l-4 border-red-500/50 bg-gradient-to-r from-red-500/5 to-transparent relative overflow-hidden shadow-lg">
+                            <i class="fa-solid fa-lock absolute -right-4 -bottom-4 text-8xl text-red-500/10"></i>
+                            <h4 class="text-xl font-bold text-white mb-2">The Proprietary Model (The Rental)</h4>
+                            <p class="text-sm text-forge-muted font-light leading-relaxed">Tools are locked. If you need a new feature, you wait years for the corporation to build it, and you pay a heavy monthly subscription just to access your own timeline.</p>
+                        </div>
+                        <div class="glass p-8 rounded-3xl border-l-4 border-forge-teal bg-gradient-to-r from-forge-teal/10 to-transparent relative overflow-hidden shadow-lg">
+                            <i class="fa-solid fa-lock-open absolute -right-4 -bottom-4 text-8xl text-forge-teal/10"></i>
+                            <h4 class="text-xl font-bold text-white mb-2">The Open Source Model (The Forge)</h4>
+                            <p class="text-sm text-forge-muted font-light leading-relaxed">Tools are owned by the users. If a feature is missing, a developer in the community codes it over the weekend, and everyone's editor gets upgraded instantly. No subscriptions. No gatekeepers.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: The Caliber (Tier Rankings) -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full h-full flex flex-col justify-center">
+                <div class="text-center anim-el mb-8">
+                    <h2 class="text-xs font-bold tracking-[0.3em] text-forge-amber uppercase mb-3">The Global Benchmark</h2>
+                    <h3 class="text-5xl font-sans font-extrabold text-white">The Reality of the Top 60</h3>
+                    <p class="text-forge-muted mt-3 max-w-4xl mx-auto text-lg font-light">In software, tools are ranked by "Tiers". We don't pretend to be an S-Tier Hollywood studio engine. But our standing as a free, browser-based underdog breaking into the Professional A-Tier is what makes this project revolutionary.</p>
+                </div>
+                
+                <div class="grid grid-cols-12 gap-10 max-w-7xl mx-auto w-full">
+                    <!-- Left Column: Tier Cards -->
+                    <div class="col-span-5 flex flex-col gap-3">
+                        <!-- S-Tier -->
+                        <div class="anim-el delay-100 glass p-4 rounded-xl border border-white/5 flex items-center gap-4">
+                            <div class="w-12 h-12 shrink-0 bg-white/5 rounded-xl flex items-center justify-center text-xl font-display font-bold text-white/30">S</div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-bold text-white mb-0.5">Industry Standard</h4>
+                                <p class="text-xs text-forge-muted font-light leading-snug">Full-scale feature film production, heavy 3D compositing, team cloud collaboration.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- A-Tier (Highlighted Forge) -->
+                        <div class="anim-el delay-200 glass p-4 rounded-xl border-l-4 border-forge-amber bg-gradient-to-r from-forge-amber/10 to-transparent flex items-center gap-4 relative overflow-hidden shadow-[0_0_20px_rgba(245,158,11,0.15)]">
+                            <div class="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-forge-amber/5 to-transparent pointer-events-none"></div>
+                            <div class="w-12 h-12 shrink-0 bg-forge-amber rounded-xl flex items-center justify-center text-2xl font-display font-bold text-forge-bg shadow-[0_0_15px_rgba(245,158,11,0.5)]">A</div>
+                            <div class="flex-1 relative z-10">
+                                <div class="flex justify-between items-center mb-0.5">
+                                    <h4 class="text-lg font-bold text-white">Professional</h4>
+                                    <span class="text-[10px] font-bold text-forge-amber tracking-widest uppercase bg-forge-amber/10 px-2 py-0.5 rounded border border-forge-amber/20">Rank 16 / 60</span>
+                                </div>
+                                <h5 class="text-sm font-bold text-white mb-1">Forge WASM Editor</h5>
+                                <p class="text-xs text-forge-muted font-light leading-snug">High-end indie pipelines. Outpaces hundreds of funded corporate apps as a free web tool.</p>
+                            </div>
+                        </div>
+
+                        <!-- B-Tier -->
+                        <div class="anim-el delay-300 glass p-4 rounded-xl border border-white/5 flex items-center gap-4">
+                            <div class="w-12 h-12 shrink-0 bg-white/5 rounded-xl flex items-center justify-center text-xl font-display font-bold text-white/30">B</div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-bold text-white mb-0.5">Prosumer</h4>
+                                <p class="text-xs text-forge-muted font-light leading-snug">Solid multi-track editing, complex node support, but lacking true studio depth.</p>
+                            </div>
+                        </div>
+
+                        <!-- C-Tier -->
+                        <div class="anim-el delay-400 glass p-4 rounded-xl border border-white/5 flex items-center gap-4">
+                            <div class="w-12 h-12 shrink-0 bg-white/5 rounded-xl flex items-center justify-center text-xl font-display font-bold text-white/30">C</div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-bold text-white mb-0.5">Consumer</h4>
+                                <p class="text-xs text-forge-muted font-light leading-snug">Simple trimmers, template-heavy social media editors, and basic web tools.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Why it Qualifies -->
+                    <div class="col-span-7 anim-el delay-300">
+                        <div class="glass p-8 rounded-[2rem] border border-forge-amber/20 bg-gradient-to-b from-white/5 to-transparent h-full flex flex-col justify-between shadow-2xl relative overflow-hidden">
+                            <div class="absolute -bottom-10 -right-10 text-[15rem] text-forge-amber/5 rotate-[-15deg] pointer-events-none"><i class="fa-solid fa-ranking-star"></i></div>
+                            
+                            <div class="relative z-10">
+                                <h4 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                                    <i class="fa-solid fa-medal text-forge-amber text-3xl"></i>
+                                    Why Forge Earns the A-Tier
+                                </h4>
+                                
+                                <ul class="space-y-4 mb-6">
+                                    <li class="flex items-start gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-forge-amber/10 flex items-center justify-center shrink-0 mt-0.5">
+                                            <i class="fa-solid fa-project-diagram text-forge-amber text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <strong class="text-white text-base block mb-0.5">Node-Based Compositing (Rubicon)</strong>
+                                            <span class="text-sm text-forge-muted leading-snug block">Studio-grade visual effects logic, typically only found in high-end suites like DaVinci Resolve's Fusion page.</span>
+                                        </div>
+                                    </li>
+                                    <li class="flex items-start gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-forge-amber/10 flex items-center justify-center shrink-0 mt-0.5">
+                                            <i class="fa-solid fa-sliders text-forge-amber text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <strong class="text-white text-base block mb-0.5">Professional Audio Control</strong>
+                                            <span class="text-sm text-forge-muted leading-snug block">Advanced per-clip mixing, precise L-cuts, fade handles, and dedicated gain nodes for flawless sound design.</span>
+                                        </div>
+                                    </li>
+                                    <li class="flex items-start gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-forge-amber/10 flex items-center justify-center shrink-0 mt-0.5">
+                                            <i class="fa-solid fa-object-group text-forge-amber text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <strong class="text-white text-base block mb-0.5">Direct Canvas Transforms (PiP)</strong>
+                                            <span class="text-sm text-forge-muted leading-snug block">Native blend modes, drop shadows, and smart guides running directly inside the browser viewport.</span>
+                                        </div>
+                                    </li>
+                                    <li class="flex items-start gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-forge-amber/10 flex items-center justify-center shrink-0 mt-0.5">
+                                            <i class="fa-solid fa-plug text-forge-amber text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <strong class="text-white text-base block mb-0.5">Deep Extension API</strong>
+                                            <span class="text-sm text-forge-muted leading-snug block">A full ecosystem that allows developers to inject custom tools directly into the editing pipeline (unmatched by consumer web editors).</span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="relative z-10 bg-black/40 border border-red-500/20 p-5 rounded-2xl">
+                                <h5 class="text-xs font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                    <i class="fa-solid fa-lock"></i> What keeps it from S-Tier?
+                                </h5>
+                                <p class="text-xs text-forge-muted font-light leading-relaxed">
+                                    Currently lacks a native keyframe editor, waveform metering, and professional codec ingest (ProRes). It utilizes browser-based export rather than heavy native rendering. The gap to S-Tier is real, but narrows with every major extension.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: The Just Wright Connection -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full grid grid-cols-12 gap-16 items-center h-full">
+                <div class="col-span-6 anim-el delay-100">
+                    <div class="glass p-12 rounded-[2.5rem] relative overflow-hidden border border-forge-amber/20 bg-gradient-to-b from-white/5 to-transparent shadow-2xl">
+                        <div class="absolute -bottom-10 -right-10 text-[15rem] text-forge-amber/5 rotate-[-15deg]"><i class="fa-solid fa-camera-retro"></i></div>
+                        <h3 class="text-4xl font-sans font-extrabold mb-8 text-white relative z-10">A Grassroots Start.</h3>
+                        <p class="text-lg text-forge-muted leading-relaxed mb-10 relative z-10 font-light">
+                            I recently had the pleasure of working with your son, who generously donated some test footage. That single act has become the foundation of a global event.
+                        </p>
+                        <ul class="space-y-6 relative z-10">
+                            <li class="flex items-start gap-5 bg-forge-bg/50 p-4 rounded-xl border border-white/5">
+                                <div class="w-10 h-10 rounded-full bg-forge-amber/20 flex items-center justify-center shrink-0 mt-0.5">
+                                    <i class="fa-solid fa-arrow-up-right-dots text-forge-amber"></i>
+                                </div>
+                                <div>
+                                    <strong class="text-white text-lg block mb-1">Scaling Up</strong>
+                                    <span class="text-sm text-forge-muted leading-relaxed block">What started as a one-off test run is now poised to be the centerpiece of a 48-hour global hackathon.</span>
+                                </div>
+                            </li>
+                            <li class="flex items-start gap-5 bg-forge-bg/50 p-4 rounded-xl border border-white/5">
+                                <div class="w-10 h-10 rounded-full bg-forge-amber/20 flex items-center justify-center shrink-0 mt-0.5">
+                                    <i class="fa-solid fa-handshake text-forge-amber"></i>
+                                </div>
+                                <div>
+                                    <strong class="text-white text-lg block mb-1">Formalizing the Partnership</strong>
+                                    <span class="text-sm text-forge-muted leading-relaxed block">We want to formally bring <strong>Just Wright Studio</strong> to the forefront as our Official Cinematic Partner.</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-span-6 anim-el">
+                    <h2 class="text-6xl font-sans font-extrabold leading-tight mb-8">Showcasing <br>Jamaican <span class="text-gradient">Cinema.</span></h2>
+                    <p class="text-xl text-forge-muted leading-relaxed font-light mb-6">
+                        We want the very first footage that global developers and editors interact with on this platform to be Jamaican-produced.
+                    </p>
+                    <div class="border-l-4 border-forge-amber pl-6 py-2 mt-8">
+                        <p class="text-2xl text-white font-sans font-bold">
+                            By backing the footage, you stamp your studio's prestige onto an open-source movement.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: The Challenge -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full text-center h-full flex flex-col justify-center">
+                <div class="anim-el mb-16">
+                    <h2 class="text-xs font-bold tracking-[0.3em] text-forge-amber uppercase mb-4">The Core Constraint</h2>
+                    <h3 class="text-6xl font-sans font-extrabold text-white">"Doing Nothing"</h3>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-12 max-w-5xl mx-auto text-left">
+                    <div class="anim-el delay-200 glass p-10 rounded-3xl border-t-4 border-forge-amber hover:-translate-y-2 transition-transform duration-300">
+                        <div class="flex justify-between items-start mb-8">
+                            <h4 class="text-2xl font-bold text-white">The Exclusive Source Footage</h4>
+                            <div class="w-12 h-12 rounded-full bg-forge-amber/10 flex items-center justify-center">
+                                <i class="fa-solid fa-film text-2xl text-forge-amber"></i>
+                            </div>
+                        </div>
+                        <p class="text-base text-forge-muted leading-relaxed mb-8 font-light">
+                            All participating editors globally <strong>must strictly use</strong> the official 5-minute "Doing Nothing" (Active Waiting) cinematic raw footage pack provided by your studio.
+                        </p>
+                        <div class="bg-forge-amber/10 border border-forge-amber/20 px-4 py-2 rounded-lg inline-flex items-center gap-2 text-forge-amber text-xs font-bold uppercase tracking-widest">
+                            <i class="fa-solid fa-ban"></i> No Outside Video Allowed
+                        </div>
+                    </div>
+                    
+                    <div class="anim-el delay-300 glass p-10 rounded-3xl border-t-4 border-forge-purple hover:-translate-y-2 transition-transform duration-300">
+                        <div class="flex justify-between items-start mb-8">
+                            <h4 class="text-2xl font-bold text-white">The 90-Second Rule</h4>
+                            <div class="w-12 h-12 rounded-full bg-forge-purple/10 flex items-center justify-center">
+                                <i class="fa-solid fa-stopwatch text-2xl text-forge-purple"></i>
+                            </div>
+                        </div>
+                        <p class="text-base text-forge-muted leading-relaxed mb-8 font-light">
+                            The final rendered cut cannot exceed exactly 90 seconds. Editors must rely entirely on pacing, sequence, and royalty-free Audio/SFX to drive a unique narrative.
+                        </p>
+                        <div class="bg-forge-purple/10 border border-forge-purple/20 px-4 py-2 rounded-lg inline-flex items-center gap-2 text-forge-purple text-xs font-bold uppercase tracking-widest">
+                            <i class="fa-solid fa-volume-high"></i> The Power of Pacing
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: Two Tracks -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full h-full flex flex-col justify-center">
+                <div class="anim-el text-center mb-20">
+                    <h2 class="text-xs font-bold tracking-[0.3em] text-white/50 uppercase mb-4">Submission Types</h2>
+                    <h3 class="text-5xl font-sans font-extrabold text-white">Two Paths to Victory</h3>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-12 relative max-w-5xl mx-auto">
+                    <!-- Connector line -->
+                    <div class="absolute left-1/2 top-4 bottom-4 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent -translate-x-1/2"></div>
+                    
+                    <div class="anim-el delay-200 glass p-10 rounded-3xl text-right pr-16 relative">
+                        <div class="absolute top-1/2 -right-4 w-8 h-8 bg-forge-bg border-4 border-forge-amber rounded-full -translate-y-1/2 z-10 shadow-[0_0_20px_rgba(245,158,11,0.5)]"></div>
+                        <h4 class="text-3xl font-bold text-forge-amber mb-4">The Vanilla Cut</h4>
+                        <p class="text-base text-forge-muted leading-relaxed mb-8 font-light">
+                            For Solo Video Editors. Pure storytelling. They use the base WASM Video Editor with zero custom code or extensions to create the best narrative from the Just Wright footage.
+                        </p>
+                        <div class="inline-flex items-center gap-3 justify-end text-sm font-bold uppercase tracking-widest text-white bg-forge-amber/20 border border-forge-amber/30 px-5 py-3 rounded-xl">
+                            <i class="fa-solid fa-crown text-forge-amber text-lg"></i> The Editor's Crown
+                        </div>
+                    </div>
+
+                    <div class="anim-el delay-300 glass p-10 rounded-3xl pl-16 relative mt-16">
+                        <div class="absolute top-1/2 -left-4 w-8 h-8 bg-forge-bg border-4 border-forge-purple rounded-full -translate-y-1/2 z-10 shadow-[0_0_20px_rgba(124,58,237,0.5)]"></div>
+                        <h4 class="text-3xl font-bold text-forge-purple mb-4">The Tag-Team</h4>
+                        <p class="text-base text-forge-muted leading-relaxed mb-8 font-light">
+                            For Developer + Editor Duos. The developer plays the role of the technical "Toolsmith," building bespoke extensions (VFX, custom grading wheels, QoL UI tweaks) that the editor utilizes to elevate the final cinematic cut.
+                        </p>
+                        <div class="inline-flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-white bg-forge-purple/20 border border-forge-purple/30 px-5 py-3 rounded-xl">
+                            <i class="fa-solid fa-rocket text-forge-purple text-lg"></i> The Duo Pack
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 10: Digital Immortality -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full grid grid-cols-12 gap-16 items-center h-full">
+                <div class="col-span-5 anim-el">
+                    <h2 class="text-xs font-bold tracking-[0.3em] text-forge-teal uppercase mb-4">The Dev Incentive</h2>
+                    <h3 class="text-6xl font-sans font-extrabold leading-tight mb-8">Building The <br><span class="text-gradient-purple">Future.</span></h3>
+                    <p class="text-xl text-forge-muted leading-relaxed mb-6 font-light">
+                        While editors vie for the best cut, developers are fighting to build the future tools of the trade. 
+                    </p>
+                    <p class="text-xl text-forge-muted leading-relaxed font-light">
+                        The Top 3 Technical extensions (think custom color grading wheels, new transition effects, or timeline efficiency shortcuts) will be <strong>officially baked into the core WASM Video Editor</strong> for all future filmmakers to use, with full honorary credit given to the authors forever.
+                    </p>
+                </div>
+                <div class="col-span-7 anim-el delay-200">
+                    <div class="glass p-1 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(14,165,233,0.15)] border border-forge-teal/20">
+                        <div class="bg-[#0d1117] p-10 font-mono text-sm relative">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-forge-purple to-forge-teal"></div>
+                            
+                            <!-- Browser/Window Dots -->
+                            <div class="flex gap-2 mb-8">
+                                <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
+                            </div>
+
+                            <div class="flex items-center gap-3 text-forge-muted mb-8 border-b border-white/10 pb-6">
+                                <i class="fa-brands fa-github text-white text-3xl"></i>
+                                <div>
+                                    <span class="text-white font-bold text-lg block">Pull Request #42</span>
+                                    <span class="text-xs">Cleo876 / wasm-video-editor</span>
+                                </div>
+                                <span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-full text-xs ml-auto font-bold flex items-center gap-2">
+                                    <i class="fa-solid fa-code-merge"></i> Merged
+                                </span>
+                            </div>
+                            
+                            <div class="text-gray-300 space-y-3 opacity-90 text-base leading-relaxed">
+                                <p><span class="text-forge-purple font-bold">commit</span> a9f8b7c4d2</p>
+                                <p><span class="text-forge-teal font-bold">Author:</span> Jam_Developer_01</p>
+                                <p><span class="text-forge-amber font-bold">Date:</span> Aug 16, 2026</p>
+                                <div class="h-4"></div>
+                                <p class="text-white font-bold text-lg">feat(vfx): Add Cinematic Cross-Dissolve & Color Wheels</p>
+                                <div class="h-2"></div>
+                                <p class="text-green-400 font-bold">+ 145 lines changed</p>
+                                <p class="text-forge-muted italic mt-4 px-4 py-2 bg-white/5 rounded-lg border-l-2 border-forge-muted">
+                                    // Voted Ultimate Toolsmith Extension - Forge Jam 2026
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 11: The Hype Cadence -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full h-full flex flex-col justify-center">
+                <div class="anim-el text-center mb-16">
+                    <h2 class="text-xs font-bold tracking-[0.3em] text-white/50 uppercase mb-4">Event Flow</h2>
+                    <h3 class="text-5xl font-sans font-extrabold text-white">Combating the Jam Hangover</h3>
+                    <p class="text-forge-muted mt-4 max-w-2xl mx-auto text-lg font-light">48 hours is exhausting. We utilize a highly targeted schedule of 6 micro-challenges via Discord to keep creators engaged and focused.</p>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-8 text-left">
+                    <div class="anim-el delay-100 glass p-8 rounded-3xl border-t-4 border-forge-amber hover:bg-white/5 transition-colors">
+                        <span class="text-xs uppercase font-bold text-forge-amber tracking-widest">1. Friday Night</span>
+                        <h4 class="font-bold text-white text-2xl mt-2 mb-3">The Kickoff Hook</h4>
+                        <p class="text-sm text-forge-muted font-light leading-relaxed">Verbal giveaway drop in the Main Voice Stage. Proves the event is live, active, and highly populated immediately.</p>
+                    </div>
+                    <div class="anim-el delay-200 glass p-8 rounded-3xl border-t-4 border-forge-amber hover:bg-white/5 transition-colors">
+                        <span class="text-xs uppercase font-bold text-forge-amber tracking-widest">2. Sat. Morning</span>
+                        <h4 class="font-bold text-white text-2xl mt-2 mb-3">Battlestation Check</h4>
+                        <p class="text-sm text-forge-muted font-light leading-relaxed">Post a pic of your messy real-life desk setup. Builds human connection across the globe without interrupting workflow.</p>
+                    </div>
+                    <div class="anim-el delay-300 glass p-8 rounded-3xl border-t-4 border-forge-purple hover:bg-white/5 transition-colors">
+                        <span class="text-xs uppercase font-bold text-forge-purple tracking-widest">3. Sat. Evening</span>
+                        <h4 class="font-bold text-white text-2xl mt-2 mb-3">The Frankenstein</h4>
+                        <p class="text-sm text-forge-muted font-light leading-relaxed">Editors must screenshot 3 extensions running and tag the Devs to validate their custom code live in the server.</p>
+                    </div>
+                    <div class="anim-el delay-400 glass p-8 rounded-3xl border-t-4 border-forge-teal hover:bg-white/5 transition-colors">
+                        <span class="text-xs uppercase font-bold text-forge-teal tracking-widest">4. Midnight</span>
+                        <h4 class="font-bold text-white text-2xl mt-2 mb-3">The Console Hacker</h4>
+                        <p class="text-sm text-forge-muted font-light leading-relaxed">Dev flex: Screenshot the Editor running alongside VS Code. Keeps the night-shift programmers hyped and coding.</p>
+                    </div>
+                    <div class="anim-el delay-500 glass p-8 rounded-3xl border-t-4 border-forge-amber hover:bg-white/5 transition-colors">
+                        <span class="text-xs uppercase font-bold text-forge-amber tracking-widest">5. Sun. Morning</span>
+                        <h4 class="font-bold text-white text-2xl mt-2 mb-3">Soundscape Flex</h4>
+                        <p class="text-sm text-forge-muted font-light leading-relaxed">Show 3 overlapping audio layers. A subtle mechanical nudge to remind editors to start finalizing their audio mix.</p>
+                    </div>
+                    <div class="anim-el delay-600 glass p-8 rounded-3xl border-t-4 border-white/30 hover:bg-white/5 transition-colors">
+                        <span class="text-xs uppercase font-bold text-white/50 tracking-widest">6. Sun. Afternoon</span>
+                        <h4 class="font-bold text-white text-2xl mt-2 mb-3">Raw Frame Meme</h4>
+                        <p class="text-sm text-forge-muted font-light leading-relaxed">5-minute relief break. Meme a single frame of the raw footage while waiting for those final MP4 renders.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 12: The Ask (Film Analytics) -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full grid grid-cols-12 gap-16 items-center h-full">
+                <div class="col-span-6 anim-el">
+                    <h2 class="text-xs font-bold tracking-[0.3em] text-forge-amber uppercase mb-4">The Amplification Effect</h2>
+                    <h3 class="text-6xl font-sans font-extrabold leading-tight mb-8">Formalizing <br>the <span class="text-gradient">Partnership.</span></h3>
+                    <p class="text-lg text-forge-muted leading-relaxed mb-8 font-light">
+                        The beauty of this constraint is seeing how vastly different editors interpret the exact same 5 minutes of raw material. 
+                    </p>
+                    
+                    <div class="glass p-8 rounded-3xl border border-forge-amber/20 bg-gradient-to-br from-forge-amber/5 to-transparent relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-forge-amber shadow-[0_0_15px_#f59e0b]"></div>
+                        <h4 class="font-bold text-white text-2xl mb-3">The Just Wright Ask</h4>
+                        <p class="text-base text-forge-muted font-light leading-relaxed mb-5">
+                            We respectfully ask to formalize the use of the "Doing Nothing" raw footage by naming <strong>Just Wright Studio</strong> as the exclusive Cinematic Sponsor of the event.
+                        </p>
+                        
+                        <div class="bg-black/40 border border-forge-amber/20 p-5 rounded-2xl">
+                            <h5 class="text-sm font-bold text-forge-amber uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-line"></i> The Creative Multiplier
+                            </h5>
+                            <p class="text-sm text-forge-muted font-light leading-relaxed">
+                                A single 5-minute pack from your studio will directly result in an estimated 100+ highly unique, creatively diverse 90-second narratives echoing globally across itch.io.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-span-6 anim-el delay-200">
+                    <div class="glass p-10 rounded-[3rem] shadow-2xl chart-container relative border border-white/5">
+                        <!-- Chart Center Text -->
+                        <div class="chart-center-text">
+                            <span class="text-6xl font-sans font-extrabold text-white mb-2 text-gradient">100x</span>
+                            <span class="text-xs uppercase tracking-[0.2em] text-forge-muted font-bold">Creative Output</span>
+                        </div>
+                        <canvas id="keysChart"></canvas>
+                    </div>
+                    <div class="flex justify-center gap-10 mt-8">
+                        <div class="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-forge-muted">
+                            <span class="w-4 h-4 rounded-full bg-forge-purple shadow-[0_0_10px_rgba(124,58,237,0.5)]"></span> 1 Official Source Footage Pack
+                        </div>
+                        <div class="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-white">
+                            <span class="w-4 h-4 rounded-full bg-forge-amber shadow-[0_0_15px_#f59e0b]"></span> 100+ Unique Narratives
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 13: Safety & Infrastructure -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full h-full flex flex-col justify-center text-center">
+                <div class="anim-el mb-16">
+                    <h2 class="text-xs font-bold tracking-[0.3em] text-white/50 uppercase mb-4">Logistics</h2>
+                    <h3 class="text-5xl font-sans font-extrabold text-white">Bulletproof Infrastructure</h3>
+                    <p class="text-forge-muted mt-4 max-w-2xl mx-auto text-lg font-light">We anticipate chaos. Our Discord and technical pipelines are designed to handle it effortlessly.</p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-16 text-left max-w-6xl mx-auto">
+                    <div class="anim-el delay-200 glass p-12 rounded-[2.5rem] border border-white/5 relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent z-0"></div>
+                        <i class="fa-brands fa-discord absolute -bottom-10 -right-10 text-[12rem] text-indigo-500/10 group-hover:scale-110 transition-transform duration-700"></i>
+                        
+                        <div class="relative z-10">
+                            <h4 class="text-3xl font-bold text-white mb-8">Discord Gatekeeping</h4>
+                            <ul class="space-y-6">
+                                <li class="flex items-start gap-5 bg-white/5 p-5 rounded-2xl border border-white/5">
+                                    <div class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-shield-halved text-indigo-400"></i>
+                                    </div>
+                                    <div class="text-base text-forge-muted font-light">
+                                        <strong class="text-white block mb-1">#introductions verification:</strong> New joins cannot see the server until they post and receive the @Jammer role via Bot. Neutralizes spam bots instantly.
+                                    </div>
+                                </li>
+                                <li class="flex items-start gap-5 bg-white/5 p-5 rounded-2xl border border-white/5">
+                                    <div class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-users text-indigo-400"></i>
+                                    </div>
+                                    <div class="text-base text-forge-muted font-light">
+                                        <strong class="text-white block mb-1">Team Voice Rooms:</strong> Voice channels are hard-capped at 5 users to prevent massive, noisy lobbies and foster team intimacy.
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="anim-el delay-300 glass p-12 rounded-[2.5rem] border border-white/5 relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent z-0"></div>
+                        <i class="fa-brands fa-itch-io absolute -bottom-10 -right-10 text-[12rem] text-rose-500/10 group-hover:scale-110 transition-transform duration-700"></i>
+                        
+                        <div class="relative z-10">
+                            <h4 class="text-3xl font-bold text-white mb-8">itch.io "Opt-Out" Sorting</h4>
+                            <ul class="space-y-6">
+                                <li class="flex items-start gap-5 bg-white/5 p-5 rounded-2xl border border-white/5">
+                                    <div class="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-filter text-rose-400"></i>
+                                    </div>
+                                    <div class="text-base text-forge-muted font-light">
+                                        <strong class="text-white block mb-1">One Submission Page:</strong> All entries go to one single page. Solo Vanilla Editors simply check an "Opt-out of Technical Innovation" box.
+                                    </div>
+                                </li>
+                                <li class="flex items-start gap-5 bg-white/5 p-5 rounded-2xl border border-white/5">
+                                    <div class="w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-ranking-star text-rose-400"></i>
+                                    </div>
+                                    <div class="text-base text-forge-muted font-light">
+                                        <strong class="text-white block mb-1">Automated Leaderboards:</strong> This natively generates two perfectly clean, separate leaderboards for pure Editors and tech Developers without manual tracking.
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 14: The VIP Judge Role -->
+        <section class="slide bg-forge-bg/90">
+            <div class="max-w-7xl mx-auto w-full grid grid-cols-12 gap-20 items-center h-full">
+                <div class="col-span-5 anim-el">
+                    <div class="w-24 h-24 bg-forge-amber/20 text-forge-amber rounded-3xl flex items-center justify-center text-4xl mb-10 shadow-[0_0_40px_rgba(245,158,11,0.2)] border border-forge-amber/30">
+                        <i class="fa-solid fa-film"></i>
+                    </div>
+                    <h3 class="text-6xl font-sans font-extrabold leading-tight mb-8 text-white">The VIP Judge.</h3>
+                    <p class="text-xl text-forge-muted leading-relaxed font-light mb-6">
+                        We know running a studio keeps you busy. Our judging pipeline requires absolutely <strong>zero effort</strong> from you during the 48-hour event itself.
+                    </p>
+                    <p class="text-xl text-forge-muted leading-relaxed font-light">
+                        We specifically want your filmmaking expertise to evaluate the <strong>"Best Vanilla Cut"</strong>—judging pure narrative, pacing, and storytelling.
+                    </p>
+                </div>
+                <div class="col-span-7 anim-el delay-200 relative">
+                    <!-- Custom timeline track -->
+                    <div class="absolute left-8 top-12 bottom-12 w-1 bg-white/5 rounded-full z-0"></div>
+                    
+                    <div class="glass p-12 rounded-[3rem] border border-white/5 relative z-10 pl-24 bg-gradient-to-r from-white/5 to-transparent">
+                        
+                        <div class="absolute left-6 top-16 w-5 h-5 bg-forge-panel border-4 border-forge-muted rounded-full z-20"></div>
+                        <div class="mb-16">
+                            <h4 class="text-2xl font-bold text-white mb-3">Phase 1: Community Vote (1 Week)</h4>
+                            <p class="text-base text-forge-muted font-light leading-relaxed">Only Jammers can vote. The community watches the videos throughout the week, organically filtering out the noise.</p>
+                        </div>
+                        
+                        <div class="absolute left-5 top-52 w-7 h-7 bg-forge-amber border-4 border-forge-panel rounded-full z-20 shadow-[0_0_20px_rgba(245,158,11,0.8)]"></div>
+                        <div>
+                            <h4 class="text-2xl font-bold text-forge-amber mb-3">Phase 2: Your Role (The Top 30%)</h4>
+                            <p class="text-base text-forge-muted font-light leading-relaxed">You only evaluate a highly curated shortlist of the absolute best narrative cuts. We jump into a 1-hour Discord Watch Party, review the Top 30% together, and finalize the placements.</p>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 15: Conclusion -->
+        <section class="slide items-center text-center">
+            <!-- Reuse the cover background but darker for the final slide -->
+            <div class="absolute inset-0 bg-forge-bg opacity-90 z-0"></div>
+            
+            <div class="max-w-5xl mx-auto w-full anim-el relative z-10 mt-10">
+                <div class="w-24 h-24 mx-auto bg-gradient-to-br from-forge-amber to-forge-glow rounded-3xl flex items-center justify-center text-4xl text-forge-bg shadow-[0_0_50px_rgba(245,158,11,0.4)] mb-12">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <h2 class="text-7xl font-sans font-extrabold text-white mb-8">Let's Build Something <br><span class="text-gradient">Legendary.</span></h2>
+                <p class="text-2xl text-gray-300 font-light mb-16 tracking-wide">August 14–16, 2026. A milestone for Caribbean open-source.</p>
+                
+                <div class="flex justify-center gap-8">
+                    <div class="glass px-10 py-6 rounded-2xl border-t-4 border-forge-amber text-left hover:-translate-y-2 transition-transform shadow-xl">
+                        <p class="text-xs font-bold text-forge-muted uppercase tracking-[0.2em] mb-2">Next Step</p>
+                        <p class="text-xl text-white font-bold">Lock in Footage Partnership</p>
+                    </div>
+                    <div class="glass px-10 py-6 rounded-2xl border-t-4 border-forge-purple text-left hover:-translate-y-2 transition-transform shadow-xl">
+                        <p class="text-xs font-bold text-forge-muted uppercase tracking-[0.2em] mb-2">Status</p>
+                        <p class="text-xl text-white font-bold">Infrastructure Ready</p>
+                    </div>
+                </div>
+                
+                <p class="mt-24 text-sm font-bold text-forge-muted tracking-[0.5em] uppercase opacity-50">Forge™. Own. Forever.</p>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Presentation Logic Variables
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progress = document.getElementById('progress');
+        const slideCounter = document.getElementById('current-slide-num');
+        let chartInstance = null;
+
+        const githubImgURL = "https://raw.githubusercontent.com/Cleo876/wasm-video-editor/main/IMG's/Banners/WASM%20Cinematic%20Wallpaper.png";
+        const storageKey = 'forgeCoverImage';
+
+        // Initialize
+        async function initPresentation() {
+            await fetchAndCacheImage();
+            updateSlide();
+        }
+
+        // Cache Image Logic
+        async function fetchAndCacheImage() {
+            const coverBg = document.getElementById('cover-bg');
+            
+            // Check Local Storage first
+            const cachedImage = localStorage.getItem(storageKey);
+            if (cachedImage) {
+                coverBg.style.backgroundImage = `url(${cachedImage})`;
+                return;
+            }
+
+            // If not cached, fetch it
+            try {
+                // Using an image object to avoid CORS issues with fetch if any, then draw to canvas for dataURL
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    try {
+                        const dataURL = canvas.toDataURL('image/png');
+                        localStorage.setItem(storageKey, dataURL);
+                        coverBg.style.backgroundImage = `url(${dataURL})`;
+                    } catch (e) {
+                        console.warn("Could not save to localStorage (quota or CORS error). Using direct URL.");
+                        coverBg.style.backgroundImage = `url('${githubImgURL}')`;
+                    }
+                };
+                img.onerror = function() {
+                    console.warn("Failed to load image. Using direct URL fallback.");
+                    coverBg.style.backgroundImage = `url('${githubImgURL}')`;
+                };
+                img.src = githubImgURL;
+            } catch (err) {
+                console.error("Error fetching image:", err);
+                coverBg.style.backgroundImage = `url('${githubImgURL}')`;
+            }
+        }
+
+        // Blur Control Logic
+        function updateBlur(val) {
+            const coverBg = document.getElementById('cover-bg');
+            if (coverBg) {
+                coverBg.style.filter = `blur(${val}px)`;
+            }
+        }
+
+        // Navigation Logic
+        function updateSlide() {
+            slides.forEach((slide, index) => { 
+                if (index === currentSlide) {
+                    slide.classList.add('active');
+                } else {
+                    slide.classList.remove('active');
+                }
+            });
+
+            if (progress) progress.style.width = ((currentSlide) / (slides.length - 1)) * 100 + '%';
+            if (slideCounter) slideCounter.innerText = currentSlide + 1;
+
+            // Chart Initialization (Slide 12 - Index 11)
+            if (currentSlide === 11) {
+                // Wait 1.4s for the CSS customFadeUp to completely finish so the canvas doesn't "dance"
+                setTimeout(initChart, 1400); 
+            }
+        }
+
+        function nextSlide() { 
+            if (currentSlide < slides.length - 1) { currentSlide++; updateSlide(); } 
+        }
+        function prevSlide() { 
+            if (currentSlide > 0) { currentSlide--; updateSlide(); } 
+        }
+
+        // Fullscreen Logic
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.warn(`Error attempting to enable full-screen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Listen for fullscreen change to update UI
+        document.addEventListener('fullscreenchange', () => {
+            const icon = document.getElementById('fs-icon');
+            const text = document.getElementById('fs-text');
+            if (document.fullscreenElement) {
+                document.body.classList.add('fullscreen-active');
+                if(icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
+                if(text) text.innerText = 'Exit';
+            } else {
+                document.body.classList.remove('fullscreen-active');
+                if(icon) { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
+                if(text) text.innerText = 'Present';
+            }
+        });
+
+        // Chart.js initialization (Adapted for Just Wright Studio "Amplification Effect")
+        function initChart() {
+            const canvas = document.getElementById('keysChart');
+            if (!canvas || !window.Chart) return;
+            
+            const ctx = canvas.getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Official Source Footage Pack', 'Unique 90s Narratives (The Output)', 'Pending'],
+                    datasets: [{
+                        data: [0, 0, 101], // Start completely transparent (1 + 100 = 101 total parts)
+                        backgroundColor: [
+                            '#7c3aed', // Purple (The Base Pack)
+                            '#f59e0b', // Amber (The Amplified Output)
+                            'transparent' // Invisible slice to maintain total proportion
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 15
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '82%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            filter: function(tooltipItem) {
+                                // Hide tooltip for the transparent slice
+                                return tooltipItem.dataIndex !== 2;
+                            },
+                            backgroundColor: 'rgba(21, 21, 26, 0.9)',
+                            titleFont: { size: 14, family: "'Plus Jakarta Sans', sans-serif" },
+                            bodyFont: { size: 16, weight: 'bold' },
+                            padding: 16,
+                            boxPadding: 8,
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            cornerRadius: 12
+                        }
+                    },
+                    animation: {
+                        animateScale: false, // Prevents chart from dancing/popping from center
+                        animateRotate: true, // Ensures it only sweeps in a circle
+                        duration: 200, // Quick 0.2s sweep for the initial small slice
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+
+            // Trigger the sequential filling animation
+            setTimeout(() => {
+                if (chartInstance) {
+                    // Step 1: Sweep the Purple section (1 unit) representing the raw pack quickly
+                    chartInstance.data.datasets[0].data = [1, 0, 100];
+                    chartInstance.update();
+                    
+                    // Step 2: Sweep the Amber section (100 units) with much more time right after
+                    setTimeout(() => {
+                        if (chartInstance) {
+                            chartInstance.options.animation.duration = 700; // Slower 0.7s sweep for the 100x output (Total 0.9s)
+                            chartInstance.data.datasets[0].data = [1, 100, 0];
+                            chartInstance.update();
+                        }
+                    }, 200); // Wait exactly the 200ms duration of the first sweep
+                }
+            }, 50);
+        }
+
+        // Keyboard Controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') nextSlide();
+            if (e.key === 'ArrowLeft' || e.key === 'PageUp') prevSlide();
+            if (e.key.toLowerCase() === 'f') toggleFullScreen();
+        });
+
+        // Run on Load
+        window.addEventListener('load', initPresentation);
+
+    </script>
+</body>
+</html>
