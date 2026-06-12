@@ -2700,6 +2700,7 @@
             recordInterval: null,
             coreUrl: null,
             coreJsUrl: null,
+            lovableConverter: null,
             
             async initFFmpeg() {
                 const status = document.getElementById('wasmStatus');
@@ -2823,7 +2824,7 @@
                     UI.showAlert("Engine Loading", "Export Engine is still loading. Please wait a moment.", "fa-gears", "text-teal-400");
                     return;
                 }
-                document.getElementById('exportFilename').value = Store.projectName || 'WASM_Export';
+                document.getElementById('exportFilename').value = Store.projectName || 'Forge_Export';
                 
                 const btnWasm = document.getElementById('btnRenderWasm');
                 if(window.wasmEngineAvailable) {
@@ -2854,6 +2855,9 @@
                 if(Player.gainNode && Player.actx) {
                     try { Player.gainNode.disconnect(); Player.gainNode.connect(Player.actx.destination); } catch(e) {}
                 }
+                if (this.lovableConverter) {
+                    try { this.lovableConverter.abort(); } catch(e) {}
+                }
                 document.getElementById('exportProgressContainer').classList.add('hidden');
                 document.getElementById('exportActions').classList.remove('hidden');
             },
@@ -2861,7 +2865,7 @@
             async recordBrowser() {
                 const targetH = parseInt(document.getElementById('exportRes').value);
                 const targetW = targetH === 2160 ? 3840 : (targetH === 1080 ? 1920 : 1280);
-                const filename = document.getElementById('exportFilename').value || 'WASM_Export';
+                const filename = document.getElementById('exportFilename').value || 'Forge_Export';
                 document.getElementById('exportFilename').disabled = true;
                 Player.compositorCanvas.width = targetW;
                 Player.compositorCanvas.height = targetH;
@@ -2919,7 +2923,7 @@
                 const res = document.getElementById('exportRes').value;
                 const targetH = parseInt(res);
                 const targetW = targetH === 2160 ? 3840 : (targetH === 1080 ? 1920 : 1280);
-                const filename = document.getElementById('exportFilename').value || 'WASM_Export';
+                const filename = document.getElementById('exportFilename').value || 'Forge_Export';
                 
                 document.getElementById('exportFilename').disabled = true;
                 Player.compositorCanvas.width = targetW;
@@ -2936,6 +2940,7 @@
                     
                     const module = await import('https://wasm-mp4.lovable.app/sdk.js');
                     const converter = new module.LovableVideoConverter({ engine: "auto" });
+                    this.lovableConverter = converter;
                     await converter.load();
                     
                     const end = Store.getEndOfContent(); 
@@ -3017,15 +3022,22 @@
                     }, 2500);
                     
                 } catch (e) {
-                    console.error("Lovable Export Error:", e);
-                    status.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i> Error: ${e.message}`;
-                    setTimeout(() => this.cancelRecording(), 3500);
+                    if (e.name === 'AbortError') {
+                        status.innerHTML = `<i class="fa-solid fa-ban text-yellow-500 mr-2"></i> Export Cancelled`;
+                        setTimeout(() => this.cancelRecording(), 2000);
+                    } else {
+                        console.error("Lovable Export Error:", e);
+                        status.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i> Error: ${e.message}`;
+                        setTimeout(() => this.cancelRecording(), 3500);
+                    }
+                } finally {
+                    this.lovableConverter = null;
                 }
             },
 
             async render() {
                 const res = document.getElementById('exportRes').value;
-                const filename = document.getElementById('exportFilename').value || 'WASM_Export';
+                const filename = document.getElementById('exportFilename').value || 'Forge_Export';
                 const status = document.getElementById('exportStatus');
                 const bar = document.getElementById('exportProgress');
                 document.getElementById('exportProgressContainer').classList.remove('hidden');
