@@ -1,12 +1,12 @@
 /**
  * @name Media Manager Pro
- * @version 1.5.1
+ * @version 1.6.0
  * @developer Forge™
- * @description Refines core UX with Media Deletion, Video/Audio Previews, Inline Renaming, Smart Collision, Validated Google Fonts, and cosmetic audio waveforms. (Restored Core Functions)
+ * @description Refines core UX with Media Deletion, Video/Audio Previews, Inline Renaming, Smart Collision, Validated Google Fonts, cosmetic audio waveforms, and Title Persistence Self-Healing.
  */
 (function() {
     const MODULE_ID = 'media_manager_pro';
-    const CURRENT_VERSION = '1.5.1';
+    const CURRENT_VERSION = '1.6.0';
 
     if (typeof Store === 'undefined' || typeof UI === 'undefined' || typeof Player === 'undefined' || typeof NativeInspector === 'undefined' || typeof TimelineModule === 'undefined') {
         console.error(`❌ [${MODULE_ID}] Core environment not found. Ensure editor is fully loaded.`);
@@ -32,6 +32,8 @@
         originalDrawToCanvas: null,
         originalRenderFrame: null,
         originalAddClip: null,
+        originalLoadProject: null,
+        originalCreateProject: null,
         globalClickHandler: null,
 
         // Waveform specific 
@@ -56,8 +58,31 @@
             this.bindGlobalEvents();
             this.preloadWaveforms();            
 
+            // SELF-HEALING PROTOCOL: Guarantee that Titles are never permanently lost
+            await this.ensureTitlesExist();
+
             if (typeof Store !== 'undefined') Store.refreshUI();
             if (NativeInspector.currentClipId) NativeInspector.render();
+        },
+
+        async ensureTitlesExist() {
+            if (!Store || !Store.assets) return;
+            const hasTitles = Store.assets.some(a => a && a.type === 'title');
+            
+            if (!hasTitles) {
+                console.log(`[${MODULE_ID}] Titles missing! Restoring default title assets...`);
+                const defaults = [{name:'Big Title', color:'#8b5cf6'}, {name:'Subtitle', color:'#ec4899'}];
+                let added = false;
+                for (const t of defaults) {
+                    const a = await Store.addAsset(t.name, 'title'); 
+                    await Store.updateAssetMeta(a.id, { color: t.color });
+                    a.color = t.color;
+                    added = true;
+                }
+                if (added && typeof Store.refreshUI === 'function') {
+                    Store.refreshUI();
+                }
+            }
         },
 
         async checkForUpdates() {
@@ -196,12 +221,15 @@
                 const card = grid.lastElementChild;
                 if (!card) return;
 
-                const delBtn = document.createElement('div');
-                delBtn.className = 'media-delete-btn';
-                delBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
-                delBtn.title = "Delete Media";
-                delBtn.onclick = (e) => { e.stopPropagation(); this.requestDelete(asset.id); };
-                card.appendChild(delBtn);
+                // 🛡️ PROTECTION SHIELD: Only inject the delete button if it's NOT a core Title node
+                if (asset.type !== 'title') {
+                    const delBtn = document.createElement('div');
+                    delBtn.className = 'media-delete-btn';
+                    delBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+                    delBtn.title = "Delete Media";
+                    delBtn.onclick = (e) => { e.stopPropagation(); this.requestDelete(asset.id); };
+                    card.appendChild(delBtn);
+                }
 
                 if (asset.type === 'audio' || asset.type === 'video') {
                     const playBtn = document.createElement('div');
@@ -215,6 +243,25 @@
                     card.appendChild(playBtn);
                 }
             };
+
+            // Inject Self-Healing hook into Store load/create logic
+            if (typeof Store !== 'undefined' && Store.loadProject && Store.createProject) {
+                this.originalLoadProject = Store.loadProject.bind(Store);
+                Store.loadProject = async (pid) => {
+                    await this.originalLoadProject(pid);
+                    if (this.isActive) {
+                        await this.ensureTitlesExist();
+                    }
+                };
+
+                this.originalCreateProject = Store.createProject.bind(Store);
+                Store.createProject = async (name) => {
+                    await this.originalCreateProject(name);
+                    if (this.isActive) {
+                        await this.ensureTitlesExist();
+                    }
+                };
+            }
 
             // Original Inspector render
             this.originalInspectorRender = NativeInspector.render.bind(NativeInspector);
@@ -878,6 +925,8 @@
             if (this.originalDrawToCanvas) Player.drawToCanvas = this.originalDrawToCanvas;
             if (this.originalRenderFrame) Player.renderFrame = this.originalRenderFrame;
             if (this.originalAddClip) Store.addClip = this.originalAddClip;
+            if (this.originalLoadProject) Store.loadProject = this.originalLoadProject;
+            if (this.originalCreateProject) Store.createProject = this.originalCreateProject;
             if (this.originalRenderTrack) TimelineModule.renderTrack = this.originalRenderTrack;
             if (this.originalRefreshTimeline) UI.refreshTimeline = this.originalRefreshTimeline;
             if (this.originalSetZoom) Store.setZoom = this.originalSetZoom;
