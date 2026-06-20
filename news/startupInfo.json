@@ -1,1 +1,35 @@
-
+{
+  "content": [
+    {
+      "title": "Welcome to Forge™ Next-Gen"
+    },
+    {
+      "header1": "Advanced Spatial Ecosystem"
+    },
+    {
+      "body": "The engine has been significantly upgraded. We've introduced the **Delta Transform Matrix** enabling seamless spatial transitions that don't overwrite your custom PiP coordinates.<br><br>Check out the demo below:"
+    },
+    {
+      "body": "[video](https://www.w3schools.com/html/mov_bbb.mp4)"
+    },
+    {
+      "header1": "Integrated Typography"
+    },
+    {
+      "body": "The Google Fonts Engine is now deeply integrated into the Media Manager Pro. [img](https://picsum.photos/400/250) [right]<br><br>You can dynamically fetch, cache, and apply typography in real-time directly on the canvas without leaving your workflow.<br><br>Stay tuned as we continue to push the absolute boundaries of what is mathematically possible within modern web browsers!"
+    }
+  ],
+  "_legend": [
+    "--- JSON NEWS FORMATTING GUIDE ---",
+    "Text Formatting:",
+    "  'title'   : Renders as H1",
+    "  'header1' : Renders as H2",
+    "  'body'    : Renders as Paragraph (Use <br> for line breaks)",
+    "  **text**  : Bolds the text",
+    "",
+    "Media & Links:",
+    "  Links:  [display text](url)",
+    "  Images: [img](url) [right|left|center]",
+    "  Videos: [video](url) -> Automatically generates a custom video player"
+  ]
+}
