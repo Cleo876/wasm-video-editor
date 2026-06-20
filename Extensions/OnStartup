@@ -1,6 +1,311 @@
 /**
  * @name On Startup Welcome
- * @version 0.0.1
+ * @version 0.1.0
  * @developer Forge™
  * @description A module to introduce new users to the editor, getting them familiar with the interface and knowledgeable on any new changes to the editor.
  */
+(function() {
+    const MODULE_ID = 'on_startup_welcome';
+    const GITHUB_BANNERS_API = 'https://api.github.com/repos/Cleo876/wasm-video-editor/contents/IMGs/Banners';
+    const GITHUB_NEWS_URL = 'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/refs/heads/main/news/startupInfo.json';
+    const CACHE_LIFETIME = 2 * 24 * 60 * 60 * 1000; // 2 Days in milliseconds
+
+    if (typeof DB === 'undefined') {
+        console.error(`❌ [${MODULE_ID}] IndexedDB environment not found.`);
+        return;
+    }
+
+    const WelcomeModule = {
+        bannerUrl: '',
+        newsData: [],
+        
+        async init() {
+            // Retrieve Tool Version from Host, fallback if unavailable
+            this.toolVersion = typeof TOOL_VERSION !== 'undefined' ? TOOL_VERSION : 'Unknown Version';
+            
+            this.injectStyles();
+            await this.prepareBannerImage();
+            await this.fetchNewsData();
+            this.buildAndShowModal();
+        },
+
+        injectStyles() {
+            const style = document.createElement('style');
+            style.id = `${MODULE_ID}_styles`;
+            style.innerHTML = `
+                .welcome-overlay {
+                    position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px);
+                    z-index: 100000; display: flex; align-items: center; justify-content: center;
+                    opacity: 0; transition: opacity 0.4s ease-out;
+                }
+                .welcome-modal {
+                    position: relative; width: 850px; height: 500px; max-width: 95vw; max-height: 90vh;
+                    background: #111; border: 1px solid #333; border-radius: 16px;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+                    overflow: hidden;
+                }
+                .welcome-page {
+                    position: absolute; inset: 0; width: 100%; height: 100%;
+                    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+                    display: flex; flex-direction: column;
+                }
+                #welcome-page-1 { transform: translateX(0%); }
+                #welcome-page-2 { transform: translateX(100%); background: #151515; }
+                
+                .welcome-modal.swiped #welcome-page-1 { transform: translateX(-100%); }
+                .welcome-modal.swiped #welcome-page-2 { transform: translateX(0%); }
+
+                .forge-custom-video .v-controls { opacity: 0; transition: opacity 0.3s; }
+                .forge-custom-video:hover .v-controls, .forge-custom-video.paused .v-controls { opacity: 1; }
+                .v-progress-bg { flex-grow: 1; margin: 0 10px; }
+            `;
+            document.head.appendChild(style);
+        },
+
+        async prepareBannerImage() {
+            try {
+                let cache = await DB.get('system', 'welcome_banner_cache');
+                const now = Date.now();
+
+                // Fetch if no cache, or if cache is older than 2 days
+                if (!cache || !cache.urls || cache.urls.length === 0 || (now - cache.timestamp > CACHE_LIFETIME)) {
+                    console.log(`[${MODULE_ID}] Fetching fresh banners from GitHub...`);
+                    const res = await fetch(GITHUB_BANNERS_API);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const urls = data.filter(f => f.name.match(/\.(png|jpg|jpeg|webp|gif)$/i)).map(f => f.download_url);
+                        
+                        cache = { id: 'welcome_banner_cache', timestamp: now, urls: urls };
+                        await DB.put('system', cache);
+                    }
+                }
+
+                // Pick a random image from the resilient cache
+                if (cache && cache.urls && cache.urls.length > 0) {
+                    this.bannerUrl = cache.urls[Math.floor(Math.random() * cache.urls.length)];
+                }
+            } catch (e) {
+                console.warn(`[${MODULE_ID}] Failed to fetch/load banners. Using default aesthetic.`, e);
+            }
+        },
+
+        async fetchNewsData() {
+            try {
+                const res = await fetch(GITHUB_NEWS_URL);
+                if (res.ok) {
+                    this.newsData = await res.json();
+                } else {
+                    throw new Error("News file not found");
+                }
+            } catch (e) {
+                this.newsData = [
+                    { title: "Welcome to Forge™" },
+                    { body: "We were unable to reach the news server. However, your editor is fully operational." }
+                ];
+            }
+        },
+
+        parseMarkdown(text) {
+            let p = text;
+            
+            // 1. Images: [img](url) [alignment]
+            p = p.replace(/\[img\]\((.*?)\)\s*\[(right|left|centre|center)\]/gi, (m, url, align) => {
+                const a = align.toLowerCase();
+                let cls = 'rounded-xl shadow-lg border border-[#333] max-w-[45%] object-cover ';
+                if (a === 'right') cls += 'float-right ml-5 mb-3';
+                else if (a === 'left') cls += 'float-left mr-5 mb-3';
+                else cls = 'block mx-auto mb-4 w-3/4 rounded-xl shadow-lg border border-[#333] object-cover';
+                return `<img src="${url}" class="${cls}">`;
+            });
+
+            // 2. Videos: [video](url) (Custom Chrome-less Player)
+            p = p.replace(/\[video\]\((.*?)\)/gi, (m, url) => {
+                return `
+                    <div class="forge-custom-video relative w-4/5 mx-auto aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-[#333] mb-6 mt-2 paused flex-shrink-0" data-src="${url}">
+                        <video src="${url}" class="w-full h-full object-contain" preload="metadata" playsinline></video>
+                        <div class="v-controls absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 flex flex-col justify-between">
+                            <div class="flex justify-end p-3">
+                                <button class="v-fullscreen text-white hover:text-teal-400 drop-shadow-md transition"><i class="fa-solid fa-expand text-lg"></i></button>
+                            </div>
+                            <div class="flex justify-center items-center flex-1">
+                                <button class="v-play text-white/90 hover:text-teal-400 text-6xl drop-shadow-[0_0_15px_rgba(0,0,0,0.8)] transition-transform transform hover:scale-110 active:scale-95">
+                                    <i class="fa-solid fa-circle-play"></i>
+                                </button>
+                            </div>
+                            <div class="p-4 pt-0 w-full flex items-center gap-3">
+                                <span class="v-time text-[10px] text-white font-mono drop-shadow-md">0:00</span>
+                                <div class="v-progress-bg h-1.5 bg-gray-600/50 rounded-full cursor-pointer relative overflow-hidden flex-1 backdrop-blur-sm">
+                                    <div class="v-progress-bar h-full bg-teal-500 w-0 pointer-events-none rounded-full transition-all duration-75"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 3. Hyperlinks: [text](url)
+            p = p.replace(/\[([^\]]+)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-teal-400 hover:text-teal-300 hover:underline font-bold transition">$1</a>');
+
+            return p;
+        },
+
+        renderNewsFeed() {
+            let html = '';
+            const items = Array.isArray(this.newsData) ? this.newsData : [this.newsData];
+            
+            items.forEach(item => {
+                if (item.title) html += `<h1 class="text-3xl font-black text-white mb-6 border-b border-[#333] pb-3 tracking-tight">${this.parseMarkdown(item.title)}</h1>`;
+                if (item.header1) html += `<h2 class="text-xl font-bold text-teal-400 mt-8 mb-3 tracking-wide">${this.parseMarkdown(item.header1)}</h2>`;
+                if (item.body) html += `<p class="text-sm text-gray-300 mb-5 leading-relaxed">${this.parseMarkdown(item.body)}</p><div class="clear-both"></div>`;
+            });
+            return html;
+        },
+
+        buildAndShowModal() {
+            const overlay = document.createElement('div');
+            overlay.className = 'welcome-overlay';
+            
+            overlay.innerHTML = `
+                <div class="welcome-modal" id="welcome-modal">
+                    
+                    <!-- PAGE 1: HERO / WELCOME -->
+                    <div id="welcome-page-1" class="welcome-page bg-[#0a0a0a]">
+                        <!-- Background Banner with Seamless Cross-fade Alpha Blend -->
+                        <div class="absolute inset-0 bg-cover bg-center transition-opacity" style="background-image: url('${this.bannerUrl}');"></div>
+                        <div class="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/95 to-transparent"></div>
+                        <div class="absolute inset-0 bg-[#0a0a0a]/30"></div> <!-- Global dark wash for text readability on right -->
+
+                        <div class="relative z-10 w-full h-full flex flex-col justify-between p-12">
+                            <div>
+                                <h1 class="text-5xl font-black text-white tracking-tighter drop-shadow-lg flex items-center gap-4">
+                                    <i class="fa-solid fa-layer-group text-teal-500"></i> WASM Video Editor
+                                </h1>
+                                <span class="inline-block mt-3 px-3 py-1 bg-teal-500/20 text-teal-400 border border-teal-500/30 rounded text-xs font-bold font-mono tracking-widest shadow-lg">
+                                    VERSION ${this.toolVersion}
+                                </span>
+                            </div>
+
+                            <div class="flex justify-between items-end w-full">
+                                <div class="max-w-md">
+                                    <p class="text-gray-300 text-sm leading-relaxed drop-shadow-md border-l-2 border-teal-500 pl-4">
+                                        Forge™ is the apex of browser-based non-linear editing. Harnessing the raw computational power of WebAssembly and the HTML5 Canvas, it delivers a zero-latency, privacy-first ecosystem. Compose, grade, and export Hollywood-tier video without ever leaving your browser.
+                                    </p>
+                                </div>
+
+                                <button id="welcome-proceed-btn" class="bg-white text-black hover:bg-teal-400 font-bold w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_25px_rgba(0,0,0,0.8)] transition-all transform hover:scale-110 active:scale-95 group">
+                                    <i class="fa-solid fa-chevron-right text-xl group-hover:translate-x-1 transition-transform"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PAGE 2: NEWS / UPDATES -->
+                    <div id="welcome-page-2" class="welcome-page">
+                        <div class="flex justify-between items-center p-6 border-b border-[#222] bg-[#111] flex-shrink-0">
+                            <h2 class="text-lg font-bold text-gray-200 uppercase tracking-widest flex items-center gap-3">
+                                <i class="fa-regular fa-newspaper text-teal-500"></i> What's New
+                            </h2>
+                            <button id="welcome-close-btn" class="w-8 h-8 flex items-center justify-center rounded-full bg-[#222] text-gray-400 hover:bg-red-600 hover:text-white transition-colors border border-[#333] hover:border-red-500">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex-1 overflow-y-auto custom-scroll p-8 bg-[#151515]">
+                            <div class="max-w-3xl mx-auto pb-10">
+                                ${this.renderNewsFeed()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            // Trigger Entrance Animation
+            requestAnimationFrame(() => {
+                overlay.style.opacity = '1';
+            });
+
+            // Bind Animations & Controls
+            document.getElementById('welcome-proceed-btn').onclick = () => {
+                document.getElementById('welcome-modal').classList.add('swiped');
+            };
+
+            document.getElementById('welcome-close-btn').onclick = () => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.remove();
+                    this.cleanup();
+                }, 400);
+            };
+
+            this.initializeVideoPlayers(overlay);
+        },
+
+        initializeVideoPlayers(container) {
+            const players = container.querySelectorAll('.forge-custom-video');
+            
+            players.forEach(wrapper => {
+                const video = wrapper.querySelector('video');
+                const playBtn = wrapper.querySelector('.v-play');
+                const progressBg = wrapper.querySelector('.v-progress-bg');
+                const progressBar = wrapper.querySelector('.v-progress-bar');
+                const fullscreenBtn = wrapper.querySelector('.v-fullscreen');
+                const timeDisp = wrapper.querySelector('.v-time');
+
+                const formatTime = (time) => {
+                    const m = Math.floor(time / 60);
+                    const s = Math.floor(time % 60);
+                    return `${m}:${s < 10 ? '0' : ''}${s}`;
+                };
+
+                const togglePlay = () => {
+                    if (video.paused) {
+                        video.play();
+                        wrapper.classList.remove('paused');
+                        playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                    } else {
+                        video.pause();
+                        wrapper.classList.add('paused');
+                        playBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
+                    }
+                };
+
+                playBtn.onclick = (e) => { e.stopPropagation(); togglePlay(); };
+                video.onclick = () => togglePlay();
+
+                video.ontimeupdate = () => {
+                    const pct = (video.currentTime / video.duration) * 100;
+                    progressBar.style.width = `${pct}%`;
+                    timeDisp.innerText = formatTime(video.currentTime);
+                };
+
+                video.onended = () => {
+                    wrapper.classList.add('paused');
+                    playBtn.innerHTML = '<i class="fa-solid fa-rotate-right"></i>';
+                };
+
+                progressBg.onclick = (e) => {
+                    e.stopPropagation();
+                    const rect = progressBg.getBoundingClientRect();
+                    const pos = (e.clientX - rect.left) / rect.width;
+                    video.currentTime = pos * video.duration;
+                };
+
+                fullscreenBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (video.requestFullscreen) video.requestFullscreen();
+                    else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+                };
+            });
+        },
+
+        cleanup() {
+            delete window.ON_STARTUP_WELCOME;
+        }
+    };
+
+    window.ON_STARTUP_WELCOME = WelcomeModule;
+    WelcomeModule.init();
+
+})();
