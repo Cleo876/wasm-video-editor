@@ -21,6 +21,11 @@
         newsData: [],
         
         async init() {
+            // Prevent the modal from opening if the user simply refreshes the browser page
+            if (sessionStorage.getItem(MODULE_ID + '_shown')) {
+                return;
+            }
+            
             // Retrieve Tool Version from Host, fallback if unavailable
             this.toolVersion = typeof TOOL_VERSION !== 'undefined' ? TOOL_VERSION : 'Unknown Version';
             
@@ -222,11 +227,11 @@
                 // Ignore any internal/legend keys
                 if (item._legend || item._comment || item.__developer_notice) return;
 
-                if (item.title) html += `<h1 class="text-2xl font-bold text-white mb-5 border-b border-[#222] pb-2 tracking-tight">${this.parseMarkdown(item.title)}</h1>`;
-                if (item.header1) html += `<h2 class="text-lg font-semibold text-teal-400 mt-6 mb-2 tracking-wide">${this.parseMarkdown(item.header1)}</h2>`;
+                if (item.title) html += `<h1 class="text-3xl font-black text-white mb-5 border-b border-[#222] pb-2 tracking-tight">${this.parseMarkdown(item.title)}</h1>`;
+                if (item.header1) html += `<h2 class="text-lg font-bold text-teal-400 mt-6 mb-2 tracking-wide">${this.parseMarkdown(item.header1)}</h2>`;
                 
                 if (item.body) {
-                    html += `<p class="text-xs text-gray-400 mb-4 leading-relaxed">${this.parseMarkdown(item.body)}</p><div class="clear-both"></div>`;
+                    html += `<p class="text-sm text-gray-300 mb-4 leading-relaxed">${this.parseMarkdown(item.body)}</p><div class="clear-both"></div>`;
                 }
             });
             return html;
@@ -248,23 +253,23 @@
 
                         <div class="relative z-10 w-full h-full flex flex-col justify-between p-12">
                             <div>
-                                <h1 class="text-4xl font-bold text-white tracking-tight drop-shadow-lg flex items-center gap-3">
+                                <h1 class="text-5xl font-black text-white tracking-tighter drop-shadow-lg flex items-center gap-4">
                                     <i class="fa-solid fa-layer-group text-teal-500"></i> WASM Editor
                                 </h1>
-                                <span class="inline-block mt-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/20 rounded text-[10px] font-semibold font-mono tracking-widest shadow-lg">
+                                <span class="inline-block mt-3 px-3 py-1 bg-teal-500/10 text-teal-400 border border-teal-500/20 rounded text-xs font-bold font-mono tracking-widest shadow-lg">
                                     VERSION ${this.toolVersion}
                                 </span>
                             </div>
 
                             <div class="flex justify-between items-end w-full">
                                 <div class="max-w-[420px]">
-                                    <p class="text-gray-300 text-xs leading-relaxed drop-shadow-md border-l-2 border-teal-500 pl-4">
+                                    <p class="text-gray-300 text-sm leading-relaxed drop-shadow-md border-l-2 border-teal-500 pl-4">
                                         WASM Editor is the apex of browser-based non-linear editing. Harnessing the raw computational power of WebAssembly and the HTML5 Canvas, it delivers a zero-latency, privacy-first ecosystem. Compose, grade, and export Hollywood-tier video without ever leaving your browser.
                                     </p>
                                 </div>
 
                                 <button id="welcome-proceed-btn" class="nav-btn-sm btn-glass group" title="Next">
-                                    <i class="fa-solid fa-chevron-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
+                                    <i class="fa-solid fa-chevron-right text-sm group-hover:translate-x-0.5 transition-transform"></i>
                                 </button>
                             </div>
                         </div>
@@ -272,12 +277,12 @@
 
                     <!-- PAGE 2: NEWS / UPDATES -->
                     <div id="welcome-page-2" class="welcome-page">
-                        <div class="flex justify-between items-center p-5 border-b border-[#1a1a1a] bg-[#0a0a0a] flex-shrink-0 shadow-md z-10">
-                            <h2 class="text-sm font-bold text-gray-200 uppercase tracking-widest flex items-center gap-2">
+                        <div class="flex justify-between items-center p-6 border-b border-[#1a1a1a] bg-[#0a0a0a] flex-shrink-0 shadow-md z-10">
+                            <h2 class="text-sm font-bold text-gray-200 uppercase tracking-widest flex items-center gap-3">
                                 <i class="fa-regular fa-newspaper text-teal-500"></i> What's New
                             </h2>
-                            <button id="welcome-close-btn" class="w-7 h-7 flex items-center justify-center rounded-full bg-[#1a1a1a] text-gray-400 hover:bg-red-600 hover:text-white transition-colors border border-[#2a2a2a] hover:border-red-500 outline-none">
-                                <i class="fa-solid fa-xmark text-sm"></i>
+                            <button id="welcome-close-btn" class="w-8 h-8 flex items-center justify-center rounded-full bg-[#1a1a1a] text-gray-400 hover:bg-red-600 hover:text-white transition-colors border border-[#2a2a2a] hover:border-red-500 outline-none">
+                                <i class="fa-solid fa-xmark"></i>
                             </button>
                         </div>
                         
@@ -289,13 +294,16 @@
 
                         <!-- Absolute positioned back button sitting cleanly at the bottom left -->
                         <button id="welcome-back-btn" class="absolute bottom-8 left-8 nav-btn-sm btn-dark group z-50" title="Back">
-                            <i class="fa-solid fa-chevron-left text-xs group-hover:-translate-x-0.5 transition-transform"></i>
+                            <i class="fa-solid fa-chevron-left text-sm group-hover:-translate-x-0.5 transition-transform"></i>
                         </button>
                     </div>
                 </div>
             `;
 
             document.body.appendChild(overlay);
+
+            // Record that the modal was shown in this session so refresh doesn't trigger it again
+            sessionStorage.setItem(MODULE_ID + '_shown', 'true');
 
             // Trigger Entrance Animation
             requestAnimationFrame(() => {
