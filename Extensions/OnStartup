@@ -1,12 +1,12 @@
 /**
  * @name On Startup Welcome
- * @version 0.5.0
+ * @version 0.6.0
  * @developer Forge™
  * @description A module to introduce new users to the editor, getting them familiar with the interface and knowledgeable on any new changes to the editor. Supports raw <br> tags for HTML line breaks and intelligent banner caching.
  */
 (function() {
     const MODULE_ID = 'on_startup_welcome';
-    const MODULE_VERSION = '0.5.0'; // Used to force-bypass the 2-day cache limit on updates
+    const MODULE_VERSION = '0.6.0'; // Used to force-bypass the 2-day cache limit on updates
     const GITHUB_BANNERS_API = 'https://api.github.com/repos/Cleo876/wasm-video-editor/contents/IMGs/Banners';
     const GITHUB_NEWS_URL = 'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/refs/heads/main/news/startupInfo.json';
     const CACHE_LIFETIME = 2 * 24 * 60 * 60 * 1000; // 2 Days in milliseconds
@@ -49,7 +49,10 @@
                     background: #111; border: 1px solid #333; border-radius: 12px;
                     box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.9);
                     overflow: hidden;
+                    transform: scale(0.95); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
                 }
+                .welcome-overlay.show .welcome-modal { transform: scale(1); }
+                
                 .welcome-page {
                     position: absolute; inset: 0; width: 100%; height: 100%;
                     transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
@@ -92,6 +95,14 @@
                 .forge-custom-video .v-controls { opacity: 0; transition: opacity 0.3s; }
                 .forge-custom-video:hover .v-controls, .forge-custom-video.paused .v-controls { opacity: 1; }
                 .v-progress-bg { flex-grow: 1; margin: 0 10px; }
+                
+                @keyframes kf-kenburns {
+                    0% { transform: scale(1); }
+                    100% { transform: scale(1.08); }
+                }
+                .bg-kenburns {
+                    animation: kf-kenburns 25s ease-out forwards;
+                }
             `;
             document.head.appendChild(style);
         },
@@ -178,17 +189,17 @@
                 return `<img src="${url}" class="${cls}">`;
             });
 
-            // 2. Videos: [video](url) (Custom Chrome-less Player)
+            // 2. Videos: [video](url) (Custom Chrome-less Player with Absolute Height Fix)
             p = p.replace(/\[video\]\((.*?)\)/gi, (m, url) => {
                 return `
-                    <div class="forge-custom-video relative w-4/5 mx-auto aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-[#222] mb-6 mt-3 paused flex-shrink-0" data-src="${url}">
-                        <video src="${url}" class="w-full h-full object-contain" preload="metadata" playsinline></video>
-                        <div class="v-controls absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 flex flex-col justify-between">
+                    <div class="forge-custom-video relative w-4/5 mx-auto aspect-video bg-black rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.7)] border border-[#222] mb-6 mt-3 paused flex-shrink-0" data-src="${url}">
+                        <video src="${url}" class="absolute inset-0 w-full h-full object-contain block bg-black" preload="metadata" playsinline></video>
+                        <div class="v-controls absolute inset-0 z-10 bg-gradient-to-t from-black/90 via-transparent to-black/40 flex flex-col justify-between">
                             <div class="flex justify-end p-3">
                                 <button class="v-fullscreen text-white hover:text-teal-400 drop-shadow-md transition"><i class="fa-solid fa-expand text-sm"></i></button>
                             </div>
                             <div class="flex justify-center items-center flex-1">
-                                <button class="v-play text-white/90 hover:text-teal-400 text-5xl drop-shadow-[0_0_15px_rgba(0,0,0,0.8)] transition-transform transform hover:scale-110 active:scale-95">
+                                <button class="v-play text-white/90 hover:text-teal-400 text-5xl drop-shadow-[0_0_20px_rgba(0,0,0,0.9)] transition-transform transform hover:scale-110 active:scale-95">
                                     <i class="fa-solid fa-circle-play"></i>
                                 </button>
                             </div>
@@ -246,15 +257,17 @@
                     
                     <!-- PAGE 1: HERO / WELCOME -->
                     <div id="welcome-page-1" class="welcome-page bg-[#0a0a0a]">
-                        <!-- Background Banner with Seamless Cross-fade Alpha Blend -->
-                        <div class="absolute inset-0 bg-cover bg-center transition-opacity" style="background-image: url('${this.bannerUrl}'); opacity: 0.6;"></div>
-                        <div class="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent"></div>
-                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-80"></div>
+                        <!-- Background Banner with Ken Burns & Reduced Darkness Overlay -->
+                        <div class="absolute inset-0 bg-black overflow-hidden">
+                            <div class="absolute inset-0 bg-cover bg-center bg-kenburns" style="background-image: url('${this.bannerUrl}'); opacity: 0.85;"></div>
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/70 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-60"></div>
 
                         <div class="relative z-10 w-full h-full flex flex-col justify-between p-12">
                             <div>
-                                <h1 class="text-5xl font-black text-white tracking-tighter drop-shadow-lg flex items-center gap-4">
-                                    <i class="fa-solid fa-layer-group text-teal-500"></i> WASM Editor
+                                <h1 class="text-6xl font-black text-white tracking-tighter drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] flex items-center gap-4">
+                                    <i class="fa-solid fa-layer-group text-teal-500 drop-shadow-[0_0_15px_rgba(0,210,190,0.5)]"></i> WASM Editor
                                 </h1>
                                 <span class="inline-block mt-3 px-3 py-1 bg-teal-500/10 text-teal-400 border border-teal-500/20 rounded text-xs font-bold font-mono tracking-widest shadow-lg">
                                     VERSION ${this.toolVersion}
@@ -305,9 +318,10 @@
             // Record that the modal was shown in this session so refresh doesn't trigger it again
             sessionStorage.setItem(MODULE_ID + '_shown', 'true');
 
-            // Trigger Entrance Animation
+            // Trigger Entrance Animation (Scales up elegantly)
             requestAnimationFrame(() => {
                 overlay.style.opacity = '1';
+                overlay.classList.add('show');
             });
 
             // Bind Animations & Controls
@@ -321,6 +335,7 @@
 
             document.getElementById('welcome-close-btn').onclick = () => {
                 overlay.style.opacity = '0';
+                document.getElementById('welcome-modal').style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     overlay.remove();
                     this.cleanup();
