@@ -1,8 +1,8 @@
 /**
  * @name Audio Mixing & Fades Engine
- * @version 1.1.0
+ * @version 2.6.0
  * @developer Forge™
- * @description Advanced audio bus routing. Adds volume mixing, visual timeline fade handles, independent L-Cut audio extraction, and buttery smooth slider UX.
+ * @description Advanced audio bus routing. Upgraded with State-Driven Matrix Diffing for extreme efficiency and Exponential Audio Tapering for true human-perceived loudness scaling. Features volume mixing, visual timeline fade handles, L-Cut audio extraction, and buttery smooth slider UX without polling overhead.
  */
 (function() {
     const MODULE_ID = 'audio_mixing_engine';
@@ -15,6 +15,9 @@
     const AudioMixingEngine = {
         isActive: true,
         
+        // High-Performance Global Waveform Cache
+        waveCache: new Map(),
+        
         // Native Host Hooks
         originalGetVideoSource: null,
         originalGetAudioSource: null,
@@ -23,7 +26,7 @@
         originalInspectorRender: null,
 
         init() {
-            console.log(`[${MODULE_ID}] Booting Audio Engine...`);
+            console.log(`[${MODULE_ID}] Booting Advanced Audio Engine v2.6.0 (State-Driven Exponential)...`);
             
             this.injectStyles();
             this.hijackAudioBus();
@@ -34,12 +37,15 @@
             
             if (typeof UI !== 'undefined') UI.refreshTimeline();
             if (NativeInspector.currentClipId) NativeInspector.render();
+            
+            if (typeof Player !== 'undefined') Player.safeRenderFrame();
         },
 
         injectStyles() {
             const style = document.createElement('style');
             style.id = `${MODULE_ID}_styles`;
             style.innerHTML = `
+                .audio-waveform-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; opacity: 0.8; }
                 .audio-fade-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
                 
                 .fade-handle { 
@@ -63,9 +69,110 @@
             document.head.appendChild(style);
         },
 
+        // --- THE WAVEFORM GENERATOR ---
+        async generateWaveform(assetId) {
+            if (this.waveCache.has(assetId)) return;
+            this.waveCache.set(assetId, 'generating');
+
+            try {
+                const asset = Store.assets.find(a => a.id === assetId);
+                if (!asset) return;
+
+                let arrayBuffer;
+                if (asset.file instanceof Blob) {
+                    arrayBuffer = await asset.file.arrayBuffer();
+                } else if (asset.url) {
+                    const res = await fetch(asset.url);
+                    arrayBuffer = await res.arrayBuffer();
+                } else {
+                    this.waveCache.delete(assetId);
+                    return;
+                }
+
+                const AudioContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+                const ctx = new AudioContext(1, 1, 44100); 
+                const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+                const channelData = audioBuffer.getChannelData(0); 
+
+                const samplesPerSecond = audioBuffer.sampleRate;
+                const peaksPerSecond = 100; 
+                const samplesPerPeak = Math.floor(samplesPerSecond / peaksPerSecond);
+                const totalPeaks = Math.ceil(channelData.length / samplesPerPeak);
+
+                const peaks = new Float32Array(totalPeaks);
+
+                for (let i = 0; i < totalPeaks; i++) {
+                    let start = i * samplesPerPeak;
+                    let end = start + samplesPerPeak;
+                    let max = 0;
+                    for (let j = start; j < end && j < channelData.length; j++) {
+                        let val = Math.abs(channelData[j]);
+                        if (val > max) max = val;
+                    }
+                    peaks[i] = max;
+                }
+
+                this.waveCache.set(assetId, peaks);
+                if (typeof UI !== 'undefined') UI.refreshTimeline();
+
+            } catch (e) {
+                console.error(`[${MODULE_ID}] Waveform extraction failed for ${assetId}:`, e);
+                this.waveCache.delete(assetId); 
+            }
+        },
+
+        drawWaveform(canvas, clip, assetId) {
+            const peaks = this.waveCache.get(assetId);
+            if (!peaks || peaks === 'generating') return;
+
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            const peaksPerSecond = 100;
+            const startPeak = Math.floor(clip.offset * peaksPerSecond);
+            const totalPeaks = Math.floor(clip.duration * peaksPerSecond);
+            
+            if (totalPeaks <= 0) return;
+
+            ctx.fillStyle = 'rgba(0, 210, 190, 0.4)'; 
+            
+            const peakStep = totalPeaks / w;
+            
+            ctx.beginPath();
+            for (let x = 0; x < w; x++) {
+                let peakIdx = startPeak + Math.floor(x * peakStep);
+                if (peakIdx >= peaks.length) break;
+                
+                let peak = peaks[peakIdx] || 0;
+                let amplitude = Math.min(1.0, peak * 1.5);
+                let barH = amplitude * h;
+                
+                ctx.rect(x, (h - barH) / 2, 1, barH);
+            }
+            ctx.fill();
+        },
+
         // --- AUDIO BUS HIJACKING ---
-        // We must override the core media getters to inject a GainNode per clip
         hijackAudioBus() {
+            if (Player.videoPool) {
+                Object.values(Player.videoPool).forEach(el => {
+                    if (el.pause) el.pause();
+                    el.src = '';
+                    el.remove();
+                });
+                Player.videoPool = {};
+            }
+            if (Player.audioPool) {
+                Object.values(Player.audioPool).forEach(item => {
+                    if (item.el && item.el.pause) item.el.pause();
+                    if (item.el) { item.el.src = ''; item.el.remove(); }
+                });
+                Player.audioPool = {};
+            }
+
             this.originalGetVideoSource = Player.getVideoSource.bind(Player);
             Player.getVideoSource = (clipId, url) => {
                 if(Player.videoPool[clipId]) return Player.videoPool[clipId];
@@ -90,7 +197,11 @@
                         const clipGain = Player.actx.createGain();
                         source.connect(clipGain);
                         clipGain.connect(Player.gainNode);
-                        el._clipGain = clipGain; // Attach dedicated mixer node
+                        el._clipGain = clipGain; 
+                        
+                        // Force initial state injection
+                        const clip = this.findClip(clipId);
+                        if (clip) this.applyDynamicVolume(el._clipGain, clip, Store.currentTime);
                     } catch(e) {}
                 }
                 Player.videoPool[clipId] = el;
@@ -123,7 +234,11 @@
                     const clipGain = Player.actx.createGain();
                     source.connect(clipGain);
                     clipGain.connect(Player.gainNode);
-                    el._clipGain = clipGain; // Attach dedicated mixer node
+                    el._clipGain = clipGain; 
+                    
+                    // Force initial state injection
+                    const clip = this.findClip(clipId);
+                    if (clip) this.applyDynamicVolume(el._clipGain, clip, Store.currentTime);
                 } catch(e) {}
                 
                 Player.audioPool[clipId] = { el, source, url };
@@ -131,7 +246,7 @@
             };
         },
 
-        // --- REAL-TIME MIXING RENDERER ---
+        // --- STATE-DRIVEN MIXING RENDERER ---
         hijackRenderer() {
             this.originalRenderFrame = Player.renderFrame.bind(Player);
             Player.renderFrame = () => {
@@ -140,50 +255,54 @@
 
                 const t = Store.currentTime;
 
-                // Modulate Video Track Volumes
-                Store.trackConfig.filter(tr => tr.type === 'video' || tr.type === 'fx').forEach(track => {
-                    (Store.tracks[track.id] || []).forEach(clip => {
-                        const vEl = Player.videoPool[clip.id];
-                        if (vEl && vEl._clipGain) {
-                            this.applyDynamicVolume(vEl._clipGain, clip, t);
-                        }
-                    });
+                // 🔥 STATE-DRIVEN EFFICIENCY: 
+                // Only evaluate audio for clips currently loaded in the active memory pool!
+                // Eliminates the massive 60FPS overhead of checking the entire Store database.
+                Object.keys(Player.videoPool).forEach(clipId => {
+                    const vEl = Player.videoPool[clipId];
+                    if (vEl && vEl._clipGain) {
+                        const clip = this.findClip(clipId);
+                        if (clip) this.applyDynamicVolume(vEl._clipGain, clip, t);
+                    }
                 });
 
-                // Modulate Audio Track Volumes
-                Store.trackConfig.filter(tr => tr.type === 'audio').forEach(track => {
-                    (Store.tracks[track.id] || []).forEach(clip => {
-                        const aItem = Player.audioPool[clip.id];
-                        if (aItem && aItem.el._clipGain) {
-                            this.applyDynamicVolume(aItem.el._clipGain, clip, t);
-                        }
-                    });
+                Object.keys(Player.audioPool).forEach(clipId => {
+                    const aItem = Player.audioPool[clipId];
+                    if (aItem && aItem.el._clipGain) {
+                        const clip = this.findClip(clipId);
+                        if (clip) this.applyDynamicVolume(aItem.el._clipGain, clip, t);
+                    }
                 });
             };
         },
 
         applyDynamicVolume(gainNode, clip, currentTime) {
-            let targetVol = (clip.volume !== undefined ? clip.volume : 100) / 100;
-            if (clip.muted) targetVol = 0;
+            let rawVol = (clip.volume !== undefined ? clip.volume : 100) / 100;
+            if (clip.muted) rawVol = 0;
+
+            // 🔥 LOGARITHMIC TAPER: Map linear slider to exponential curve for natural auditory perception
+            let targetVol = Math.pow(rawVol, 2);
 
             const elapsed = currentTime - clip.start;
             const fadeIn = clip.fadeIn || 0;
             const fadeOut = clip.fadeOut || 0;
 
-            // Apply Math for Fade In
-            if (fadeIn > 0 && elapsed < fadeIn) {
-                targetVol *= (elapsed / fadeIn);
+            // Apply Math for Fade In (with exponential fade curve)
+            if (fadeIn > 0 && elapsed > 0 && elapsed < fadeIn) {
+                targetVol *= Math.pow((elapsed / fadeIn), 2);
             }
             
-            // Apply Math for Fade Out
-            if (fadeOut > 0 && elapsed > (clip.duration - fadeOut)) {
+            // Apply Math for Fade Out (with exponential fade curve)
+            if (fadeOut > 0 && elapsed > (clip.duration - fadeOut) && elapsed < clip.duration) {
                 const remaining = clip.duration - elapsed;
-                targetVol *= Math.max(0, remaining / fadeOut);
+                targetVol *= Math.pow(Math.max(0, remaining / fadeOut), 2);
             }
 
-            // Smooth interpolation to prevent audio cracking
-            if (Player.actx) {
-                gainNode.gain.setTargetAtTime(targetVol, Player.actx.currentTime, 0.05);
+            // 🔥 STATE-DRIVEN CHECK: Tracking our own target ensures we don't fight the audio scheduler
+            if (Player.actx && gainNode._currentTargetVol !== targetVol) {
+                // Smooth transition (15ms) to prevent audio clicking/popping
+                gainNode.gain.setTargetAtTime(targetVol, Player.actx.currentTime, 0.015);
+                gainNode._currentTargetVol = targetVol;
             }
         },
 
@@ -200,7 +319,6 @@
                 const clips = Store.tracks[trackId] || [];
                 const trackType = Store.trackConfig.find(t => t.id === trackId)?.type;
                 
-                // Only inject audio fade handles on media tracks
                 if (trackType !== 'audio' && trackType !== 'video') return;
 
                 clips.forEach((clip, index) => {
@@ -211,24 +329,34 @@
                     const inPx = (clip.fadeIn || 0) * Store.zoom;
                     const outPx = (clip.fadeOut || 0) * Store.zoom;
 
-                    // Inject Visual Shading SVG
+                    if (trackType === 'audio') {
+                        const canvas = document.createElement('canvas');
+                        canvas.className = 'audio-waveform-canvas';
+                        canvas.width = Math.ceil(w);
+                        canvas.height = 40; 
+                        clipEl.appendChild(canvas);
+
+                        if (!this.waveCache.has(clip.assetId)) {
+                            this.generateWaveform(clip.assetId); 
+                        } else {
+                            this.drawWaveform(canvas, clip, clip.assetId); 
+                        }
+                    }
+
                     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
                     svg.setAttribute("class", "audio-fade-vis absolute inset-0 w-full h-full pointer-events-none z-10");
                     svg.setAttribute("preserveAspectRatio", "none");
                     
                     let polys = '';
                     if (inPx > 0) {
-                        // Triangle representing the muted area during fade in
                         polys += `<polygon points="0,0 0,40 ${inPx},0" fill="rgba(0,0,0,0.5)"/>`;
                     }
                     if (outPx > 0) {
-                        // Triangle representing the muted area during fade out
                         polys += `<polygon points="${w - outPx},0 ${w},40 ${w},0" fill="rgba(0,0,0,0.5)"/>`;
                     }
                     svg.innerHTML = polys;
                     clipEl.appendChild(svg);
 
-                    // Inject Draggable Handles
                     const handleIn = document.createElement('div');
                     handleIn.className = 'fade-handle in';
                     handleIn.style.left = `${inPx}px`;
@@ -266,14 +394,20 @@
                     let newFade;
                     if (type === 'in') {
                         newFade = Math.max(0, startFade + deltaSec);
-                        newFade = Math.min(newFade, clip.duration - otherFade); // Prevent overlapping fades
+                        newFade = Math.min(newFade, clip.duration - otherFade); 
                         clip.fadeIn = newFade;
                     } else {
-                        newFade = Math.max(0, startFade - deltaSec); // Drag left increases fade out
+                        newFade = Math.max(0, startFade - deltaSec); 
                         newFade = Math.min(newFade, clip.duration - otherFade);
                         clip.fadeOut = newFade;
                     }
                     
+                    // Directly push fade state to the engine
+                    let mediaItem = Player.videoPool[clip.id] || (Player.audioPool[clip.id] ? Player.audioPool[clip.id].el : null);
+                    if (mediaItem && mediaItem._clipGain) {
+                        this.applyDynamicVolume(mediaItem._clipGain, clip, Store.currentTime);
+                    }
+
                     if (typeof NativeInspector !== 'undefined') NativeInspector.render();
                     TimelineModule.renderTrack(trackId);
                 };
@@ -341,7 +475,7 @@
                             </div>
                     `;
 
-                    // L-CUT Feature: Extract Audio (Only for Video clips)
+                    // L-CUT Feature
                     if (trackType === 'video') {
                         html += `
                             <button onclick="window.AUDIO_MIXER.extractAudio('${clip.id}')" class="w-full mt-2 bg-[#111] hover:bg-[#222] border border-[#333] hover:border-teal-500 text-teal-400 py-2 rounded text-xs font-bold transition flex items-center justify-center shadow-md">
@@ -353,7 +487,6 @@
                     html += `</div>`;
                     extBox.insertAdjacentHTML('beforeend', html);
 
-                    // Protect timeline hotkeys
                     extBox.querySelectorAll('.te-safe-input').forEach(el => {
                         el.addEventListener('keydown', e => e.stopPropagation());
                         el.addEventListener('mouseup', () => Store.saveState());
@@ -367,7 +500,7 @@
             if (clip) {
                 clip[prop] = parseFloat(value);
                 
-                // Surgical DOM updates for Buttery Smooth drag (bypasses full Inspector rebuild)
+                // Surgical DOM UI Updates
                 if (prop === 'volume') {
                     const label = document.getElementById('am_vol_val');
                     if (label) label.innerText = parseFloat(value).toFixed(1) + '%';
@@ -379,6 +512,13 @@
                     if (label) label.innerText = parseFloat(value).toFixed(2) + 's';
                 }
 
+                // 🔥 INSTANT STATE-DRIVEN APPLICATION
+                // Applies the volume directly to the audio node without forcing a full canvas render frame!
+                let mediaItem = Player.videoPool[clipId] || (Player.audioPool[clipId] ? Player.audioPool[clipId].el : null);
+                if (mediaItem && mediaItem._clipGain) {
+                    this.applyDynamicVolume(mediaItem._clipGain, clip, Store.currentTime);
+                }
+
                 TimelineModule.renderTrack(this.findTrackId(clipId));
             }
         },
@@ -387,7 +527,13 @@
             const clip = this.findClip(clipId);
             if (clip) {
                 clip[prop] = defaultVal;
-                NativeInspector.render(); // Safe to rebuild full DOM on static button click
+                
+                let mediaItem = Player.videoPool[clipId] || (Player.audioPool[clipId] ? Player.audioPool[clipId].el : null);
+                if (mediaItem && mediaItem._clipGain) {
+                    this.applyDynamicVolume(mediaItem._clipGain, clip, Store.currentTime);
+                }
+
+                NativeInspector.render(); 
                 TimelineModule.renderTrack(this.findTrackId(clipId));
                 Store.saveState();
             }
@@ -402,7 +548,6 @@
             const asset = Store.assets.find(a => a.id === clip.assetId);
             if (!asset) return;
 
-            // 1. Ensure "Extracted Audio" track exists
             let extTrack = Store.trackConfig.find(t => t.label === 'Extracted Audio');
             if (!extTrack) {
                 extTrack = { id: 'ext_audio_' + Date.now().toString().slice(-4), type: 'audio', label: 'Extracted Audio', icon: 'fa-music', createdAt: Date.now() };
@@ -411,7 +556,6 @@
                 Store.sortTracks();
             }
 
-            // 2. Clone the Asset into the Database as an Audio type
             const newAssetId = 'asset_' + Date.now() + Math.random().toString(36).substr(2, 5);
             let clonedAsset;
             if (asset.file instanceof Blob) {
@@ -423,7 +567,6 @@
             clonedAsset = { ...asset, id: newAssetId, type: 'audio', name: asset.name + ' (Extracted)', color: '#10b981' };
             Store.assets.push(clonedAsset);
 
-            // 3. Create the detached Audio Clip exactly where the video is
             const newClip = { 
                 id: 'clip_' + Date.now(), 
                 assetId: newAssetId, 
@@ -437,13 +580,11 @@
             };
             
             Store.tracks[extTrack.id].push(newClip);
-
-            // 4. Mute original video to complete the L-Cut handoff
             clip.muted = true;
             
             Store.saveState();
-            Store.refreshUI(); // Refreshes media library and timeline
-            Notify.show("Audio Extracted to New Track", "fa-scissors");
+            if (typeof Store.refreshUI === 'function') Store.refreshUI(); 
+            if (typeof Notify !== 'undefined') Notify.show("Audio Extracted to New Track", "fa-scissors");
         },
 
         // --- FFMPEG MIDDLEWARE ---
@@ -457,14 +598,18 @@
                     const fIn = clip.fadeIn || 0;
                     const fOut = clip.fadeOut || 0;
 
-                    // Only apply if changes exist or if it's explicitly muted
                     if (clip.muted || vol !== 100 || fIn > 0 || fOut > 0) {
                         if (clip.muted || vol === 0) {
                             filters.push(`volume=0`);
                         } else {
-                            if (vol !== 100) filters.push(`volume=${(vol / 100).toFixed(2)}`);
-                            if (fIn > 0) filters.push(`afade=t=in:st=${clip.offset}:d=${fIn}`);
-                            if (fOut > 0) filters.push(`afade=t=out:st=${(clip.offset + clip.duration) - fOut}:d=${fOut}`);
+                            if (vol !== 100) {
+                                // Match the browser's perceived exponential curve for export
+                                const mappedVol = Math.pow(vol / 100, 2);
+                                filters.push(`volume=${mappedVol.toFixed(4)}`);
+                            }
+                            // FFmpeg's 'qua' curve perfectly matches our Math.pow(x, 2) logic
+                            if (fIn > 0) filters.push(`afade=t=in:st=${clip.offset}:d=${fIn}:curve=qua`);
+                            if (fOut > 0) filters.push(`afade=t=out:st=${(clip.offset + clip.duration) - fOut}:d=${fOut}:curve=qua`);
                         }
                     }
                     return filters.join(',');
@@ -498,6 +643,7 @@
             if (this.originalInspectorRender) NativeInspector.render = this.originalInspectorRender;
             
             document.getElementById(`${MODULE_ID}_styles`)?.remove();
+            document.querySelectorAll('.audio-waveform-canvas').forEach(el => el.remove());
             document.querySelectorAll('.audio-fade-vis').forEach(el => el.remove());
             document.querySelectorAll('.fade-handle').forEach(el => el.remove());
             
