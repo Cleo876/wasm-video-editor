@@ -1,8 +1,8 @@
 /**
  * @name On Startup Welcome
- * @version 0.1.0
+ * @version 0.4.0
  * @developer Forge™
- * @description A module to introduce new users to the editor, getting them familiar with the interface and knowledgeable on any new changes to the editor.
+ * @description A module to introduce new users to the editor, getting them familiar with the interface and knowledgeable on any new changes to the editor. Supports raw <br> tags for HTML line breaks.
  */
 (function() {
     const MODULE_ID = 'on_startup_welcome';
@@ -98,14 +98,17 @@
                     throw new Error("News file not found");
                 }
             } catch (e) {
-                this.newsData = [
-                    { title: "Welcome to Forge™" },
-                    { body: "We were unable to reach the news server. However, your editor is fully operational." }
-                ];
+                this.newsData = {
+                    content: [
+                        { title: "Welcome to Forge™" },
+                        { body: "We were unable to reach the news server. However, your editor is fully operational." }
+                    ]
+                };
             }
         },
 
         parseMarkdown(text) {
+            if (typeof text !== 'string') return text;
             let p = text;
             
             // 1. Images: [img](url) [alignment]
@@ -146,17 +149,33 @@
             // 3. Hyperlinks: [text](url)
             p = p.replace(/\[([^\]]+)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-teal-400 hover:text-teal-300 hover:underline font-bold transition">$1</a>');
 
+            // 4. Bold Text: **text**
+            p = p.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>');
+
+            // 5. Line Breaks: \n (Kept strictly as a safety fallback, <br> will pass natively)
+            p = p.replace(/\n/g, '<br>');
+
             return p;
         },
 
         renderNewsFeed() {
             let html = '';
-            const items = Array.isArray(this.newsData) ? this.newsData : [this.newsData];
+            
+            // Support both old array structure and new robust Object structure
+            let items = [];
+            if (Array.isArray(this.newsData)) items = this.newsData;
+            else if (this.newsData && Array.isArray(this.newsData.content)) items = this.newsData.content;
             
             items.forEach(item => {
+                // Ignore any internal/legend keys
+                if (item._legend || item._comment || item.__developer_notice) return;
+
                 if (item.title) html += `<h1 class="text-3xl font-black text-white mb-6 border-b border-[#333] pb-3 tracking-tight">${this.parseMarkdown(item.title)}</h1>`;
                 if (item.header1) html += `<h2 class="text-xl font-bold text-teal-400 mt-8 mb-3 tracking-wide">${this.parseMarkdown(item.header1)}</h2>`;
-                if (item.body) html += `<p class="text-sm text-gray-300 mb-5 leading-relaxed">${this.parseMarkdown(item.body)}</p><div class="clear-both"></div>`;
+                
+                if (item.body) {
+                    html += `<p class="text-sm text-gray-300 mb-5 leading-relaxed">${this.parseMarkdown(item.body)}</p><div class="clear-both"></div>`;
+                }
             });
             return html;
         },
