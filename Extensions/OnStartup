@@ -1,11 +1,12 @@
 /**
  * @name On Startup Welcome
- * @version 0.4.0
+ * @version 0.5.0
  * @developer Forge™
- * @description A module to introduce new users to the editor, getting them familiar with the interface and knowledgeable on any new changes to the editor. Supports raw <br> tags for HTML line breaks.
+ * @description A module to introduce new users to the editor, getting them familiar with the interface and knowledgeable on any new changes to the editor. Supports multi-line paragraphs, markdown styling, and intelligent banner caching.
  */
 (function() {
     const MODULE_ID = 'on_startup_welcome';
+    const MODULE_VERSION = '0.5.0'; // Used to force-bypass the 2-day cache limit on updates
     const GITHUB_BANNERS_API = 'https://api.github.com/repos/Cleo876/wasm-video-editor/contents/IMGs/Banners';
     const GITHUB_NEWS_URL = 'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/refs/heads/main/news/startupInfo.json';
     const CACHE_LIFETIME = 2 * 24 * 60 * 60 * 1000; // 2 Days in milliseconds
@@ -23,10 +24,21 @@
             // Retrieve Tool Version from Host, fallback if unavailable
             this.toolVersion = typeof TOOL_VERSION !== 'undefined' ? TOOL_VERSION : 'Unknown Version';
             
+            this.injectFonts();
             this.injectStyles();
             await this.prepareBannerImage();
             await this.fetchNewsData();
             this.buildAndShowModal();
+        },
+
+        injectFonts() {
+            if (!document.getElementById('josefin-sans-font')) {
+                const link = document.createElement('link');
+                link.id = 'josefin-sans-font';
+                link.rel = 'stylesheet';
+                link.href = 'https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600;700&display=swap';
+                document.head.appendChild(link);
+            }
         },
 
         injectStyles() {
@@ -37,11 +49,12 @@
                     position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px);
                     z-index: 100000; display: flex; align-items: center; justify-content: center;
                     opacity: 0; transition: opacity 0.4s ease-out;
+                    font-family: 'Josefin Sans', sans-serif;
                 }
                 .welcome-modal {
-                    position: relative; width: 850px; height: 500px; max-width: 95vw; max-height: 90vh;
-                    background: #111; border: 1px solid #333; border-radius: 16px;
-                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+                    position: relative; width: 960px; height: 540px; max-width: 95vw; max-height: 90vh;
+                    background: #111; border: 1px solid #2a2a2a; border-radius: 12px;
+                    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.9);
                     overflow: hidden;
                 }
                 .welcome-page {
@@ -50,10 +63,38 @@
                     display: flex; flex-direction: column;
                 }
                 #welcome-page-1 { transform: translateX(0%); }
-                #welcome-page-2 { transform: translateX(100%); background: #151515; }
+                #welcome-page-2 { transform: translateX(100%); background: #0a0a0a; }
                 
                 .welcome-modal.swiped #welcome-page-1 { transform: translateX(-100%); }
                 .welcome-modal.swiped #welcome-page-2 { transform: translateX(0%); }
+
+                .nav-btn-sm {
+                    width: 40px; height: 40px; border-radius: 50%;
+                    display: flex; align-items: center; justify-content: center;
+                    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+                    cursor: pointer; z-index: 50; outline: none;
+                }
+                
+                .btn-glass {
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    color: white; backdrop-filter: blur(8px);
+                }
+                .btn-glass:hover {
+                    background: rgba(255, 255, 255, 1);
+                    color: black; transform: scale(1.05);
+                    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+                }
+
+                .btn-dark {
+                    background: #1a1a1a;
+                    border: 1px solid #333;
+                    color: #888;
+                }
+                .btn-dark:hover {
+                    background: #2a2a2a; color: white; border-color: #555;
+                    transform: scale(1.05);
+                }
 
                 .forge-custom-video .v-controls { opacity: 0; transition: opacity 0.3s; }
                 .forge-custom-video:hover .v-controls, .forge-custom-video.paused .v-controls { opacity: 1; }
@@ -66,16 +107,39 @@
             try {
                 let cache = await DB.get('system', 'welcome_banner_cache');
                 const now = Date.now();
+                let needsFetch = false;
 
-                // Fetch if no cache, or if cache is older than 2 days
-                if (!cache || !cache.urls || cache.urls.length === 0 || (now - cache.timestamp > CACHE_LIFETIME)) {
-                    console.log(`[${MODULE_ID}] Fetching fresh banners from GitHub...`);
+                // Condition 1: No cache exists
+                if (!cache || !cache.urls || cache.urls.length === 0) {
+                    needsFetch = true;
+                } 
+                // Condition 2: Version Bump (Overrides the 2-day limit to grab fresh images)
+                else if (cache.version !== MODULE_VERSION) {
+                    console.log(`[${MODULE_ID}] Version bumped to ${MODULE_VERSION}. Bypassing time lock to fetch new banners...`);
+                    needsFetch = true;
+                }
+                // Condition 3: 2 Days have passed
+                else if (now - cache.timestamp > CACHE_LIFETIME) {
+                    console.log(`[${MODULE_ID}] 2-day cache expired. Fetching fresh banners...`);
+                    needsFetch = true;
+                }
+
+                if (needsFetch) {
                     const res = await fetch(GITHUB_BANNERS_API);
                     if (res.ok) {
                         const data = await res.json();
-                        const urls = data.filter(f => f.name.match(/\.(png|jpg|jpeg|webp|gif)$/i)).map(f => f.download_url);
+                        const fetchedUrls = data.filter(f => f.name.match(/\.(png|jpg|jpeg|webp|gif)$/i)).map(f => f.download_url);
                         
-                        cache = { id: 'welcome_banner_cache', timestamp: now, urls: urls };
+                        let existingUrls = (cache && cache.urls) ? cache.urls : [];
+                        
+                        // Push any images we don't already have into the existing array
+                        fetchedUrls.forEach(url => {
+                            if (!existingUrls.includes(url)) {
+                                existingUrls.push(url);
+                            }
+                        });
+                        
+                        cache = { id: 'welcome_banner_cache', timestamp: now, urls: existingUrls, version: MODULE_VERSION };
                         await DB.put('system', cache);
                     }
                 }
@@ -100,7 +164,7 @@
             } catch (e) {
                 this.newsData = {
                     content: [
-                        { title: "Welcome to Forge™" },
+                        { title: "Welcome to WASM Editor" },
                         { body: "We were unable to reach the news server. However, your editor is fully operational." }
                     ]
                 };
@@ -114,30 +178,30 @@
             // 1. Images: [img](url) [alignment]
             p = p.replace(/\[img\]\((.*?)\)\s*\[(right|left|centre|center)\]/gi, (m, url, align) => {
                 const a = align.toLowerCase();
-                let cls = 'rounded-xl shadow-lg border border-[#333] max-w-[45%] object-cover ';
-                if (a === 'right') cls += 'float-right ml-5 mb-3';
-                else if (a === 'left') cls += 'float-left mr-5 mb-3';
-                else cls = 'block mx-auto mb-4 w-3/4 rounded-xl shadow-lg border border-[#333] object-cover';
+                let cls = 'rounded-xl shadow-lg border border-[#222] max-w-[45%] object-cover ';
+                if (a === 'right') cls += 'float-right ml-6 mb-4';
+                else if (a === 'left') cls += 'float-left mr-6 mb-4';
+                else cls = 'block mx-auto mb-5 w-3/4 rounded-xl shadow-lg border border-[#222] object-cover';
                 return `<img src="${url}" class="${cls}">`;
             });
 
             // 2. Videos: [video](url) (Custom Chrome-less Player)
             p = p.replace(/\[video\]\((.*?)\)/gi, (m, url) => {
                 return `
-                    <div class="forge-custom-video relative w-4/5 mx-auto aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-[#333] mb-6 mt-2 paused flex-shrink-0" data-src="${url}">
+                    <div class="forge-custom-video relative w-4/5 mx-auto aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-[#222] mb-6 mt-3 paused flex-shrink-0" data-src="${url}">
                         <video src="${url}" class="w-full h-full object-contain" preload="metadata" playsinline></video>
                         <div class="v-controls absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 flex flex-col justify-between">
                             <div class="flex justify-end p-3">
-                                <button class="v-fullscreen text-white hover:text-teal-400 drop-shadow-md transition"><i class="fa-solid fa-expand text-lg"></i></button>
+                                <button class="v-fullscreen text-white hover:text-teal-400 drop-shadow-md transition"><i class="fa-solid fa-expand text-sm"></i></button>
                             </div>
                             <div class="flex justify-center items-center flex-1">
-                                <button class="v-play text-white/90 hover:text-teal-400 text-6xl drop-shadow-[0_0_15px_rgba(0,0,0,0.8)] transition-transform transform hover:scale-110 active:scale-95">
+                                <button class="v-play text-white/90 hover:text-teal-400 text-5xl drop-shadow-[0_0_15px_rgba(0,0,0,0.8)] transition-transform transform hover:scale-110 active:scale-95">
                                     <i class="fa-solid fa-circle-play"></i>
                                 </button>
                             </div>
                             <div class="p-4 pt-0 w-full flex items-center gap-3">
                                 <span class="v-time text-[10px] text-white font-mono drop-shadow-md">0:00</span>
-                                <div class="v-progress-bg h-1.5 bg-gray-600/50 rounded-full cursor-pointer relative overflow-hidden flex-1 backdrop-blur-sm">
+                                <div class="v-progress-bg h-1 bg-gray-600/50 rounded-full cursor-pointer relative overflow-hidden flex-1 backdrop-blur-sm">
                                     <div class="v-progress-bar h-full bg-teal-500 w-0 pointer-events-none rounded-full transition-all duration-75"></div>
                                 </div>
                             </div>
@@ -147,35 +211,29 @@
             });
 
             // 3. Hyperlinks: [text](url)
-            p = p.replace(/\[([^\]]+)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-teal-400 hover:text-teal-300 hover:underline font-bold transition">$1</a>');
+            p = p.replace(/\[([^\]]+)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-teal-400 hover:text-teal-300 hover:underline font-semibold transition">$1</a>');
 
             // 4. Bold Text: **text**
-            p = p.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>');
+            p = p.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>');
 
-            // 5. Line Breaks: \n (Kept strictly as a safety fallback, <br> will pass natively)
-            p = p.replace(/\n/g, '<br>');
+            // 5. Native Line Breaks to HTML
+            p = p.replace(/<br>/g, '<br/>');
 
             return p;
         },
 
         renderNewsFeed() {
             let html = '';
-            
-            // Support both old array structure and new robust Object structure
             let items = [];
             if (Array.isArray(this.newsData)) items = this.newsData;
             else if (this.newsData && Array.isArray(this.newsData.content)) items = this.newsData.content;
             
             items.forEach(item => {
-                // Ignore any internal/legend keys
                 if (item._legend || item._comment || item.__developer_notice) return;
 
-                if (item.title) html += `<h1 class="text-3xl font-black text-white mb-6 border-b border-[#333] pb-3 tracking-tight">${this.parseMarkdown(item.title)}</h1>`;
-                if (item.header1) html += `<h2 class="text-xl font-bold text-teal-400 mt-8 mb-3 tracking-wide">${this.parseMarkdown(item.header1)}</h2>`;
-                
-                if (item.body) {
-                    html += `<p class="text-sm text-gray-300 mb-5 leading-relaxed">${this.parseMarkdown(item.body)}</p><div class="clear-both"></div>`;
-                }
+                if (item.title) html += `<h1 class="text-2xl font-bold text-white mb-5 border-b border-[#222] pb-2 tracking-tight">${this.parseMarkdown(item.title)}</h1>`;
+                if (item.header1) html += `<h2 class="text-lg font-semibold text-teal-400 mt-6 mb-2 tracking-wide">${this.parseMarkdown(item.header1)}</h2>`;
+                if (item.body) html += `<p class="text-xs text-gray-400 mb-4 leading-relaxed">${this.parseMarkdown(item.body)}</p><div class="clear-both"></div>`;
             });
             return html;
         },
@@ -189,30 +247,29 @@
                     
                     <!-- PAGE 1: HERO / WELCOME -->
                     <div id="welcome-page-1" class="welcome-page bg-[#0a0a0a]">
-                        <!-- Background Banner with Seamless Cross-fade Alpha Blend -->
-                        <div class="absolute inset-0 bg-cover bg-center transition-opacity" style="background-image: url('${this.bannerUrl}');"></div>
-                        <div class="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/95 to-transparent"></div>
-                        <div class="absolute inset-0 bg-[#0a0a0a]/30"></div> <!-- Global dark wash for text readability on right -->
+                        <div class="absolute inset-0 bg-cover bg-center transition-opacity" style="background-image: url('${this.bannerUrl}'); opacity: 0.6;"></div>
+                        <div class="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-80"></div>
 
                         <div class="relative z-10 w-full h-full flex flex-col justify-between p-12">
                             <div>
-                                <h1 class="text-5xl font-black text-white tracking-tighter drop-shadow-lg flex items-center gap-4">
-                                    <i class="fa-solid fa-layer-group text-teal-500"></i> WASM Video Editor
+                                <h1 class="text-4xl font-bold text-white tracking-tight drop-shadow-lg flex items-center gap-3">
+                                    <i class="fa-solid fa-layer-group text-teal-500"></i> WASM Editor
                                 </h1>
-                                <span class="inline-block mt-3 px-3 py-1 bg-teal-500/20 text-teal-400 border border-teal-500/30 rounded text-xs font-bold font-mono tracking-widest shadow-lg">
+                                <span class="inline-block mt-2 px-2 py-0.5 bg-teal-500/10 text-teal-400 border border-teal-500/20 rounded text-[10px] font-semibold font-mono tracking-widest shadow-lg">
                                     VERSION ${this.toolVersion}
                                 </span>
                             </div>
 
                             <div class="flex justify-between items-end w-full">
-                                <div class="max-w-md">
-                                    <p class="text-gray-300 text-sm leading-relaxed drop-shadow-md border-l-2 border-teal-500 pl-4">
-                                        Forge™ is the apex of browser-based non-linear editing. Harnessing the raw computational power of WebAssembly and the HTML5 Canvas, it delivers a zero-latency, privacy-first ecosystem. Compose, grade, and export Hollywood-tier video without ever leaving your browser.
+                                <div class="max-w-[420px]">
+                                    <p class="text-gray-300 text-xs leading-relaxed drop-shadow-md border-l-2 border-teal-500 pl-4">
+                                        WASM Editor is the apex of browser-based non-linear editing. Harnessing the raw computational power of WebAssembly and the HTML5 Canvas, it delivers a zero-latency, privacy-first ecosystem. Compose, grade, and export Hollywood-tier video without ever leaving your browser.
                                     </p>
                                 </div>
 
-                                <button id="welcome-proceed-btn" class="bg-white text-black hover:bg-teal-400 font-bold w-14 h-14 rounded-full flex items-center justify-center shadow-[0_10px_25px_rgba(0,0,0,0.8)] transition-all transform hover:scale-110 active:scale-95 group">
-                                    <i class="fa-solid fa-chevron-right text-xl group-hover:translate-x-1 transition-transform"></i>
+                                <button id="welcome-proceed-btn" class="nav-btn-sm btn-glass group" title="Next">
+                                    <i class="fa-solid fa-chevron-right text-xs group-hover:translate-x-0.5 transition-transform"></i>
                                 </button>
                             </div>
                         </div>
@@ -220,20 +277,25 @@
 
                     <!-- PAGE 2: NEWS / UPDATES -->
                     <div id="welcome-page-2" class="welcome-page">
-                        <div class="flex justify-between items-center p-6 border-b border-[#222] bg-[#111] flex-shrink-0">
-                            <h2 class="text-lg font-bold text-gray-200 uppercase tracking-widest flex items-center gap-3">
+                        <div class="flex justify-between items-center p-5 border-b border-[#1a1a1a] bg-[#0a0a0a] flex-shrink-0 shadow-md z-10">
+                            <h2 class="text-sm font-bold text-gray-200 uppercase tracking-widest flex items-center gap-2">
                                 <i class="fa-regular fa-newspaper text-teal-500"></i> What's New
                             </h2>
-                            <button id="welcome-close-btn" class="w-8 h-8 flex items-center justify-center rounded-full bg-[#222] text-gray-400 hover:bg-red-600 hover:text-white transition-colors border border-[#333] hover:border-red-500">
-                                <i class="fa-solid fa-xmark"></i>
+                            <button id="welcome-close-btn" class="w-7 h-7 flex items-center justify-center rounded-full bg-[#1a1a1a] text-gray-400 hover:bg-red-600 hover:text-white transition-colors border border-[#2a2a2a] hover:border-red-500 outline-none">
+                                <i class="fa-solid fa-xmark text-sm"></i>
                             </button>
                         </div>
                         
-                        <div class="flex-1 overflow-y-auto custom-scroll p-8 bg-[#151515]">
-                            <div class="max-w-3xl mx-auto pb-10">
+                        <div class="flex-1 overflow-y-auto custom-scroll p-8 relative">
+                            <div class="max-w-2xl mx-auto pb-16">
                                 ${this.renderNewsFeed()}
                             </div>
                         </div>
+
+                        <!-- Absolute positioned back button sitting cleanly at the bottom left -->
+                        <button id="welcome-back-btn" class="absolute bottom-8 left-8 nav-btn-sm btn-dark group z-50" title="Back">
+                            <i class="fa-solid fa-chevron-left text-xs group-hover:-translate-x-0.5 transition-transform"></i>
+                        </button>
                     </div>
                 </div>
             `;
@@ -248,6 +310,10 @@
             // Bind Animations & Controls
             document.getElementById('welcome-proceed-btn').onclick = () => {
                 document.getElementById('welcome-modal').classList.add('swiped');
+            };
+
+            document.getElementById('welcome-back-btn').onclick = () => {
+                document.getElementById('welcome-modal').classList.remove('swiped');
             };
 
             document.getElementById('welcome-close-btn').onclick = () => {
