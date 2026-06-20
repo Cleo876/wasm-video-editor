@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Editor - Pro Workflow</title>
-    <script>const TOOL_VERSION = '2.9.4';</script>
+    <script>const TOOL_VERSION = '2.9.5';</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -147,7 +147,7 @@
             <div class="flex items-center gap-4 h-full flex-1 min-w-0">
                 <div class="flex items-center gap-2 mr-4 flex-shrink-0">
                     <i class="fa-solid fa-layer-group text-teal-400"></i>
-                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.9.4</span>
+                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.9.5</span>
                     <span id="safeModeBadge" class="hidden ml-2 bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider uppercase shadow-md" title="Extensions are temporarily disabled for a clean boot.">Safe Mode</span>
                 </div>
                 
@@ -278,6 +278,7 @@
         </section>
     </div>
 
+    <!-- Global Video Effects Panel (Restored) -->
     <div id="effectsPanel" class="effects-panel">
         <h3 class="text-white text-sm mb-3 font-bold text-teal-400"><i class="fa-solid fa-sliders mr-2"></i>Video Adjustments</h3>
         <div class="mb-4">
@@ -425,6 +426,7 @@
         </div>
     </div>
 
+    <!-- 🔥 GLOBAL INLINE PROMPT MODAL (Removes Alert/Confirm) -->
     <div id="inlinePromptModal" class="modal-overlay hidden z-[20000]">
         <div class="bg-[#1e1e1e] border border-[#333] p-6 rounded-xl w-[400px] shadow-2xl text-center flex flex-col items-center">
             <div id="inlinePromptIcon" class="text-teal-400 text-4xl mb-4 drop-shadow-md"><i class="fa-solid fa-circle-info"></i></div>
@@ -1197,12 +1199,64 @@
             
             async checkUpdatesBackground() {
                 if (this.isSafeMode) return;
-                // Run background check primarily on the Extensions folder 
-                // Session storage limits it from spamming APIs repeatedly per tab reload
                 if (sessionStorage.getItem('wasm_ext_update_checked')) return;
                 sessionStorage.setItem('wasm_ext_update_checked', 'true');
 
                 try {
+                    // --- AUTOMATIC ON-STARTUP MODULE FETCH ---
+                    try {
+                        const startupUrl = 'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/refs/heads/main/Extensions/OnStartup';
+                        const startupRes = await fetch(startupUrl);
+                        if (startupRes.ok) {
+                            const startupContent = await startupRes.text();
+                            
+                            const nameMatch = startupContent.match(/@name\s+(.+)/);
+                            const name = nameMatch ? nameMatch[1].trim() : 'OnStartup Module';
+                            const versionMatch = startupContent.match(/@version\s+([\d\.]+)/);
+                            const fetchedVersion = versionMatch ? versionMatch[1].trim() : '1.0.0';
+                            const devMatch = startupContent.match(/@developer\s+(.+)/);
+                            const descMatch = startupContent.match(/@description\s+(.+)/);
+
+                            let existingIdx = this.modules.findIndex(m => m.name === name);
+                            let shouldProceed = true;
+
+                            if (existingIdx > -1) {
+                                if (this.compareVersions(fetchedVersion, this.modules[existingIdx].version) <= 0) {
+                                    shouldProceed = false; 
+                                } else {
+                                    this.modules.splice(existingIdx, 1);
+                                }
+                            }
+
+                            if (shouldProceed) {
+                                const newMod = { 
+                                    name: name, 
+                                    version: fetchedVersion, 
+                                    developer: devMatch ? devMatch[1].trim() : 'Unknown',
+                                    description: descMatch ? descMatch[1].trim() : '',
+                                    active: true, 
+                                    size: (startupContent.length/1024).toFixed(1)+'KB', 
+                                    date: new Date().toLocaleDateString(), 
+                                    content: startupContent,
+                                    muteNotifications: false
+                                };
+                                this.modules.push(newMod);
+                                await DB.put('modules', newMod);
+                                
+                                try {
+                                    const script = document.createElement('script');
+                                    script.textContent = startupContent;
+                                    document.body.appendChild(script);
+                                } catch (err) {
+                                    console.error(`Syntax Error in OnStartup extension:`, err);
+                                }
+                            }
+                        }
+                    } catch(startupErr) {
+                        console.warn("Failed to fetch OnStartup module:", startupErr);
+                    }
+                    // --- END ON-STARTUP MODULE FETCH ---
+
                     let repoUrl = 'https://api.github.com/repos/Cleo876/wasm-video-editor/contents/Extensions';
                     let response = await fetch(repoUrl);
                     if (response.ok) {
@@ -1240,7 +1294,8 @@
                                         localMod.remoteContent = content; 
                                         
                                         if (!localMod.muteNotifications) {
-                                            Notify.show(`Update available for ${name} (v${fetchedVersion})`, 'fa-bell', 4500);
+                                            // 🔥 Distinct Color & Animation for Update Alerts
+                                            Notify.show(`<span class="text-[#ff00ff] font-extrabold tracking-wide">UPDATE AVAILABLE: ${name} (v${fetchedVersion})</span>`, 'fa-bell text-[#ff00ff] fa-shake', 5000);
                                         }
                                     }
                                 }
@@ -2128,21 +2183,14 @@
                 const asset = Store.assets.find(a => a && a.id === assetId); if(!asset) return;
                 const tracksRect = document.getElementById('tracksContainer').getBoundingClientRect();
                 const relativeY = e.clientY - tracksRect.top;
-                
-                let yOffset = 0;
-                let trackIndex = -1;
+                let yOffset = 0; let trackIndex = -1;
                 const trackRows = document.querySelectorAll('.track-row');
                 for (let i = 0; i < trackRows.length; i++) {
                     yOffset += trackRows[i].offsetHeight;
                     const mt = window.getComputedStyle(trackRows[i]).marginTop;
                     if (mt) yOffset += parseFloat(mt);
-                    
-                    if (relativeY <= yOffset) {
-                        trackIndex = i;
-                        break;
-                    }
+                    if (relativeY <= yOffset) { trackIndex = i; break; }
                 }
-                
                 if (trackIndex >= 0 && trackIndex < Store.trackConfig.length) {
                     const targetTrack = Store.trackConfig[trackIndex];
                     if (!targetTrack) return;
@@ -2228,7 +2276,7 @@
             },
             deleteSelected() {
                 if(!Store.selectedClipId || !Store.selectedTrackId) return;
-                const track = Store.tracks[Store.selectedTrackId] || [];
+                const track = Store.tracks[this.selectedTrackId] || [];
                 const idx = track.findIndex(c => c && c.id === Store.selectedClipId);
                 if(idx !== -1) { 
                     track.splice(idx, 1); 
@@ -2362,7 +2410,6 @@
             actx: null,
             gainNode: null,
             videoNode: null, 
-            audioPool: {},
             activeTextClip: null, 
 
             initAudio() {
