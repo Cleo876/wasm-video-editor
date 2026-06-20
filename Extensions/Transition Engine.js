@@ -1,8 +1,8 @@
 /**
  * @name Advanced Transitions Engine
- * @version 7.2.5
+ * @version 8.3.0
  * @developer Forge™
- * @description The Definitive Ecosystem. Restores the pristine UX of v5.0.2 (Drag-to-Snap & Double-Click) paired with True-Facilitator rendering, dynamic scaling, Z-index fortifications, and a refined single‑button Add/Edit UI. Now with Rubicon awareness.
+ * @description The Definitive Ecosystem. Features the "Necromancer" Early Resurrection algorithm, Intelligent Z-Index Splicing for Slide/Push overlap, Paired Delta Routing, and On-Demand GitHub syncing.
  */
 (function() {
     const MODULE_ID = 'advanced_transitions_engine';
@@ -12,13 +12,13 @@
         return;
     }
 
-    // --- THE TRANSITION ECOSYSTEM REGISTRY (UNCHANGED) ---
     window.TRANSITION_REGISTRY = {
         'dissolve': {
             name: 'Cross Dissolve',
             description: 'Smoothly blends the transparency of the clip from 0% to 100%.',
             defaultDuration: 1.0,
             autoReverse: true,
+            pingPong: false, 
             getUI: (params) => `<div class="text-xs text-gray-500 italic mt-2">Smoothly blends transparency.</div>`,
             getParams: () => ({}),
             onRender: null, 
@@ -30,6 +30,7 @@
             defaultDuration: 1.0,
             maxDuration: 10.0,
             autoReverse: true, 
+            pingPong: true, 
             getUI: (params) => `
                 <div class="mt-3">
                     <label class="block text-[10px] text-gray-500 font-bold mb-1 uppercase">Fade Color</label>
@@ -57,7 +58,6 @@
         panelClipId: null,
         previewTimer: null,
         
-        // Native Host Hooks
         originalDrawToCanvas: null,
         originalRenderTrack: null,
         originalSelectClip: null,
@@ -72,7 +72,7 @@ Welcome to the Transition Ecosystem! You can easily add custom transitions to th
 Here is the exact step-by-step blueprint to create your own:
 
 ### Step 1: The File Setup
-Create a new \`.js\` file and include these mandatory headers at the top so the automated GitHub updater can track versions:
+Create a new \`.js\` file and include these mandatory headers:
 \`\`\`javascript
 /**
  * @name Color Wipe
@@ -83,52 +83,45 @@ Create a new \`.js\` file and include these mandatory headers at the top so the 
 \`\`\`
 
 ### Step 2: Register the Engine
-Add your logic to the global registry object. You can dynamically restrict the scaling using \`maxDuration\`.
+Add your logic to the global registry object. 
 \`\`\`javascript
 window.TRANSITION_REGISTRY['color_wipe'] = {
     name: 'Color Wipe',
     description: 'Swipes a solid color block across the screen.',
     defaultDuration: 1.0,
-    maxDuration: 3.0,
-    
+    maxDuration: 3.0, 
     autoReverse: true, 
+    
+    // NEW in v8.2.0: pingPong 
+    // Set to true if your transition should peak in the middle and reverse back out when centered (e.g. Fade to Black)
+    pingPong: false, 
 \`\`\`
 
-### Step 3: Build the UI (Optional)
-Let users customize it in the inspector!
+### Step 3: Delta Transforms (Spatial Transitions)
+If you want to move clips around the screen (like a Push or Slide) without overriding the user's manual canvas position, inject Delta values using \`getClipTransform\`.
 \`\`\`javascript
-    getUI: (params) => \`
-        <div class="mt-3">
-            <label style="font-size: 10px; color: gray; font-weight: bold;">WIPE COLOR</label>
-            <input type="color" id="wipe_color" value="\${params.color || '#ffffff'}" style="width: 100%; height: 32px; background: transparent; cursor: pointer; border-radius: 4px; border: 1px solid #333;">
-        </div>
-    \`,
-    getParams: () => ({ color: document.getElementById('wipe_color').value }),
+    // Engine automatically feeds these offsets into the PiP Transform Engine!
+    getClipTransform: (progress, edge, params) => {
+        let delta = { x: 0, y: 0, scale: 0, rotation: 0 };
+        if (edge === 'in') delta.x = (1 - progress) * 100; // Slide in from right
+        if (edge === 'out') delta.x = progress * -100;     // Slide out to left
+        return delta;
+    },
 \`\`\`
 
-### Step 4: The Canvas Render (Preview)
-This is the visual magic! It runs 60 times a second during preview playback. 
-The Editor handles dynamic time scaling for you: \`progress\` is a decimal that always goes from \`0.0\` (start) to \`1.0\` (end) exactly over the uninterrupted duration of the transition block.
+### Step 4: The Canvas Render (Overlay Preview)
+If you are generating colors or shapes, draw directly over the composited frame using \`onRender\`:
 \`\`\`javascript
     onRender: (ctx, canvas, progress, params) => {
         ctx.fillStyle = params.color || '#ffffff';
         ctx.fillRect(0, 0, canvas.width * progress, canvas.height);
     },
-\`\`\`
-
-### Step 5: FFmpeg Export
-Translate your effect into FFmpeg string format for the final MP4 render.
-\`\`\`javascript
-    getFFmpeg: (edge, duration, params, alignment) => {
-        const hexColor = (params.color || '#ffffff').replace('#', '0x');
-        return "fade=t=" + edge + ":st=0:d=" + duration + ":c=" + hexColor; 
-    }
-}; // Close the registry object
+}; 
 \`\`\`
 `,
         
         async init() {
-            console.log(`[${MODULE_ID}] Booting Advanced Ecosystem...`);
+            console.log(`[${MODULE_ID}] Booting Advanced Ecosystem v8.3.0...`);
             
             await this.loadPersistentTransitions();
             this.checkForUpdates(); 
@@ -161,7 +154,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 saved.scripts.push(scriptString);
                 await DB.put('system', saved);
                 eval(scriptString); 
-                Notify.show("Custom Transition Installed", "fa-puzzle-piece");
+                if (typeof Notify !== 'undefined') Notify.show("Custom Transition Installed", "fa-puzzle-piece");
                 this.updatePanelUI(); 
             } catch (e) {
                 alert("Failed to install transition script.");
@@ -221,7 +214,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
 
                 if (updatedCount > 0) {
                     await DB.put('system', saved);
-                    Notify.show(`Synced ${updatedCount} Transitions`, 'fa-cloud-arrow-down');
+                    if (typeof Notify !== 'undefined') Notify.show(`Synced ${updatedCount} Transitions`, 'fa-cloud-arrow-down');
                     if (this.panel && this.panel.style.display === 'block') this.updatePanelUI();
                 }
             } catch(e) {}
@@ -251,7 +244,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                     top: 0; bottom: 0;
                     background: repeating-linear-gradient(45deg, rgba(0,210,190,0.2), rgba(0,210,190,0.2) 5px, rgba(0,0,0,0.5) 5px, rgba(0,0,0,0.5) 10px);
                     border: 1px solid rgba(0,210,190,0.8);
-                    z-index: 8;
+                    z-index: 8; 
                     cursor: grab;
                     transition: background 0.2s, border-color 0.2s;
                     pointer-events: auto;
@@ -262,6 +255,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 
                 .trans-block.in.align-edge { left: 0; border-left: none; border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
                 .trans-block.out.align-edge { right: 0; border-right: none; border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+                
                 .trans-block.in.align-center { left: 0; transform: translateX(-50%); border-radius: 4px; }
                 .trans-block.out.align-center { right: 0; transform: translateX(50%); border-radius: 4px; }
                 
@@ -317,7 +311,6 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             document.head.appendChild(style);
         },
 
-        // ---------- MENU BUTTON with Rubicon awareness ----------
         injectMenuButton() {
             const header = document.querySelector('header .flex-1');
             if (!header) return;
@@ -348,13 +341,11 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 const clip = this.getClipById(clipId);
                 if (!clip) return;
 
-                // --- RUBICON GUARD ---
                 if (this.clipHasActiveGraph(clip)) {
                     this.showRubiconNotice();
                     return;
                 }
 
-                // Toggle panel close if already open for this clip
                 if (this.panel.style.display === 'block' && this.panelClipId === clipId) {
                     this.closeEditor();
                     return;
@@ -374,25 +365,16 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             this.updateMenuItems();
         },
 
-        // Helper: determine if clip has an active Rubicon graph
         clipHasActiveGraph(clip) {
-            // Grab the global Rubicon engine instance if available
-            const rubicon = window.GRAPH_ENGINE;
-            // A clip is considered "graph‑active" if it has graphData with nodes/wires beyond the default
-            // (the same logic the Rubicon inspector uses to show "EDIT GRAPH")
             if (clip.graphData) {
                 const nodes = clip.graphData.nodes || [];
                 const wires = clip.graphData.wires || [];
-                // If there are more than 2 nodes (media_in, media_out) or any wires, the graph is active
                 if (nodes.length > 2 || wires.length > 0) return true;
-                // Even just having graphData at all could be considered active, but we'll be lenient
-                // and treat any graphData as active if it exists (the user might have saved a default graph)
-                return true; // uncomment for strictness: /* true */ 
+                return true; 
             }
             return false;
         },
 
-        // Show an inline notification (using Notify) to bake first
         showRubiconNotice() {
             if (typeof Notify !== 'undefined') {
                 Notify.show("Bake Rubicon effects first before adding transitions", "fa-triangle-exclamation");
@@ -414,7 +396,6 @@ Translate your effect into FFmpeg string format for the final MP4 render.
         },
 
         addTransitionToSelected(edge) {
-            // Kept for programmatic use, but also guarded
             const clipId = Store.selectedClipId;
             if (!clipId) {
                 alert("Please select a video or image clip first.");
@@ -433,11 +414,12 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 type: 'dissolve', 
                 duration: window.TRANSITION_REGISTRY['dissolve'].defaultDuration, 
                 alignment: 'edge', 
+                easing: 'scurve',
                 params: {} 
             };
             
             Store.saveState();
-            UI.refreshTimeline();
+            if (typeof UI !== 'undefined') UI.refreshTimeline();
             this.openEditor(clip.id, edge);
         },
 
@@ -454,7 +436,6 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             input.click();
         },
 
-        // ---------- EDITOR PANEL (unchanged except for minor guard in openEditor) ----------
         createEditorPanel() {
             const p = document.createElement('div');
             p.id = 'transitionEditorPanel';
@@ -467,7 +448,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             
             p.innerHTML = `
                 <div id="teTransHeader" class="bg-[#222] p-3 border-b border-[#333] flex justify-between items-center cursor-move select-none">
-                    <span class="text-xs font-bold text-white"><i class="fa-solid fa-shuffle text-teal-400 mr-2"></i>TRANSITION EDITOR</span>
+                    <span class="text-xs font-bold text-white"><i id="teSyncIcon" class="fa-solid fa-shuffle text-teal-400 mr-2 transition-transform"></i>TRANSITION EDITOR</span>
                     <button id="teTransClose" class="text-gray-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 
@@ -476,53 +457,64 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                     <button id="teTabGuide" class="flex-1 py-2 text-xs font-bold text-gray-500 border-b-2 border-transparent hover:text-gray-300 transition">Dev Guide</button>
                 </div>
 
-                <div id="teSettingsView" class="p-4 flex flex-col gap-3">
-                    <div id="teEdgeTabs">
+                <div id="teSettingsView" class="flex flex-col">
+                    <div id="teEdgeTabs" class="flex-shrink-0">
                         <button id="teEdgeTabStart" class="active">START</button>
                         <button id="teEdgeTabEnd">END</button>
                     </div>
 
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="text-[10px] font-bold text-gray-500 uppercase bg-[#111] px-2 py-1 rounded border border-[#333]" id="teTransEdgeBadge">START</span>
-                        <span class="text-xs text-gray-400 truncate flex-1" id="teTransClipName">Clip Name</span>
-                    </div>
+                    <div class="p-4 flex flex-col gap-3 overflow-y-auto custom-scroll max-h-[350px]">
+                        <div class="flex items-center gap-2 mb-2 flex-shrink-0">
+                            <span class="text-[10px] font-bold text-gray-500 uppercase bg-[#111] px-2 py-1 rounded border border-[#333]" id="teTransEdgeBadge">START</span>
+                            <span class="text-xs text-gray-400 truncate flex-1" id="teTransClipName">Clip Name</span>
+                        </div>
 
-                    <div>
-                        <label class="block text-[10px] uppercase text-gray-500 font-bold mb-1">Transition Type</label>
-                        <div class="relative">
-                            <div id="teTransTypeDisplay" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm rounded cursor-pointer flex justify-between items-center">
-                                <span id="teTransTypeName" class="font-bold text-teal-400">Select...</span>
-                                <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                        <div class="flex-shrink-0">
+                            <label class="block text-[10px] uppercase text-gray-500 font-bold mb-1">Transition Type</label>
+                            <div class="relative">
+                                <div id="teTransTypeDisplay" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm rounded cursor-pointer flex justify-between items-center">
+                                    <span id="teTransTypeName" class="font-bold text-teal-400">Select...</span>
+                                    <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                                </div>
+                                <div id="teTransTypeList" class="absolute top-full left-0 right-0 bg-[#1a1a1a] border border-[#333] mt-1 rounded shadow-xl z-50 hidden max-h-56 overflow-y-auto custom-scroll"></div>
                             </div>
-                            <div id="teTransTypeList" class="absolute top-full left-0 right-0 bg-[#1a1a1a] border border-[#333] mt-1 rounded shadow-xl z-50 hidden max-h-56 overflow-y-auto custom-scroll"></div>
                         </div>
-                    </div>
-                    
-                    <div class="mt-2 flex gap-2">
-                        <div class="flex-1">
-                            <label class="block text-[10px] uppercase text-gray-500 font-bold mb-1">Duration (s)</label>
-                            <input type="number" id="teTransDuration" step="0.1" min="0.1" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm rounded outline-none focus:border-teal-500">
+                        
+                        <div class="mt-2 flex gap-2 flex-shrink-0">
+                            <div class="flex-1">
+                                <label class="block text-[10px] uppercase text-gray-500 font-bold mb-1">Duration (s)</label>
+                                <input type="number" id="teTransDuration" step="0.1" min="0.1" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm rounded outline-none focus:border-teal-500">
+                            </div>
+                            <div class="flex-1">
+                                <label class="block text-[10px] uppercase text-gray-500 font-bold mb-1">Position</label>
+                                <select id="teTransAlignment" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm rounded outline-none focus:border-teal-500">
+                                    <option value="edge">Edge Snap</option>
+                                    <option value="center">Half-n-Half</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="flex-1">
-                            <label class="block text-[10px] uppercase text-gray-500 font-bold mb-1">Position</label>
-                            <select id="teTransAlignment" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm rounded outline-none focus:border-teal-500">
-                                <option value="edge">Edge Snap</option>
-                                <option value="center">Half-n-Half</option>
+
+                        <div class="mt-2 flex-shrink-0">
+                            <label class="block text-[10px] uppercase text-gray-500 font-bold mb-1">Easing (Curve)</label>
+                            <select id="teTransEasing" class="w-full bg-[#111] border border-[#333] text-white p-2 text-sm rounded outline-none focus:border-teal-500">
+                                <option value="linear">Linear (Constant Speed)</option>
+                                <option value="scurve">S-Curve (Smooth Cinematic)</option>
+                                <option value="exp">Exponential (Camera Flash/Whip)</option>
                             </select>
                         </div>
-                    </div>
-                    
-                    <div id="teTransDynamicUI" class="border-t border-[#333] mt-1 pt-1 empty:hidden"></div>
-                    
-                    <button id="teAddMissingEdge" style="display:none;"><i class="fa-solid fa-plus mr-1"></i> Add Other Transition</button>
-                    
-                    <div class="grid grid-cols-2 gap-2 mt-3">
-                        <button id="teTransPreview" class="bg-[#333] hover:bg-[#444] border border-[#555] text-white py-2 rounded text-xs font-bold flex items-center justify-center transition">
-                            <i class="fa-solid fa-play mr-2"></i> PREVIEW
-                        </button>
-                        <button id="teTransRemove" class="bg-red-900/30 hover:bg-red-800 border border-red-900 text-red-300 py-2 rounded text-xs font-bold transition">
-                            REMOVE
-                        </button>
+                        
+                        <div id="teTransDynamicUI" class="border-t border-[#333] mt-1 pt-1 empty:hidden flex-shrink-0"></div>
+                        
+                        <button id="teAddMissingEdge" style="display:none;" class="flex-shrink-0"><i class="fa-solid fa-plus mr-1"></i> Add Other Transition</button>
+                        
+                        <div class="grid grid-cols-2 gap-2 mt-3 flex-shrink-0">
+                            <button id="teTransPreview" class="bg-[#333] hover:bg-[#444] border border-[#555] text-white py-2 rounded text-xs font-bold flex items-center justify-center transition">
+                                <i class="fa-solid fa-play mr-2"></i> PREVIEW
+                            </button>
+                            <button id="teTransRemove" class="bg-red-900/30 hover:bg-red-800 border border-red-900 text-red-300 py-2 rounded text-xs font-bold transition">
+                                REMOVE
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -550,6 +542,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             
             document.getElementById('teTransDuration').onchange = () => this.commitModifications();
             document.getElementById('teTransAlignment').onchange = () => this.commitModifications();
+            document.getElementById('teTransEasing').onchange = () => this.commitModifications();
             
             const displayBtn = document.getElementById('teTransTypeDisplay');
             const typeList = document.getElementById('teTransTypeList');
@@ -582,10 +575,11 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                         type: 'dissolve',
                         duration: window.TRANSITION_REGISTRY['dissolve'].defaultDuration,
                         alignment: 'edge',
+                        easing: 'scurve',
                         params: {}
                     };
                     Store.saveState();
-                    UI.refreshTimeline();
+                    if (typeof UI !== 'undefined') UI.refreshTimeline();
                     this.activeSelection = { clipId: this.panelClipId, edge: otherEdge };
                     this.updatePanelUI();
                     this.updateMenuItems();
@@ -622,6 +616,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 type: type,
                 duration: reg.defaultDuration || 1.0,
                 alignment: clip.transitions[this.activeSelection.edge].alignment || 'edge',
+                easing: clip.transitions[this.activeSelection.edge].easing || 'linear',
                 params: {}
             };
             
@@ -639,10 +634,11 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 type: type,
                 duration: reg?.defaultDuration || 1.0,
                 alignment: 'edge',
+                easing: 'scurve',
                 params: {}
             };
             Store.saveState();
-            UI.refreshTimeline();
+            if (typeof UI !== 'undefined') UI.refreshTimeline();
             this.updatePanelUI();
             this.updateMenuItems();
         },
@@ -659,13 +655,11 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             };
             document.addEventListener('click', this.globalClickHandler);
 
-            // Double-click guard: if clip has Rubicon graph, show notice and don't open editor
             this.globalDblClickHandler = (e) => {
                 const block = e.target.closest('.trans-block');
                 if (block && this.isActive) {
                     e.preventDefault(); e.stopPropagation();
                     
-                    // Forcefully terminate any dragging sequences
                     document.dispatchEvent(new MouseEvent('mouseup')); 
                     
                     const clipId = block.dataset.clipId;
@@ -732,15 +726,22 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            Notify.show("Guide Downloaded", "fa-download");
+            if (typeof Notify !== 'undefined') Notify.show("Guide Downloaded", "fa-download");
         },
 
         openEditor(clipId, edge) {
-            this.panelClipId = clipId;
-            this.activeSelection = edge ? { clipId, edge } : null;
+            this.activeSelection = { clipId, edge };
             this.switchTab('settings'); 
             this.updatePanelUI();
             this.panel.style.display = 'block';
+            
+            const syncIcon = document.getElementById('teSyncIcon');
+            if (syncIcon) syncIcon.classList.add('fa-spin');
+            
+            this.checkForUpdates().finally(() => {
+                if (syncIcon) syncIcon.classList.remove('fa-spin');
+            });
+            
             this.updateMenuItems();
             if (typeof UI !== 'undefined') UI.refreshTimeline();
         },
@@ -791,6 +792,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
 
                 document.getElementById('teTransDuration').value = trans.duration.toFixed(2);
                 document.getElementById('teTransAlignment').value = trans.alignment || 'edge';
+                document.getElementById('teTransEasing').value = trans.easing || 'linear';
 
                 this.renderDynamicUI(trans);
             } else if (edge) {
@@ -799,6 +801,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 document.getElementById('teTransTypeName').innerText = 'None';
                 document.getElementById('teTransDuration').value = '';
                 document.getElementById('teTransAlignment').value = 'edge';
+                document.getElementById('teTransEasing').value = 'linear';
                 document.getElementById('teTransDynamicUI').innerHTML = '<div class="text-xs text-gray-500 italic">Select a transition type above.</div>';
                 document.getElementById('teTransTypeList').innerHTML = Object.keys(window.TRANSITION_REGISTRY).map(key => {
                     const reg = window.TRANSITION_REGISTRY[key];
@@ -815,6 +818,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 document.getElementById('teTransTypeName').innerText = 'Select START or END';
                 document.getElementById('teTransDuration').value = '';
                 document.getElementById('teTransAlignment').value = 'edge';
+                document.getElementById('teTransEasing').value = 'linear';
                 document.getElementById('teTransDynamicUI').innerHTML = '<div class="text-xs text-gray-500 italic">Use the tabs above to add a start/end transition.</div>';
                 document.getElementById('teTransTypeList').innerHTML = '';
                 document.getElementById('teAddMissingEdge').style.display = 'none';
@@ -867,13 +871,14 @@ Translate your effect into FFmpeg string format for the final MP4 render.
 
             trans.duration = dur;
             trans.alignment = document.getElementById('teTransAlignment').value;
+            trans.easing = document.getElementById('teTransEasing').value;
             
             if (reg && reg.getParams) {
                 trans.params = reg.getParams();
             }
 
             Store.saveState();
-            UI.refreshTimeline();
+            if (typeof UI !== 'undefined') UI.refreshTimeline();
             Player.safeRenderFrame();
         },
 
@@ -890,7 +895,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             } else {
                 this.closeEditor();
             }
-            UI.refreshTimeline();
+            if (typeof UI !== 'undefined') UI.refreshTimeline();
             Player.safeRenderFrame();
         },
 
@@ -924,88 +929,222 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             }, 50);
         },
 
+        applyEasing(p, type) {
+            p = Math.max(0, Math.min(1, p)); 
+            if (type === 'scurve') return p * p * (3 - 2 * p); 
+            if (type === 'exp') return p === 1 ? 1 : 1 - Math.pow(2, -10 * p); 
+            return p; 
+        },
+
+        // --- INDEPENDENT TIME OBJECT EXTRACTOR (Half/Half Fix) ---
+        getActiveTransitions(currentTime) {
+            const active = [];
+            Store.trackConfig.forEach(track => {
+                (Store.tracks[track.id] || []).forEach(clip => {
+                    if (!clip.transitions) return;
+                    
+                    const processEdge = (trans, edge) => {
+                        const dur = trans.duration;
+                        const align = trans.alignment || 'edge';
+                        let startTime = clip.start;
+                        
+                        if (edge === 'in') {
+                            startTime = align === 'center' ? clip.start - (dur / 2) : clip.start;
+                        } else {
+                            startTime = align === 'center' ? (clip.start + clip.duration) - (dur / 2) : (clip.start + clip.duration) - dur;
+                        }
+                        
+                        // Using absolute mathematical bounds allows transitions to animate uninterrupted across cuts!
+                        if (currentTime >= startTime - 0.01 && currentTime <= startTime + dur + 0.01) {
+                            active.push({
+                                id: `${clip.id}_${edge}`,
+                                clipId: clip.id,
+                                edge: edge,
+                                startTime: startTime,
+                                duration: dur,
+                                type: trans.type,
+                                params: trans.params || {},
+                                alignment: align,
+                                easing: trans.easing
+                            });
+                        }
+                    };
+
+                    if (clip.transitions.in) processEdge(clip.transitions.in, 'in');
+                    if (clip.transitions.out) processEdge(clip.transitions.out, 'out');
+                });
+            });
+            return active;
+        },
+
         hijackCoreLifecycles() {
             this.originalDrawToCanvas = Player.drawToCanvas.bind(Player);
             
+            // TRUE FACILITATOR RENDERER: Flawless mathematical timeframe execution
             Player.drawToCanvas = (vClips, tClips) => {
                 if (!this.isActive) return this.originalDrawToCanvas(vClips, tClips);
                 
                 const t = Store.currentTime;
-                const opacityBackups = new Map();
-                
+                const activeTrans = this.getActiveTransitions(t);
+                const propBackups = new Map();
+
+                // 🔥 1. THE NECROMANCER ALGORITHM: Resurrect paired clips for Same-Track overlaps
+                activeTrans.forEach(tr => {
+                    const trackId = this.findTrackId(tr.clipId);
+                    const trackData = Store.tracks[trackId] || [];
+                    const clipIdx = trackData.findIndex(c => c.id === tr.clipId);
+                    const clip = trackData[clipIdx];
+                    if (!clip) return;
+
+                    if (tr.alignment === 'edge' || tr.alignment === 'center') {
+                        if (tr.edge === 'in') {
+                            const prevClip = trackData[clipIdx - 1];
+                            if (prevClip && Math.abs((prevClip.start + prevClip.duration) - clip.start) < 0.1) {
+                                const clipIdxInV = vClips.findIndex(c => c.id === clip.id);
+                                if (!vClips.find(c => c.id === prevClip.id)) {
+                                    // Splicing cleanly preserves global multi-track Z-Index!
+                                    vClips.splice(clipIdxInV, 0, prevClip); 
+                                }
+                                prevClip._pairedTrans = { ...tr, edge: 'out' };
+                            }
+                        } else if (tr.edge === 'out') {
+                            const nextClip = trackData[clipIdx + 1];
+                            if (nextClip && Math.abs(nextClip.start - (clip.start + clip.duration)) < 0.1) {
+                                const clipIdxInV = vClips.findIndex(c => c.id === clip.id);
+                                if (!vClips.find(c => c.id === nextClip.id)) {
+                                    vClips.splice(clipIdxInV + 1, 0, nextClip); 
+                                }
+                                nextClip._pairedTrans = { ...tr, edge: 'in' };
+                            }
+                        }
+                    }
+                });
+
+                // 2. SNAPSHOT PROPERTIES (Protects against timeline mutation)
                 vClips.forEach(clip => {
-                    opacityBackups.set(clip.id, clip.opacity);
-                    if (clip.transitions) {
-                        let currentOpacity = clip.opacity !== undefined ? clip.opacity : 100;
+                    propBackups.set(clip.id, { 
+                        opacity: clip.opacity, x: clip.x, y: clip.y, scale: clip.scale, rotation: clip.rotation 
+                    });
+                });
+                
+                // 3. APPLY PRIMARY TRANSITIONS
+                activeTrans.forEach(tr => {
+                    const clip = vClips.find(c => c.id === tr.clipId);
+                    if (clip) {
+                        const reg = window.TRANSITION_REGISTRY[tr.type];
+                        let prog = (t - tr.startTime) / tr.duration;
+                        prog = Math.max(0, Math.min(1, prog)); // Clamp
+
+                        if (reg && reg.pingPong && tr.alignment === 'center') {
+                            prog = prog <= 0.5 ? (prog * 2) : 2 - (prog * 2);
+                            if (reg.autoReverse !== false) prog = 1.0 - prog; 
+                        } else {
+                            if (tr.edge === 'out' && reg && reg.autoReverse !== false) {
+                                prog = 1.0 - prog; 
+                            }
+                        }
                         
-                        if (clip.transitions.in && clip.transitions.in.type === 'dissolve') {
-                            const dur = clip.transitions.in.duration;
-                            const align = clip.transitions.in.alignment || 'edge';
-                            const start = align === 'center' ? clip.start - dur/2 : clip.start;
-                            
-                            if (t >= start && t <= start + dur) {
-                                const prog = (t - start) / dur;
-                                currentOpacity *= prog;
-                            }
+                        if (tr.type === 'dissolve') {
+                            let dissolveProg = prog;
+                            if (this.applyEasing) dissolveProg = this.applyEasing(prog, tr.easing);
+                            clip.opacity = (clip.opacity !== undefined ? clip.opacity : 100) * dissolveProg;
                         }
-                        if (clip.transitions.out && clip.transitions.out.type === 'dissolve') {
-                            const dur = clip.transitions.out.duration;
-                            const align = clip.transitions.out.alignment || 'edge';
-                            const start = align === 'center' ? (clip.start + clip.duration) - dur/2 : clip.start + clip.duration - dur;
-                            
-                            if (t >= start && t <= start + dur) {
-                                const prog = (start + dur - t) / dur;
-                                currentOpacity *= prog;
-                            }
+                        
+                        // Delta Transform Injection
+                        if (reg && reg.getClipTransform) {
+                            let transProg = prog;
+                            if (this.applyEasing) transProg = this.applyEasing(transProg, tr.easing);
+
+                            const delta = reg.getClipTransform(transProg, tr.edge, tr.params || {});
+                            if (delta.x !== undefined) clip.x = (clip.x !== undefined ? clip.x : 50) + delta.x;
+                            if (delta.y !== undefined) clip.y = (clip.y !== undefined ? clip.y : 50) + delta.y;
+                            if (delta.scale !== undefined) clip.scale = (clip.scale !== undefined ? clip.scale : 100) + delta.scale;
+                            if (delta.rotation !== undefined) clip.rotation = (clip.rotation || 0) + delta.rotation;
+                            if (delta.opacity !== undefined) clip.opacity = (clip.opacity !== undefined ? clip.opacity : 100) + delta.opacity;
                         }
-                        clip.opacity = currentOpacity;
+                    }
+                });
+
+                // 4. APPLY RESURRECTED "NECROMANCER" TRANSITIONS
+                vClips.forEach(clip => {
+                    if (clip._pairedTrans) {
+                        const pt = clip._pairedTrans;
+                        const reg = window.TRANSITION_REGISTRY[pt.type];
+                        
+                        let prog = (t - pt.startTime) / pt.duration;
+                        prog = Math.max(0, Math.min(1, prog));
+
+                        if (reg && reg.pingPong && pt.alignment === 'center') {
+                            prog = prog <= 0.5 ? (prog * 2) : 2 - (prog * 2);
+                            if (reg.autoReverse !== false) prog = 1.0 - prog;
+                        } else {
+                            if (pt.edge === 'out' && reg && reg.autoReverse !== false) prog = 1.0 - prog; 
+                        }
+
+                        if (pt.type === 'dissolve') {
+                            let dissolveProg = prog;
+                            if (this.applyEasing) dissolveProg = this.applyEasing(prog, pt.easing);
+                            clip.opacity = (clip.opacity !== undefined ? clip.opacity : 100) * dissolveProg;
+                        }
+                        
+                        if (reg && reg.getClipTransform) {
+                            let transProg = prog;
+                            if (this.applyEasing) transProg = this.applyEasing(transProg, pt.easing);
+                            const delta = reg.getClipTransform(transProg, pt.edge, pt.params || {});
+                            if (delta.x !== undefined) clip.x = (clip.x !== undefined ? clip.x : 50) + delta.x;
+                            if (delta.y !== undefined) clip.y = (clip.y !== undefined ? clip.y : 50) + delta.y;
+                            if (delta.scale !== undefined) clip.scale = (clip.scale !== undefined ? clip.scale : 100) + delta.scale;
+                            if (delta.rotation !== undefined) clip.rotation = (clip.rotation || 0) + delta.rotation;
+                            if (delta.opacity !== undefined) clip.opacity = (clip.opacity !== undefined ? clip.opacity : 100) + delta.opacity;
+                        }
                     }
                 });
                 
+                // 5. CORE RENDER PASS (The PiP engine runs here and safely uses our overridden Math)
                 this.originalDrawToCanvas(vClips, tClips);
-                vClips.forEach(clip => clip.opacity = opacityBackups.get(clip.id));
                 
+                // 6. RESTORE PROPERTIES
+                vClips.forEach(clip => {
+                    if (propBackups.has(clip.id)) {
+                        const b = propBackups.get(clip.id);
+                        if (b.opacity !== undefined) clip.opacity = b.opacity;
+                        if (b.x !== undefined) clip.x = b.x;
+                        if (b.y !== undefined) clip.y = b.y;
+                        if (b.scale !== undefined) clip.scale = b.scale;
+                        if (b.rotation !== undefined) clip.rotation = b.rotation;
+                    }
+                    delete clip._pairedTrans;
+                });
+                
+                // 7. DEDICATED OVERLAY PASS
                 const ctx = Player.compositorCanvas.getContext('2d');
                 const canvas = Player.compositorCanvas;
+                const renderedOverlays = new Set();
                 
-                let activeTrans = [];
-                Store.trackConfig.forEach(track => {
-                    (Store.tracks[track.id] || []).forEach(clip => {
-                        if (!clip.transitions) return;
-                        
-                        if (clip.transitions.in) {
-                            const dur = clip.transitions.in.duration;
-                            const align = clip.transitions.in.alignment || 'edge';
-                            const start = align === 'center' ? clip.start - dur/2 : clip.start;
-                            if (t >= start && t <= start + dur) {
-                                activeTrans.push({ clip, edge: 'in', trans: clip.transitions.in, start, dur });
-                            }
-                        }
-                        if (clip.transitions.out) {
-                            const dur = clip.transitions.out.duration;
-                            const align = clip.transitions.out.alignment || 'edge';
-                            const start = align === 'center' ? (clip.start + clip.duration) - dur/2 : clip.start + clip.duration - dur;
-                            if (t >= start && t <= start + dur) {
-                                activeTrans.push({ clip, edge: 'out', trans: clip.transitions.out, start, dur });
-                            }
-                        }
-                    });
-                });
+                activeTrans.forEach(tr => {
+                    const reg = window.TRANSITION_REGISTRY[tr.type];
+                    if (reg && reg.onRender && tr.type !== 'dissolve') {
+                        const overlayKey = `${tr.type}_${tr.startTime.toFixed(2)}`;
+                        if (renderedOverlays.has(overlayKey)) return;
+                        renderedOverlays.add(overlayKey);
 
-                activeTrans.forEach(item => {
-                    const reg = window.TRANSITION_REGISTRY[item.trans.type];
-                    if (reg && reg.onRender) {
-                        let prog = (t - item.start) / item.dur; 
-                        
-                        if (item.edge === 'out' && reg.autoReverse !== false) {
-                            prog = 1.0 - prog; 
+                        let prog = (t - tr.startTime) / tr.duration;
+                        prog = Math.max(0, Math.min(1, prog)); 
+
+                        if (reg.pingPong && tr.alignment === 'center') {
+                            prog = prog <= 0.5 ? (prog * 2) : 2 - (prog * 2);
+                            if (reg.autoReverse !== false) prog = 1.0 - prog;
+                        } else {
+                            if (tr.edge === 'out' && reg.autoReverse !== false) {
+                                prog = 1.0 - prog; 
+                            }
                         }
                         
-                        if (prog >= 0 && prog <= 1) {
-                            ctx.save();
-                            reg.onRender(ctx, canvas, prog, item.trans.params || {});
-                            ctx.restore();
-                        }
+                        if (this.applyEasing) prog = this.applyEasing(prog, tr.easing);
+                        
+                        ctx.save();
+                        reg.onRender(ctx, canvas, prog, tr.params || {});
+                        ctx.restore();
                     }
                 });
             };
@@ -1016,6 +1155,40 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                 if (this.isActive) this.injectTimelineBlocks(trackId);
             };
 
+            // INTELLIGENT SPLIT CLIP HANDLING
+            this.originalSplitClip = TimelineModule.splitClip.bind(TimelineModule);
+            TimelineModule.splitClip = () => {
+                const time = Store.currentTime;
+                const trackId = Store.selectedTrackId;
+                if (!trackId) return this.originalSplitClip();
+                
+                const trackData = Store.tracks[trackId] || [];
+                const idx = trackData.findIndex(c => c && time > c.start && time < (c.start + c.duration));
+                
+                if (idx === -1) return this.originalSplitClip();
+                
+                const originalId = trackData[idx].id;
+                
+                this.originalSplitClip();
+                
+                const newTrackData = Store.tracks[trackId] || [];
+                const origClip = newTrackData.find(c => c.id === originalId);
+                const newClip = newTrackData.find(c => c.id === Store.selectedClipId);
+                
+                if (origClip && newClip && origClip.id !== newClip.id) {
+                    if (origClip.transitions && origClip.transitions.out) {
+                        delete origClip.transitions.out;
+                    }
+                    if (newClip.transitions && newClip.transitions.in) {
+                        delete newClip.transitions.in;
+                    }
+                    Store.saveState();
+                    if (typeof UI !== 'undefined') UI.refreshTimeline();
+                    Player.safeRenderFrame();
+                }
+            };
+
+            // MASTER UX
             this.originalStartDrag = TimelineModule.startDrag.bind(TimelineModule);
             TimelineModule.startDrag = (e, clip, trackId) => {
                 if (!this.isActive) return this.originalStartDrag(e, clip, trackId);
@@ -1047,7 +1220,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                             
                             if (newAlign !== trans.alignment) {
                                 trans.alignment = newAlign;
-                                UI.refreshTimeline();
+                                if (typeof UI !== 'undefined') UI.refreshTimeline();
                                 this.updatePanelUI();
                             }
                         }
@@ -1065,7 +1238,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                     document.addEventListener('mousemove', onMove);
                     document.addEventListener('mouseup', onUp);
                     
-                    return;
+                    return; 
                 }
                 
                 this.originalStartDrag(e, clip, trackId);
@@ -1075,10 +1248,15 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             TimelineModule.selectClip = (clipId, trackId) => {
                 this.originalSelectClip(clipId, trackId);
                 
-                this.updateMenuItems();
-                
-                if (this.isActive && this.panel && this.panel.style.display !== 'none' && this.panelClipId !== clipId) {
-                    this.closeEditor();
+                if (this.isActive && this.panel && this.panel.style.display !== 'none') {
+                    const clip = this.getClipById(clipId);
+                    if (clip && clip.transitions) {
+                        const edge = clip.transitions.in ? 'in' : (clip.transitions.out ? 'out' : null);
+                        if (edge) {
+                            this.activeSelection = { clipId, edge };
+                            this.updatePanelUI();
+                        }
+                    }
                 }
             };
         },
@@ -1106,15 +1284,6 @@ Translate your effect into FFmpeg string format for the final MP4 render.
                     block.dataset.edge = edge;
                     block.style.width = `${transObj.duration * Store.zoom}px`;
                     block.title = `Drag to snap. Dbl-Click to edit ${window.TRANSITION_REGISTRY[transObj.type]?.name || 'Transition'}.`;
-                    
-                    const editBtn = document.createElement('div');
-                    editBtn.className = 'trans-edit-btn';
-                    editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square" style="font-size: 8px;"></i>';
-                    editBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.openEditor(clipData.id, edge);
-                    });
-                    block.appendChild(editBtn);
                     
                     clipEl.appendChild(block);
                 };
@@ -1156,6 +1325,14 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             return null;
         },
 
+        findTrackId(clipId) {
+            for (let tid in Store.tracks) {
+                const trackData = Store.tracks[tid] || [];
+                if (trackData.find(c => c.id === clipId)) return tid;
+            }
+            return null;
+        },
+
         cleanup() {
             console.log(`[${MODULE_ID}] Uninstalling Advanced Transitions Engine...`);
             this.isActive = false;
@@ -1164,6 +1341,7 @@ Translate your effect into FFmpeg string format for the final MP4 render.
             if (this.originalRenderTrack) TimelineModule.renderTrack = this.originalRenderTrack;
             if (this.originalStartDrag) TimelineModule.startDrag = this.originalStartDrag;
             if (this.originalSelectClip) TimelineModule.selectClip = this.originalSelectClip;
+            if (this.originalSplitClip) TimelineModule.splitClip = this.originalSplitClip;
             
             if (this.globalClickHandler) document.removeEventListener('click', this.globalClickHandler);
             if (this.globalDblClickHandler) document.removeEventListener('dblclick', this.globalDblClickHandler);
