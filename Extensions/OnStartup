@@ -2,7 +2,7 @@
  * @name On Startup Welcome
  * @version 0.5.0
  * @developer Forge™
- * @description A module to introduce new users to the editor, getting them familiar with the interface and knowledgeable on any new changes to the editor. Supports multi-line paragraphs, markdown styling, and intelligent banner caching.
+ * @description A module to introduce new users to the editor, getting them familiar with the interface and knowledgeable on any new changes to the editor. Supports raw <br> tags for HTML line breaks and intelligent banner caching.
  */
 (function() {
     const MODULE_ID = 'on_startup_welcome';
@@ -24,21 +24,10 @@
             // Retrieve Tool Version from Host, fallback if unavailable
             this.toolVersion = typeof TOOL_VERSION !== 'undefined' ? TOOL_VERSION : 'Unknown Version';
             
-            this.injectFonts();
             this.injectStyles();
             await this.prepareBannerImage();
             await this.fetchNewsData();
             this.buildAndShowModal();
-        },
-
-        injectFonts() {
-            if (!document.getElementById('josefin-sans-font')) {
-                const link = document.createElement('link');
-                link.id = 'josefin-sans-font';
-                link.rel = 'stylesheet';
-                link.href = 'https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600;700&display=swap';
-                document.head.appendChild(link);
-            }
         },
 
         injectStyles() {
@@ -49,11 +38,10 @@
                     position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px);
                     z-index: 100000; display: flex; align-items: center; justify-content: center;
                     opacity: 0; transition: opacity 0.4s ease-out;
-                    font-family: 'Josefin Sans', sans-serif;
                 }
                 .welcome-modal {
                     position: relative; width: 960px; height: 540px; max-width: 95vw; max-height: 90vh;
-                    background: #111; border: 1px solid #2a2a2a; border-radius: 12px;
+                    background: #111; border: 1px solid #333; border-radius: 12px;
                     box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.9);
                     overflow: hidden;
                 }
@@ -216,24 +204,30 @@
             // 4. Bold Text: **text**
             p = p.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>');
 
-            // 5. Native Line Breaks to HTML
-            p = p.replace(/<br>/g, '<br/>');
+            // 5. Line Breaks: \n (Fallback for standard strings, <br> will pass natively)
+            p = p.replace(/\n/g, '<br>');
 
             return p;
         },
 
         renderNewsFeed() {
             let html = '';
+            
+            // Support both old array structure and new robust Object structure
             let items = [];
             if (Array.isArray(this.newsData)) items = this.newsData;
             else if (this.newsData && Array.isArray(this.newsData.content)) items = this.newsData.content;
             
             items.forEach(item => {
+                // Ignore any internal/legend keys
                 if (item._legend || item._comment || item.__developer_notice) return;
 
                 if (item.title) html += `<h1 class="text-2xl font-bold text-white mb-5 border-b border-[#222] pb-2 tracking-tight">${this.parseMarkdown(item.title)}</h1>`;
                 if (item.header1) html += `<h2 class="text-lg font-semibold text-teal-400 mt-6 mb-2 tracking-wide">${this.parseMarkdown(item.header1)}</h2>`;
-                if (item.body) html += `<p class="text-xs text-gray-400 mb-4 leading-relaxed">${this.parseMarkdown(item.body)}</p><div class="clear-both"></div>`;
+                
+                if (item.body) {
+                    html += `<p class="text-xs text-gray-400 mb-4 leading-relaxed">${this.parseMarkdown(item.body)}</p><div class="clear-both"></div>`;
+                }
             });
             return html;
         },
@@ -247,6 +241,7 @@
                     
                     <!-- PAGE 1: HERO / WELCOME -->
                     <div id="welcome-page-1" class="welcome-page bg-[#0a0a0a]">
+                        <!-- Background Banner with Seamless Cross-fade Alpha Blend -->
                         <div class="absolute inset-0 bg-cover bg-center transition-opacity" style="background-image: url('${this.bannerUrl}'); opacity: 0.6;"></div>
                         <div class="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] via-[#0a0a0a]/90 to-transparent"></div>
                         <div class="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-80"></div>
