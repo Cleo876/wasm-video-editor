@@ -7,14 +7,19 @@
       "header1": "Advanced Community Features"
     },
     {
-      "body": "The engine has been significantly upgraded. We've introduced the **OnStart Up Modal** enabling you as editors with the ability to see what's happening in concern for the **WASM Video Editor** on diferent types of things such as:"
+      "body": "The engine has been significantly upgraded. We've introduced the **OnStart Up Modal** enabling you as editors with the ability to see what's happening in concern for the **WASM Video Editor** on different types of things such as:"
     },
     {
       "header1": "OnStart Up Modal"
     },
     {
-      "body": "We can now show news and other great updates made within the editor such as this **OnStart Up Modal Window**! So if we have new upgrades for the video editor, such as the *Ghost App Installer*, which we are planning to enable **Hardware Acceleration** to allow for GPU processing which should reduce the CPU overhead that is happening with the engine. <br><br> so look forward to that installer update coming soon!"
-    }
+      "body": "We can now show news and other great updates made within the editor such as this **OnStart Up Modal Window**! So if we have new upgrades for the video editor, such as the *Ghost App Installer*, we can now mention that here, or any other new features, events that are coming up or so on."
+    },
+    {
+      "header1": "New Ghost App Installer *(Coming Soon)*"
+    },
+    {
+      "body": " We are planning to enable **Hardware Acceleration** within the **Ghost App Installer** to allow for GPU processing which should reduce the CPU overhead that is happening with the engine, making it more performant and less likely to freeze up your editor, and computer. <br><br> So look forward to that installer update coming soon!"
   ],
   "_legend": [
     "--- JSON NEWS FORMATTING GUIDE ---",
