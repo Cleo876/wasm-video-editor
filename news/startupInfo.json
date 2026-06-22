@@ -4,19 +4,16 @@
       "title": "Welcome to Forge™ Next-Gen"
     },
     {
-      "header1": "Advanced Spatial Ecosystem"
+      "header1": "Advanced Community Features"
     },
     {
-      "body": "The engine has been significantly upgraded. We've introduced the **Delta Transform Matrix** enabling seamless spatial transitions that don't overwrite your custom PiP coordinates.<br><br>Check out the demo below:"
+      "body": "The engine has been significantly upgraded. We've introduced the **OnStart Up Modal** enabling you as editors with the ability to see what's happening in concern for the **WASM Video Editor** on diferent types of things such as:"
     },
     {
-      "body": "[video](https://www.w3schools.com/html/mov_bbb.mp4)"
+      "header1": "OnStart Up Modal"
     },
     {
-      "header1": "Integrated Typography"
-    },
-    {
-      "body": "The Google Fonts Engine is now deeply integrated into the Media Manager Pro. [img](https://picsum.photos/400/250) [right]<br><br>You can dynamically fetch, cache, and apply typography in real-time directly on the canvas without leaving your workflow.<br><br>Stay tuned as we continue to push the absolute boundaries of what is mathematically possible within modern web browsers!"
+      "body": "We can now show news and other great updates made within the editor such as this **OnStart Up Modal Window**! So if we have new upgrades for the video editor, such as the *Ghost App Installer*, which we are planning to enable **Hardware Acceleration** to allow for GPU processing which should reduce the CPU overhead that is happening with the engine. <br><br> so look forward to that installer update coming soon!"
     }
   ],
   "_legend": [
