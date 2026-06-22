@@ -20,7 +20,7 @@
     },
     {
       "body": " We are planning to enable **Hardware Acceleration** within the **Ghost App Installer** to allow for GPU processing which should reduce the CPU overhead that is happening with the engine, making it more performant and less likely to freeze up your editor, and computer. <br><br> So look forward to that installer update coming soon!"
-    },
+    }
   ],
   "_legend": [
     "--- JSON NEWS FORMATTING GUIDE ---",
