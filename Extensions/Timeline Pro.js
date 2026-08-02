@@ -1,6 +1,6 @@
 /**
  * @name Timeline Pro Engine
- * @version 1.6.0
+ * @version 1.6.2
  * @developer Forge™
  * @description Advanced timeline operations. Adds Magnetic Playhead Snapping (Drag & Resize), Alt+Drag Panning, Shift+Scroll Navigation, Marquee Box Selection, Shift-Click Multi-Select, Group Dragging, Playhead-Relative Paste/Duplicate, Mass Deletion, Timeline Preferences, and Empty-State UX Guides.
  */
@@ -30,7 +30,7 @@
         globalWheelHandler: null,
 
         async init() {
-            console.log(`[${MODULE_ID}] Booting Timeline Pro Engine v1.6.0...`);
+            console.log(`[${MODULE_ID}] Booting Timeline Pro Engine v1.6.2...`);
             
             await this.loadPreferences();
             
@@ -506,31 +506,45 @@
                 this.updateWatermark();
             };
 
+            // ---- FIX: Override deleteSelected completely to use selectedClips set ----
             this.originalDeleteSelected = TimelineModule.deleteSelected.bind(TimelineModule);
             TimelineModule.deleteSelected = () => {
-                if (!this.isActive || this.selectedClips.size <= 1) {
-                    return this.originalDeleteSelected();
+                if (!this.isActive) return;
+
+                // Build list of clip IDs to delete from selectedClips, fallback to Store.selectedClipId
+                let clipIds = [];
+                if (this.selectedClips.size > 0) {
+                    clipIds = Array.from(this.selectedClips);
+                } else if (Store.selectedClipId) {
+                    clipIds = [Store.selectedClipId];
+                } else {
+                    return; // nothing to delete
                 }
 
                 let deletedCount = 0;
-                this.selectedClips.forEach(cid => {
+                clipIds.forEach(cid => {
                     const trackId = this.findTrackId(cid);
                     if (trackId) {
-                        Store.tracks[trackId] = Store.tracks[trackId].filter(c => c.id !== cid);
-                        deletedCount++;
+                        const track = Store.tracks[trackId];
+                        const idx = track.findIndex(c => c.id === cid);
+                        if (idx !== -1) {
+                            track.splice(idx, 1);
+                            deletedCount++;
+                        }
                     }
                 });
 
                 if (deletedCount > 0) {
                     this.selectedClips.clear();
                     Store.selectedClipId = null;
+                    Store.selectedTrackId = null;
                     Store.saveState();
                     if (typeof UI !== 'undefined') {
                         UI.checkExportButton();
                         UI.refreshTimeline();
                     }
                     if (typeof Player !== 'undefined') Player.safeRenderFrame();
-                    if (typeof Notify !== 'undefined') Notify.show(`Deleted ${deletedCount} Clips`, 'fa-trash');
+                    if (typeof Notify !== 'undefined') Notify.show(`Deleted ${deletedCount} Clip(s)`, 'fa-trash');
                 }
             };
 
@@ -819,6 +833,7 @@
 
                 if (clipEl && !resizeHandle && !transBlock) {
                     const clipId = clipEl.dataset.clipId;
+                    const trackId = clipEl.dataset.trackId;
                     
                     if (e.shiftKey) {
                         e.stopPropagation(); 
@@ -830,7 +845,7 @@
                         } else {
                             this.selectedClips.add(clipId);
                             Store.selectedClipId = clipId;
-                            Store.selectedTrackId = clipEl.dataset.trackId;
+                            Store.selectedTrackId = trackId;
                         }
                         if (typeof UI !== 'undefined') UI.refreshTimeline();
                         
@@ -839,6 +854,9 @@
                             this.selectedClips.clear();
                             this.selectedClips.add(clipId);
                         }
+                        Store.selectedClipId = clipId;
+                        Store.selectedTrackId = trackId;
+                        if (typeof UI !== 'undefined') UI.refreshTimeline();
                     }
                 } 
                 else if (!clipEl && !e.target.closest('.control-bar') && e.target.closest('.timeline-container')) {
