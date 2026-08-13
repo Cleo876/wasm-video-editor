@@ -1,12 +1,12 @@
 /**
  * @name On Startup Welcome
- * @version 0.6.0
+ * @version 0.9.3
  * @developer Forge™
- * @description A module to introduce new users to the editor, getting them familiar with the interface and knowledgeable on any new changes to the editor. Supports raw <br> tags for HTML line breaks and intelligent banner caching.
+ * @description A module to introduce new users to the editor, getting you familiar with the interface and knowledgeable on any new changes to the editor. Supports raw <br> tags for HTML line breaks and intelligent banner caching.
  */
 (function() {
     const MODULE_ID = 'on_startup_welcome';
-    const MODULE_VERSION = '0.6.0'; // Used to force-bypass the 2-day cache limit on updates
+    const MODULE_VERSION = '0.9.3'; // Fixed centering and clipping in lightbox
     const GITHUB_BANNERS_API = 'https://api.github.com/repos/Cleo876/wasm-video-editor/contents/IMGs/Banners';
     const GITHUB_NEWS_URL = 'https://raw.githubusercontent.com/Cleo876/wasm-video-editor/refs/heads/main/news/startupInfo.json';
     const CACHE_LIFETIME = 2 * 24 * 60 * 60 * 1000; // 2 Days in milliseconds
@@ -19,14 +19,20 @@
     const WelcomeModule = {
         bannerUrl: '',
         newsData: [],
+        _lightboxScale: 1,
+        _lightboxTranslateX: 0,
+        _lightboxTranslateY: 0,
+        _isDragging: false,
+        _dragStartX: 0,
+        _dragStartY: 0,
+        _dragStartTranslateX: 0,
+        _dragStartTranslateY: 0,
         
         async init() {
-            // Prevent the modal from opening if the user simply refreshes the browser page
             if (sessionStorage.getItem(MODULE_ID + '_shown')) {
                 return;
             }
             
-            // Retrieve Tool Version from Host, fallback if unavailable
             this.toolVersion = typeof TOOL_VERSION !== 'undefined' ? TOOL_VERSION : 'Unknown Version';
             
             this.injectStyles();
@@ -103,6 +109,124 @@
                 .bg-kenburns {
                     animation: kf-kenburns 25s ease-out forwards;
                 }
+
+                /* --- Image Wrapper and Expand Button --- */
+                .news-image-wrapper {
+                    position: relative;
+                    display: inline-block;
+                    max-width: 100%;
+                    vertical-align: top;
+                }
+                .news-image-wrapper .news-expand-btn {
+                    position: absolute;
+                    bottom: 8px;
+                    left: 8px;
+                    width: 30px;
+                    height: 30px;
+                    border-radius: 50%;
+                    background: rgba(0, 0, 0, 0.55);
+                    border: 1px solid rgba(255, 255, 255, 0.25);
+                    color: rgba(255, 255, 255, 0.9);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 13px;
+                    cursor: pointer;
+                    transition: background 0.2s, transform 0.2s, opacity 0.2s;
+                    opacity: 0.75;
+                    backdrop-filter: blur(4px);
+                    z-index: 5;
+                }
+                .news-image-wrapper .news-expand-btn:hover {
+                    background: rgba(0, 210, 190, 0.7);
+                    transform: scale(1.1);
+                    opacity: 1;
+                    border-color: rgba(255, 255, 255, 0.6);
+                }
+                .news-image-wrapper .news-expand-btn i {
+                    pointer-events: none;
+                }
+
+                /* --- Lightbox Styles --- */
+                .lightbox-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0, 0, 0, 0.92);
+                    z-index: 200000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                    cursor: default;
+                    backdrop-filter: blur(4px);
+                }
+                .lightbox-overlay.active {
+                    opacity: 1;
+                }
+                .lightbox-overlay .lightbox-image-wrapper {
+                    max-width: 90vw;
+                    max-height: 90vh;
+                    overflow: hidden;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: default;
+                    position: relative;
+                    touch-action: none;
+                }
+                .lightbox-overlay .lightbox-image-wrapper img {
+                    display: block;
+                    max-width: 100%;
+                    max-height: 100%;
+                    width: auto;
+                    height: auto;
+                    object-fit: contain;
+                    transform-origin: center center;
+                    user-select: none;
+                    -webkit-user-drag: none;
+                    will-change: transform;
+                    transition: transform 0.1s ease;
+                }
+                .lightbox-overlay .lightbox-close-hint {
+                    position: absolute;
+                    bottom: 30px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    color: rgba(255,255,255,0.4);
+                    font-size: 13px;
+                    font-family: Inter, sans-serif;
+                    pointer-events: none;
+                    background: rgba(0,0,0,0.5);
+                    padding: 6px 18px;
+                    border-radius: 20px;
+                    backdrop-filter: blur(4px);
+                    border: 1px solid rgba(255,255,255,0.1);
+                }
+                .lightbox-overlay .lightbox-close-btn {
+                    position: absolute;
+                    top: 20px;
+                    right: 25px;
+                    color: rgba(255,255,255,0.6);
+                    font-size: 28px;
+                    cursor: pointer;
+                    transition: color 0.2s, transform 0.2s;
+                    background: rgba(0,0,0,0.4);
+                    border-radius: 50%;
+                    width: 44px;
+                    height: 44px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    backdrop-filter: blur(4px);
+                    border: 1px solid rgba(255,255,255,0.15);
+                }
+                .lightbox-overlay .lightbox-close-btn:hover {
+                    color: #fff;
+                    transform: scale(1.1);
+                    background: rgba(0,0,0,0.7);
+                }
+                /* --- End Lightbox Styles --- */
             `;
             document.head.appendChild(style);
         },
@@ -113,16 +237,13 @@
                 const now = Date.now();
                 let needsFetch = false;
 
-                // Condition 1: No cache exists
                 if (!cache || !cache.urls || cache.urls.length === 0) {
                     needsFetch = true;
                 } 
-                // Condition 2: Version Bump (Overrides the 2-day limit to grab fresh images)
                 else if (cache.version !== MODULE_VERSION) {
                     console.log(`[${MODULE_ID}] Version bumped to ${MODULE_VERSION}. Bypassing time lock to fetch new banners...`);
                     needsFetch = true;
                 }
-                // Condition 3: 2 Days have passed
                 else if (now - cache.timestamp > CACHE_LIFETIME) {
                     console.log(`[${MODULE_ID}] 2-day cache expired. Fetching fresh banners...`);
                     needsFetch = true;
@@ -136,7 +257,6 @@
                         
                         let existingUrls = (cache && cache.urls) ? cache.urls : [];
                         
-                        // Push any images we don't already have into the existing array
                         fetchedUrls.forEach(url => {
                             if (!existingUrls.includes(url)) {
                                 existingUrls.push(url);
@@ -148,7 +268,6 @@
                     }
                 }
 
-                // Pick a random image from the resilient cache
                 if (cache && cache.urls && cache.urls.length > 0) {
                     this.bannerUrl = cache.urls[Math.floor(Math.random() * cache.urls.length)];
                 }
@@ -179,17 +298,30 @@
             if (typeof text !== 'string') return text;
             let p = text;
             
-            // 1. Images: [img](url) [alignment]
+            // 1. Images: [img](url) [alignment] - wrap in container with expand button
             p = p.replace(/\[img\]\((.*?)\)\s*\[(right|left|centre|center)\]/gi, (m, url, align) => {
                 const a = align.toLowerCase();
-                let cls = 'rounded-xl shadow-lg border border-[#222] max-w-[45%] object-cover ';
-                if (a === 'right') cls += 'float-right ml-6 mb-4';
-                else if (a === 'left') cls += 'float-left mr-6 mb-4';
-                else cls = 'block mx-auto mb-5 w-3/4 rounded-xl shadow-lg border border-[#222] object-cover';
-                return `<img src="${url}" class="${cls}">`;
+                let wrapperCls = 'news-image-wrapper ';
+                let imgCls = 'rounded-xl shadow-lg border border-[#222] max-w-[45%] object-cover news-image';
+                if (a === 'right') {
+                    wrapperCls += 'float-right ml-6 mb-4';
+                    imgCls += ' float-none';
+                } else if (a === 'left') {
+                    wrapperCls += 'float-left mr-6 mb-4';
+                    imgCls += ' float-none';
+                } else {
+                    wrapperCls += 'block mx-auto mb-5 w-3/4';
+                    imgCls += ' block mx-auto';
+                }
+                return `
+                    <span class="${wrapperCls}">
+                        <img src="${url}" class="${imgCls}" data-src="${url}">
+                        <button class="news-expand-btn" data-src="${url}" title="Expand image"><i class="fa-solid fa-expand"></i></button>
+                    </span>
+                `;
             });
 
-            // 2. Videos: [video](url) (Custom Chrome-less Player with Absolute Height Fix)
+            // 2. Videos: [video](url)
             p = p.replace(/\[video\]\((.*?)\)/gi, (m, url) => {
                 return `
                     <div class="forge-custom-video relative w-4/5 mx-auto aspect-video bg-black rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.7)] border border-[#222] mb-6 mt-3 paused flex-shrink-0" data-src="${url}">
@@ -214,13 +346,16 @@
                 `;
             });
 
-            // 3. Hyperlinks: [text](url)
+            // 3. Hyperlinks
             p = p.replace(/\[([^\]]+)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-teal-400 hover:text-teal-300 hover:underline font-semibold transition">$1</a>');
 
-            // 4. Bold Text: **text**
+            // 4. Bold
             p = p.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>');
 
-            // 5. Line Breaks: \n (Fallback for standard strings, <br> will pass natively)
+            // 5. Italic
+            p = p.replace(/\*(.*?)\*/g, '<em class="text-gray-300 italic">$1</em>');
+
+            // 6. Line breaks
             p = p.replace(/\n/g, '<br>');
 
             return p;
@@ -229,13 +364,11 @@
         renderNewsFeed() {
             let html = '';
             
-            // Support both old array structure and new robust Object structure
             let items = [];
             if (Array.isArray(this.newsData)) items = this.newsData;
             else if (this.newsData && Array.isArray(this.newsData.content)) items = this.newsData.content;
             
             items.forEach(item => {
-                // Ignore any internal/legend keys
                 if (item._legend || item._comment || item.__developer_notice) return;
 
                 if (item.title) html += `<h1 class="text-3xl font-black text-white mb-5 border-b border-[#222] pb-2 tracking-tight">${this.parseMarkdown(item.title)}</h1>`;
@@ -257,7 +390,6 @@
                     
                     <!-- PAGE 1: HERO / WELCOME -->
                     <div id="welcome-page-1" class="welcome-page bg-[#0a0a0a]">
-                        <!-- Background Banner with Ken Burns & Reduced Darkness Overlay -->
                         <div class="absolute inset-0 bg-black overflow-hidden">
                             <div class="absolute inset-0 bg-cover bg-center bg-kenburns" style="background-image: url('${this.bannerUrl}'); opacity: 0.85;"></div>
                         </div>
@@ -299,13 +431,12 @@
                             </button>
                         </div>
                         
-                        <div class="flex-1 overflow-y-auto custom-scroll p-8 relative">
+                        <div class="flex-1 overflow-y-auto custom-scroll p-8 relative" id="news-content">
                             <div class="max-w-2xl mx-auto pb-16">
                                 ${this.renderNewsFeed()}
                             </div>
                         </div>
 
-                        <!-- Absolute positioned back button sitting cleanly at the bottom left -->
                         <button id="welcome-back-btn" class="absolute bottom-8 left-8 nav-btn-sm btn-dark group z-50" title="Back">
                             <i class="fa-solid fa-chevron-left text-sm group-hover:-translate-x-0.5 transition-transform"></i>
                         </button>
@@ -315,16 +446,13 @@
 
             document.body.appendChild(overlay);
 
-            // Record that the modal was shown in this session so refresh doesn't trigger it again
             sessionStorage.setItem(MODULE_ID + '_shown', 'true');
 
-            // Trigger Entrance Animation (Scales up elegantly)
             requestAnimationFrame(() => {
                 overlay.style.opacity = '1';
                 overlay.classList.add('show');
             });
 
-            // Bind Animations & Controls
             document.getElementById('welcome-proceed-btn').onclick = () => {
                 document.getElementById('welcome-modal').classList.add('swiped');
             };
@@ -343,6 +471,175 @@
             };
 
             this.initializeVideoPlayers(overlay);
+            this.attachLightbox(overlay);
+        },
+
+        // --- Lightbox Methods (only button‑triggered, with drag & zoom) ---
+        attachLightbox(container) {
+            const newsContent = container.querySelector('#news-content');
+            if (!newsContent) return;
+
+            newsContent.addEventListener('click', (e) => {
+                const btn = e.target.closest('.news-expand-btn');
+                if (btn) {
+                    e.stopPropagation();
+                    const src = btn.dataset.src;
+                    if (src) {
+                        this.showLightbox(src);
+                    }
+                }
+            });
+        },
+
+        showLightbox(src) {
+            // If already open, update src and reset transforms
+            if (this._lightboxOverlay && this._lightboxOverlay.parentNode) {
+                const img = this._lightboxOverlay.querySelector('.lightbox-image-wrapper img');
+                if (img) {
+                    img.src = src;
+                    this._lightboxScale = 1;
+                    this._lightboxTranslateX = 0;
+                    this._lightboxTranslateY = 0;
+                    this.applyLightboxTransform(img);
+                }
+                return;
+            }
+
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'lightbox-overlay';
+            overlay.innerHTML = `
+                <div class="lightbox-image-wrapper">
+                    <img src="${src}" alt="Expanded view">
+                </div>
+                <div class="lightbox-close-hint">Click outside to close • Scroll to zoom • Drag to pan</div>
+                <div class="lightbox-close-btn" title="Close"><i class="fa-solid fa-xmark"></i></div>
+            `;
+            document.body.appendChild(overlay);
+            this._lightboxOverlay = overlay;
+            this._lightboxScale = 1;
+            this._lightboxTranslateX = 0;
+            this._lightboxTranslateY = 0;
+
+            // Force reflow for transition
+            requestAnimationFrame(() => {
+                overlay.classList.add('active');
+            });
+
+            const imgWrapper = overlay.querySelector('.lightbox-image-wrapper');
+            const img = imgWrapper.querySelector('img');
+
+            // Apply initial transform
+            this.applyLightboxTransform(img);
+
+            // Close handlers
+            const close = () => {
+                overlay.classList.remove('active');
+                setTimeout(() => {
+                    if (overlay.parentNode) overlay.remove();
+                    if (this._lightboxOverlay === overlay) this._lightboxOverlay = null;
+                }, 300);
+                // Clean up drag events
+                document.removeEventListener('mousemove', this._boundDragMove);
+                document.removeEventListener('mouseup', this._boundDragEnd);
+                document.removeEventListener('touchmove', this._boundTouchMove);
+                document.removeEventListener('touchend', this._boundTouchEnd);
+            };
+
+            // Click on backdrop or close button
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay || e.target.classList.contains('lightbox-close-hint') || e.target.closest('.lightbox-close-btn')) {
+                    close();
+                }
+            });
+            overlay.querySelector('.lightbox-close-btn').addEventListener('click', close);
+
+            // --- Zoom with scroll wheel ---
+            overlay.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                let newScale = this._lightboxScale + delta;
+                newScale = Math.min(4, Math.max(0.5, newScale));
+                this._lightboxScale = newScale;
+                // If scale is 1 (or very close), reset translation to center
+                if (newScale <= 1.05) {
+                    this._lightboxTranslateX = 0;
+                    this._lightboxTranslateY = 0;
+                }
+                this.applyLightboxTransform(img);
+            }, { passive: false });
+
+            // --- Drag to pan (mouse & touch) ---
+            let isDragging = false;
+            let startX = 0, startY = 0;
+            let startTx = 0, startTy = 0;
+
+            const onDragStart = (e) => {
+                if (this._lightboxScale <= 1.05) return; // only allow drag when zoomed in
+                const ev = e.touches ? e.touches[0] : e;
+                isDragging = true;
+                startX = ev.clientX;
+                startY = ev.clientY;
+                startTx = this._lightboxTranslateX;
+                startTy = this._lightboxTranslateY;
+                imgWrapper.style.cursor = 'grabbing';
+                e.preventDefault();
+            };
+
+            const onDragMove = (e) => {
+                if (!isDragging) return;
+                const ev = e.touches ? e.touches[0] : e;
+                const dx = ev.clientX - startX;
+                const dy = ev.clientY - startY;
+                this._lightboxTranslateX = startTx + dx;
+                this._lightboxTranslateY = startTy + dy;
+                this.applyLightboxTransform(img);
+                e.preventDefault();
+            };
+
+            const onDragEnd = () => {
+                if (isDragging) {
+                    isDragging = false;
+                    imgWrapper.style.cursor = 'default';
+                }
+            };
+
+            // Mouse events
+            imgWrapper.addEventListener('mousedown', onDragStart);
+            document.addEventListener('mousemove', onDragMove);
+            document.addEventListener('mouseup', onDragEnd);
+
+            // Touch events
+            imgWrapper.addEventListener('touchstart', onDragStart, { passive: false });
+            document.addEventListener('touchmove', onDragMove, { passive: false });
+            document.addEventListener('touchend', onDragEnd, { passive: false });
+
+            // Store cleanup references for close
+            this._boundDragMove = onDragMove;
+            this._boundDragEnd = onDragEnd;
+            this._boundTouchMove = onDragMove;
+            this._boundTouchEnd = onDragEnd;
+        },
+
+        applyLightboxTransform(img) {
+            if (!img) return;
+            const scale = this._lightboxScale;
+            const tx = this._lightboxTranslateX;
+            const ty = this._lightboxTranslateY;
+            img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+        },
+
+        closeLightbox() {
+            if (this._lightboxOverlay) {
+                this._lightboxOverlay.classList.remove('active');
+                setTimeout(() => {
+                    if (this._lightboxOverlay && this._lightboxOverlay.parentNode) {
+                        this._lightboxOverlay.remove();
+                    }
+                    this._lightboxOverlay = null;
+                }, 300);
+            }
         },
 
         initializeVideoPlayers(container) {
@@ -404,6 +701,7 @@
         },
 
         cleanup() {
+            this.closeLightbox();
             delete window.ON_STARTUP_WELCOME;
         }
     };
