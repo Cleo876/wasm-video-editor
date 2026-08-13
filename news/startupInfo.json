@@ -1,37 +1,22 @@
 {
   "content": [
     {
-      "title": "SignUP: Editor's Jam 2026 & WIN **+$500 USD** Giveaways!"
+      "title": "The Editor Jam Has Been PostPoned!"
     },
     {
-      "header1": " [img](https://github.com/Cleo876/wasm-video-editor/blob/main/IMG's/Banners/Editors_Jam_Poster-1.png?raw=true) [center]"
+      "body": "[img](https://github.com/Cleo876/wasm-video-editor/blob/main/IMGs/Meta-Data/PostPoned_Editor-Jam.png?raw=true) [right] Unfortunately, we had to postpone the event, due to the original filming crew being unavailable to shoot the footage for us, and us not being able to procure another team in the time period we were hoping for. SO as a result, we are going to postpone the event until we can make proper adjustments for it to work excellently. <br><br> In the meantime! We are still working on, and upgrading the **WASM Video Editor** to raise the bar for the level of power and capabilities we put at your fingertips as users."
     },
     {
-      "body": "We're hosting a **48‑hour global marathon** uniting two distinct creative worlds of **Video Editors** and **Web Developers**. This competition will be challenging the **Video Editors**: You will receive a highly modular, 6‑minute 'Doing Nothing' cinematic footage pack. Your goal is to use the Kuleshov Effect to cut a 90‑second narrative (Thriller, Comedy, Action) using only this neutral footage… Make it highly engaging!<br> While challenging **Web Developers**: You will simultaneously code live, custom JavaScript (.js) extensions to upgrade the **WASM Video Editor** while it is being used, building tools that directly assist the editors in achieving their vision. There are links to the documentation for each aspect of the modularization you'll want as a web developer. <br><br> Sign up **[here](itch.io/jam/forge-editors-jam)**"
+      "header1": "**Version 2.10.0** Just Released!"
     },
     {
-      "header1": "What Are the Rules?"
-    },
-    {
-      "body": "1. All editing must be done exclusively within the **Forge™ WASM Video Editor**."
-    },
-    {
-      "body": "2. Final cuts must not exceed 90 seconds."
-    },
-    {
-      "body": "3. Developers must submit their **.js** extension files alongside the video project made by the video editor they partner with."
-    },
-    {
-      "header1": "What Are the Prizes?"
-    },
-    {
-      "body": "Through our partnership with the **Jamaica Game Developer Society (JGDS)** and global indie game developer sponsors, we have curated a massive Indie Showcase Prize Pool, alongside premium professional assets such as Forge™ LUT Selection Pack, Forge™ SFX Pack to giveaway to top competitors of the Jam."
+      "body": "1. As of **August 13, 2026** we have released **v2.10.0** and it has some upgrades that are worth noting! Such as us increasing the efficiency of the **Realtime Webm Exporter** with having the ability to export **Full length movies!** <br><br> Instead of storing the video chunks in the RAM, we opted to write the chunks straight into the IndexedDB for holding until all of the chunks for the video are exported, this has allowed for a trimendous reduction in the CPU throttling and has allowed for a greater optimization of the exporting power that comes with this. <br><br> The other upgrade we made was to ensure that the audio would be muted during the realtime export so you didn't have to keep hearing the audio for the entire export time."
     },
     {
       "title": "New Ghost App Installer Now Available!*"
     },
     {
-      "body": " We are now able to present the upgraded **WASM Video Editor - Ghost App Installer** complete with the **Hardware Acceleration** enabled! This means that we can now see better performance on older computers as it uses less CPU power and greater GPU power to balance out the load!<br><br> Download the new version **[here](https://cleo876.github.io/wasm-video-editor/landing) [img](https://github.com/Cleo876/wasm-video-editor/blob/main/IMGs/Banners/WASM%20Cinematic%20Wallpaper%205.jpg?raw=true) [right]**"
+      "body": " We are now able to present the upgraded **WASM Video Editor - Ghost App Installer** complete with the **Hardware Acceleration** enabled! This means that we can now see better performance on older computers as it uses less CPU power by utilizing greater GPU power to balance out the load!<br><br> Download the new version **[here](https://cleo876.github.io/wasm-video-editor/landing) [img](https://github.com/Cleo876/wasm-video-editor/blob/main/IMGs/Banners/WASM%20Cinematic%20Wallpaper%203.png?raw=true [right]**"
     }
   ],
   "_legend": [
