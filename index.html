@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Editor - Pro Workflow</title>
-    <script>const TOOL_VERSION = '2.10.0';</script>
+    <script>const TOOL_VERSION = '2.10.3';</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -147,7 +147,7 @@
             <div class="flex items-center gap-4 h-full flex-1 min-w-0">
                 <div class="flex items-center gap-2 mr-4 flex-shrink-0">
                     <i class="fa-solid fa-layer-group text-teal-400"></i>
-                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.10.0</span>
+                    <span class="font-bold tracking-wide text-sm whitespace-nowrap">WASM Editor v2.10.3</span>
                     <span id="safeModeBadge" class="hidden ml-2 bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider uppercase shadow-md" title="Extensions are temporarily disabled for a clean boot.">Safe Mode</span>
                 </div>
 
@@ -278,7 +278,7 @@
         </section>
     </div>
 
-    <!-- Global Video Effects Panel (Restored) -->
+    <!-- Global Video Effects Panel -->
     <div id="effectsPanel" class="effects-panel">
         <h3 class="text-white text-sm mb-3 font-bold text-teal-400"><i class="fa-solid fa-sliders mr-2"></i>Video Adjustments</h3>
         <div class="mb-4">
@@ -297,6 +297,7 @@
         <button onclick="document.getElementById('effectsPanel').style.display='none'" class="absolute top-2 right-2 text-gray-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
+    <!-- Modals -->
     <div id="inputModal" class="modal-overlay hidden">
         <div class="bg-gray-800 p-6 rounded-xl w-96 border border-gray-700 shadow-2xl">
             <h2 id="inputModalTitle" class="text-lg font-bold text-white mb-4">Input Required</h2>
@@ -426,7 +427,7 @@
         </div>
     </div>
 
-    <!-- 🔥 GLOBAL INLINE PROMPT MODAL (Removes Alert/Confirm) -->
+    <!-- GLOBAL INLINE PROMPT MODAL -->
     <div id="inlinePromptModal" class="modal-overlay hidden z-[20000]">
         <div class="bg-[#1e1e1e] border border-[#333] p-6 rounded-xl w-[400px] shadow-2xl text-center flex flex-col items-center">
             <div id="inlinePromptIcon" class="text-teal-400 text-4xl mb-4 drop-shadow-md"><i class="fa-solid fa-circle-info"></i></div>
@@ -540,10 +541,9 @@
             db: null,
             init() {
                 return new Promise((resolve, reject) => {
-                    const req = indexedDB.open('WasmEditorDB', 5); // bumped version for new store
+                    const req = indexedDB.open('WasmEditorDB', 5);
                     req.onupgradeneeded = (e) => {
                         const db = e.target.result;
-                        // Existing stores
                         if (!db.objectStoreNames.contains('assets')) {
                             const assetStore = db.createObjectStore('assets', { keyPath: 'id' });
                             assetStore.createIndex('projectId', 'projectId', { unique: false });
@@ -555,7 +555,6 @@
                         if (!db.objectStoreNames.contains('projects')) db.createObjectStore('projects', { keyPath: 'id' });
                         if (!db.objectStoreNames.contains('modules')) db.createObjectStore('modules', { keyPath: 'name' });
                         if (!db.objectStoreNames.contains('system')) db.createObjectStore('system', { keyPath: 'id' });
-                        // NEW: export chunks store
                         if (!db.objectStoreNames.contains('exportChunks')) {
                             db.createObjectStore('exportChunks', { keyPath: 'id' });
                         }
@@ -2178,6 +2177,7 @@
                 const c = document.getElementById('rulerCanvas');
                 const container = document.getElementById('tracksScrollArea');
                 if (!c || !container) return;
+                if (Player.isRecording) return; // skip during recording
                 const viewportW = container.clientWidth;
                 const scrollX = container.scrollLeft;
                 if (c.width !== viewportW) c.width = viewportW;
@@ -2215,6 +2215,7 @@
         const TimelineModule = {
             minimapTimeout: null,
             triggerMinimap() {
+                if (Player.isRecording) return;
                 const mm = document.getElementById('minimap');
                 mm.classList.add('visible');
                 clearTimeout(this.minimapTimeout);
@@ -2352,6 +2353,7 @@
                 this.renderMinimap();
             },
             renderMinimap() {
+                if (Player.isRecording) return;
                 const mapContent = document.getElementById('minimapContent');
                 const viewport = document.getElementById('minimapViewport');
                 const container = document.getElementById('tracksScrollArea');
@@ -2538,6 +2540,7 @@
                 UI.checkExportButton();
             },
             updatePlayhead(time) {
+                if (Player.isRecording) return;
                 const container = document.getElementById('tracksScrollArea');
                 const scrollX = container ? container.scrollLeft : 0;
                 const pos = (time * Store.zoom) - scrollX;
@@ -2545,6 +2548,17 @@
                 if (el) el.style.transform = `translateX(${pos}px)`;
             }
         };
+
+        // =========================================================================
+        // PLAYER – with reusable arrays and cached filter
+        // =========================================================================
+        // Reusable arrays (declared outside Player to persist)
+        const _upcomingClips = [];
+        const _activeVideoClips = [];
+        const _activeTextClips = [];
+        const _activeAudioClips = [];
+        const _usedClipIds = new Set();
+        let _cachedFilter = '';
 
         const Player = {
             videoPool: {},
@@ -2556,7 +2570,7 @@
             isRecording: false,
             actx: null,
             gainNode: null,
-            playbackGain: null, // NEW: separate gain for speakers (muted during export)
+            playbackGain: null,
             videoNode: null,
             activeTextClip: null,
 
@@ -2565,19 +2579,15 @@
                 try {
                     this.actx = new(window.AudioContext || window.webkitAudioContext)();
 
-                    // Main gain node — always at full volume for recording
                     this.gainNode = this.actx.createGain();
                     this.gainNode.gain.value = 1.0;
 
-                    // Playback gain node — controls speaker volume (muted during export)
                     this.playbackGain = this.actx.createGain();
                     this.playbackGain.gain.value = 1.0;
 
-                    // Route: gainNode → playbackGain → speakers
                     this.gainNode.connect(this.playbackGain);
                     this.playbackGain.connect(this.actx.destination);
 
-                    // Connect existing video node if available
                     if (this.videoNode) {
                         try {
                             this.videoNode.disconnect();
@@ -2702,19 +2712,23 @@
                 if (isNaN(Store.currentTime) || Store.currentTime < 0) Store.currentTime = 0;
                 const t = Store.currentTime;
 
-                TimelineModule.updatePlayhead(t);
-                const fmt = n => Math.floor(Math.max(0, n)).toString().padStart(2, '0');
-                const timecodeEl = document.getElementById('timecode');
-                if (timecodeEl) timecodeEl.innerText =
-                    `00:${fmt(t/60)}:${fmt(t%60)}:${fmt((t%1)*30)}`;
+                // --- DOM updates only if NOT recording (saves CPU) ---
+                if (!this.isRecording) {
+                    TimelineModule.updatePlayhead(t);
+                    const fmt = n => Math.floor(Math.max(0, n)).toString().padStart(2, '0');
+                    const timecodeEl = document.getElementById('timecode');
+                    if (timecodeEl) timecodeEl.innerText =
+                        `00:${fmt(t/60)}:${fmt(t%60)}:${fmt((t%1)*30)}`;
 
-                const container = document.getElementById('tracksScrollArea');
-                if (container) {
-                    const headPos = t * Store.zoom;
-                    if (!this.playing && headPos > container.scrollLeft + container.clientWidth) { container.scrollLeft =
-                            headPos - 100;
-                        TimelineModule.renderMinimap();
-                        TimelineModule.triggerMinimap(); }
+                    const container = document.getElementById('tracksScrollArea');
+                    if (container) {
+                        const headPos = t * Store.zoom;
+                        if (!this.playing && headPos > container.scrollLeft + container.clientWidth) {
+                            container.scrollLeft = headPos - 100;
+                            TimelineModule.renderMinimap();
+                            TimelineModule.triggerMinimap();
+                        }
+                    }
                 }
 
                 const pv = document.querySelector('.player-view');
@@ -2735,8 +2749,8 @@
                     viewportRect = vp.getBoundingClientRect();
                 }
 
-                // --- PRE-WARMING ENGINE ---
-                const upcomingClips = [];
+                // --- PRE-WARMING ENGINE (kept) – uses _upcomingClips, reused ---
+                _upcomingClips.length = 0;
                 for (let i = Store.trackConfig.length - 1; i >= 0; i--) {
                     const track = Store.trackConfig[i];
                     if (!track) continue;
@@ -2744,11 +2758,11 @@
                     trackData.forEach(c => {
                         if (!c) return;
                         if (t < c.start && (c.start - t) <= 1.5) {
-                            upcomingClips.push(c);
+                            _upcomingClips.push(c);
                         }
                     });
                 }
-                upcomingClips.forEach(clip => {
+                _upcomingClips.forEach(clip => {
                     const asset = Store.assets.find(a => a && a.id === clip.assetId);
                     if (asset && asset.type === 'video') {
                         const vEl = this.getVideoSource(clip.id, asset.url || '');
@@ -2760,11 +2774,11 @@
                         }
                     }
                 });
-                // --- END PRE-WARMING ---
 
-                const activeVideoClips = [];
-                const activeTextClips = [];
-                const activeAudioClips = [];
+                // --- Find active clips – reuse arrays ---
+                _activeVideoClips.length = 0;
+                _activeTextClips.length = 0;
+                _activeAudioClips.length = 0;
 
                 for (let i = Store.trackConfig.length - 1; i >= 0; i--) {
                     const track = Store.trackConfig[i];
@@ -2784,23 +2798,24 @@
                     });
 
                     if (track.type === 'video' || track.type === 'fx') {
-                        activeVideoClips.push(...clips);
+                        _activeVideoClips.push(...clips);
                     } else if (track.type === 'text') {
-                        activeTextClips.push(...clips);
+                        _activeTextClips.push(...clips);
                     } else if (track.type === 'audio') {
-                        activeAudioClips.push(...clips);
+                        _activeAudioClips.push(...clips);
                     }
                 }
 
-                const usedClipIds = new Set();
-                activeAudioClips.forEach(clip => {
+                // --- Audio ---
+                _usedClipIds.clear();
+                _activeAudioClips.forEach(clip => {
                     const asset = Store.assets.find(a => a && a.id === clip.assetId);
                     if (!asset) return;
 
                     const audioItem = this.getAudioSource(clip.id, asset.url || '');
                     if (!audioItem) return;
 
-                    usedClipIds.add(clip.id);
+                    _usedClipIds.add(clip.id);
                     const internalTime = Math.max(0, Math.min(asset.duration || 9999, clip.offset + (t - clip
                     .start)));
                     if (Math.abs(audioItem.el.currentTime - internalTime) > 0.3) audioItem.el.currentTime =
@@ -2810,19 +2825,20 @@
                 });
 
                 Object.keys(this.audioPool).forEach(clipId => {
-                    if (!usedClipIds.has(clipId)) {
+                    if (!_usedClipIds.has(clipId)) {
                         const item = this.audioPool[clipId];
                         if (!item.el.paused) item.el.pause();
                     }
                 });
 
-                const usedVideoIds = new Set();
-                activeVideoClips.forEach(clip => {
+                // --- Video & Images ---
+                _usedClipIds.clear();
+                _activeVideoClips.forEach(clip => {
                     const asset = Store.assets.find(a => a && a.id === clip.assetId);
                     if (!asset) return;
 
                     if (asset.type === 'video') {
-                        usedVideoIds.add(clip.id);
+                        _usedClipIds.add(clip.id);
                         const vEl = this.getVideoSource(clip.id, asset.url || '');
                         if (!vEl) return;
 
@@ -2840,16 +2856,17 @@
                 });
 
                 Object.keys(this.videoPool).forEach(id => {
-                    if (!usedVideoIds.has(id)) {
+                    if (!_usedClipIds.has(id)) {
                         if (!this.videoPool[id].paused) this.videoPool[id].pause();
                     }
                 });
 
+                // --- DOM text overlays ---
                 if (vp) {
                     const existingOverlays = vp.querySelectorAll('.text-overlay-item');
                     existingOverlays.forEach(el => el.dataset.used = 'false');
 
-                    activeTextClips.forEach(tClip => {
+                    _activeTextClips.forEach(tClip => {
                         const asset = Store.assets.find(a => a && a.id === tClip.assetId);
                         if (!asset) return;
 
@@ -2898,19 +2915,28 @@
                 }
 
                 const playerPlaceholder = document.getElementById('playerPlaceholder');
-                if (playerPlaceholder) playerPlaceholder.style.display = (activeVideoClips.length || activeTextClips
+                if (playerPlaceholder) playerPlaceholder.style.display = (_activeVideoClips.length || _activeTextClips
                     .length) ? 'none' : 'block';
 
-                this.drawToCanvas(activeVideoClips, this.isRecording ? activeTextClips : []);
+                this.drawToCanvas(_activeVideoClips, this.isRecording ? _activeTextClips : []);
             },
 
             drawToCanvas(vClips, tClips) {
                 const ctx = this.compositorCanvas.getContext('2d');
                 ctx.imageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
+                ctx.imageSmoothingQuality = 'high'; // kept as requested
                 ctx.clearRect(0, 0, this.compositorCanvas.width, this.compositorCanvas.height);
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, 0, this.compositorCanvas.width, this.compositorCanvas.height);
+
+                // Update cached filter only when effect values change
+                const b = VideoEffects.values.brightness;
+                const c = VideoEffects.values.contrast;
+                const s = VideoEffects.values.saturate;
+                const newFilter = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+                if (newFilter !== _cachedFilter) {
+                    _cachedFilter = newFilter;
+                }
 
                 vClips.forEach(vClip => {
                     const asset = Store.assets.find(a => a && a.id === vClip.assetId);
@@ -2918,10 +2944,6 @@
 
                     const scale = (vClip.scale !== undefined ? vClip.scale : 100) / 100;
                     const rotation = vClip.rotation || 0;
-
-                    const b = VideoEffects.values.brightness;
-                    const c = VideoEffects.values.contrast;
-                    const s = VideoEffects.values.saturate;
 
                     let drawW = this.compositorCanvas.width;
                     let drawH = this.compositorCanvas.height;
@@ -2943,7 +2965,7 @@
                     drawH *= scale;
 
                     ctx.save();
-                    ctx.filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%)`;
+                    ctx.filter = _cachedFilter; // use cached string
                     ctx.translate(this.compositorCanvas.width / 2, this.compositorCanvas.height / 2);
                     ctx.rotate(rotation * Math.PI / 180);
                     ctx.globalAlpha = (vClip.opacity !== undefined ? vClip.opacity : 100) / 100;
@@ -2990,6 +3012,9 @@
             }
         };
 
+        // =========================================================================
+        // EXPORT MANAGER – with hybrid chunk storage (in‑memory + IndexedDB)
+        // =========================================================================
         const ExportManager = {
             ffmpeg: null,
             mediaRecorder: null,
@@ -3001,7 +3026,12 @@
             _originalGain: 1,
             _originalPlaybackGain: 1,
 
-            // --- Chunked IndexedDB helpers ---
+            // Hybrid storage: in-memory chunks + flush to IndexedDB when memory limit exceeded
+            _inMemoryChunks: [],
+            _memorySize: 0,
+            MEMORY_LIMIT: 500 * 1024 * 1024, // 500 MB
+
+            // --- Chunked IndexedDB helpers (kept for fallback) ---
             async _saveChunk(exportId, index, blob) {
                 await DB.put('exportChunks', { id: `${exportId}_${index}`, exportId, index, blob });
             },
@@ -3174,7 +3204,7 @@
                 Player.isRecording = false;
                 document.getElementById('exportFilename').disabled = false;
 
-                // Restore audio gain for playback
+                // Restore audio gain
                 if (Player.gainNode && Player.actx) {
                     try {
                         Player.gainNode.gain.value = this._originalGain || 1;
@@ -3185,16 +3215,18 @@
                         Player.playbackGain.gain.value = this._originalPlaybackGain || 1;
                     } catch (e) {}
                 }
-                // Ensure recording path is cleaned up: reconnect gainNode → playbackGain → destination
                 if (Player.gainNode && Player.playbackGain && Player.actx) {
                     try {
                         Player.gainNode.disconnect();
                         Player.gainNode.connect(Player.playbackGain);
-                        // playbackGain is already connected to destination from initAudio
                     } catch (e) {}
                 }
 
-                // Clean up chunks
+                // Clean up in-memory chunks
+                this._inMemoryChunks = [];
+                this._memorySize = 0;
+
+                // Clean up IndexedDB chunks
                 if (this._currentExportId) {
                     this._clearChunks(this._currentExportId).catch(console.warn);
                     this._currentExportId = null;
@@ -3218,10 +3250,11 @@
                 const status = document.getElementById('exportStatus');
                 const bar = document.getElementById('exportProgress');
 
-                // Generate a unique export session ID
                 this._currentExportId = 'export_' + Date.now();
+                this._inMemoryChunks = [];
+                this._memorySize = 0;
 
-                status.innerText = "Preparing chunked recording...";
+                status.innerText = "Preparing recording...";
                 const end = Store.getEndOfContent();
                 if (end <= 0) {
                     UI.showAlert("Empty Timeline", "Nothing to export.", "fa-triangle-exclamation", "text-yellow-400");
@@ -3229,55 +3262,41 @@
                     return;
                 }
 
-                // Set up canvas stream
                 const stream = Player.compositorCanvas.captureStream(30);
                 if (!Player.actx) Player.initAudio();
                 const dest = Player.actx.createMediaStreamDestination();
 
-                // --- AUDIO ROUTING FIX: mute speakers but keep recording audio ---
-                // Save current gain values
                 this._originalGain = Player.gainNode.gain.value || 1;
                 this._originalPlaybackGain = Player.playbackGain ? Player.playbackGain.gain.value : 1;
 
-                // Ensure gainNode is at full volume for recording
                 Player.gainNode.gain.value = 1.0;
 
-                // Disconnect gainNode from everything, then reconnect properly
                 try {
                     Player.gainNode.disconnect();
                 } catch (e) {}
 
-                // Route: gainNode → dest (recording) at full volume
                 Player.gainNode.connect(dest);
 
-                // Route: gainNode → playbackGain → speakers (muted during export)
                 if (Player.playbackGain) {
                     Player.gainNode.connect(Player.playbackGain);
-                    // Mute the speakers via playbackGain
                     Player.playbackGain.gain.value = 0;
                 } else {
-                    // Fallback: if playbackGain doesn't exist, connect directly but mute via gainNode? 
-                    // But we need recording to have audio, so we must have playbackGain.
-                    // Create it on the fly.
                     Player.playbackGain = Player.actx.createGain();
                     Player.playbackGain.gain.value = 0;
                     Player.gainNode.connect(Player.playbackGain);
                     Player.playbackGain.connect(Player.actx.destination);
                 }
 
-                // Ensure the playbackGain is connected to speakers
                 if (Player.playbackGain && !Player.playbackGain.numberOfOutputs) {
                     Player.playbackGain.connect(Player.actx.destination);
                 }
 
                 console.log("🔇 Speakers muted for export; recording audio at full volume.");
-                // --- END AUDIO ROUTING FIX ---
 
                 if (dest.stream.getAudioTracks().length > 0) {
                     stream.addTrack(dest.stream.getAudioTracks()[0]);
                 }
 
-                // MediaRecorder with timeslice (1 second)
                 const bitrate = targetH * 25000;
                 this.mediaRecorder = new MediaRecorder(stream, {
                     mimeType: 'video/webm; codecs=vp9',
@@ -3286,25 +3305,43 @@
 
                 let chunkIndex = 0;
                 let recordingComplete = false;
+                const CHUNK_DURATION = 5; // seconds per chunk (timeslice = 5000 ms)
+                const TIMESLICE_MS = CHUNK_DURATION * 1000;
 
+                // ----- ondataavailable: store in memory, flush if exceed limit -----
                 this.mediaRecorder.ondataavailable = async (e) => {
                     if (e.data.size > 0) {
-                        try {
-                            await this._saveChunk(this._currentExportId, chunkIndex++, e.data);
-                            // Update progress (roughly)
-                            const elapsed = chunkIndex; // seconds
+                        // Store in memory
+                        this._inMemoryChunks.push(e.data);
+                        this._memorySize += e.data.size;
+
+                        // If memory exceeds limit, flush all in‑memory chunks to IndexedDB
+                        if (this._memorySize > this.MEMORY_LIMIT) {
+                            try {
+                                for (let i = 0; i < this._inMemoryChunks.length; i++) {
+                                    await this._saveChunk(this._currentExportId, chunkIndex++, this._inMemoryChunks[i]);
+                                }
+                                this._inMemoryChunks = [];
+                                this._memorySize = 0;
+                            } catch (err) {
+                                console.error("Failed to flush chunks to IndexedDB", err);
+                                status.innerText = "Error flushing chunks: " + err.message;
+                                this.mediaRecorder.stop();
+                            }
+                        }
+
+                        // Update progress every 5 chunks to reduce DOM updates
+                        if (chunkIndex % 5 === 0) {
+                            const elapsed = chunkIndex * CHUNK_DURATION;
                             const pct = Math.min(100, (elapsed / end) * 100);
                             bar.style.width = `${pct}%`;
                             status.innerHTML =
-                                `<i class="fa-solid fa-circle-dot text-red-500 mr-2"></i> Recording chunk ${chunkIndex} – ${elapsed.toFixed(0)}s / ${end.toFixed(1)}s`;
-                        } catch (err) {
-                            console.error("Failed to store chunk in IndexedDB", err);
-                            status.innerText = "Error storing chunk: " + err.message;
-                            this.mediaRecorder.stop();
+                                `<i class="fa-solid fa-circle-dot text-red-500 mr-2"></i> Recording ${elapsed.toFixed(0)}s / ${end.toFixed(1)}s`;
                         }
                     }
                 };
 
+                // ----- onstop: combine in‑memory + IndexedDB chunks -----
                 this.mediaRecorder.onstop = async () => {
                     recordingComplete = true;
                     if (Player.isRecording) {
@@ -3312,16 +3349,18 @@
                         clearInterval(this.recordInterval);
                         if (Player.playing) Player.togglePlay();
 
-                        status.innerText = "Assembling final video from chunks...";
+                        status.innerText = "Assembling final video...";
                         bar.style.width = '90%';
 
                         try {
-                            const chunks = await this._getAllChunks(this._currentExportId);
-                            if (chunks.length === 0) {
-                                throw new Error("No chunks recorded.");
+                            // Get all IndexedDB chunks for this export
+                            const dbChunks = await this._getAllChunks(this._currentExportId);
+                            // Combine: in‑memory chunks first (they are earlier in time)
+                            const allChunks = [...this._inMemoryChunks, ...dbChunks.map(c => c.blob)];
+                            if (allChunks.length === 0) {
+                                throw new Error("No data recorded.");
                             }
-                            // Concatenate blobs in order
-                            const fullBlob = new Blob(chunks.map(c => c.blob), { type: 'video/webm' });
+                            const fullBlob = new Blob(allChunks, { type: 'video/webm' });
                             const url = URL.createObjectURL(fullBlob);
                             const a = document.createElement('a');
                             a.href = url;
@@ -3332,8 +3371,10 @@
                             status.innerText = "Export complete!";
                             bar.style.width = '100%';
 
-                            // Clean up IndexedDB chunks
+                            // Clean up IndexedDB and in‑memory
                             await this._clearChunks(this._currentExportId);
+                            this._inMemoryChunks = [];
+                            this._memorySize = 0;
                         } catch (err) {
                             console.error("Assembly error", err);
                             status.innerText = "Error: " + err.message;
@@ -3349,25 +3390,22 @@
                                     Player.playbackGain.gain.value = ExportManager._originalPlaybackGain || 1;
                                 } catch (e) {}
                             }
-                            // Restore routing: gainNode → playbackGain → destination
                             if (Player.gainNode && Player.playbackGain && Player.actx) {
                                 try {
                                     Player.gainNode.disconnect();
                                     Player.gainNode.connect(Player.playbackGain);
                                 } catch (e) {}
                             }
-                            // Reset UI after a moment
                             setTimeout(() => {
-                                ExportManager.cancelRecording(); // also hides progress and re-enables inputs
+                                ExportManager.cancelRecording();
                             }, 3000);
                         }
                     }
                 };
 
-                // Start recording with timeslice
-                this.mediaRecorder.start(1000); // 1 second chunks
+                // Start recording with timeslice = 5000 ms (5 seconds)
+                this.mediaRecorder.start(TIMESLICE_MS);
 
-                // Play the timeline
                 Store.currentTime = 0;
                 Player.isRecording = true;
                 Player.safeRenderFrame();
@@ -3382,6 +3420,7 @@
                 }, 200);
             },
 
+            // ==================== renderLovable (unchanged) ====================
             async renderLovable() {
                 const res = document.getElementById('exportRes').value;
                 const targetH = parseInt(res);
@@ -3413,7 +3452,6 @@
                     if (!Player.actx) Player.initAudio();
                     const dest = Player.actx.createMediaStreamDestination();
 
-                    // --- AUDIO ROUTING FIX: mute speakers but keep recording audio ---
                     this._originalGain = Player.gainNode.gain.value || 1;
                     this._originalPlaybackGain = Player.playbackGain ? Player.playbackGain.gain.value : 1;
                     Player.gainNode.gain.value = 1.0;
@@ -3432,7 +3470,6 @@
                         Player.playbackGain.connect(Player.actx.destination);
                     }
                     console.log("🔇 Speakers muted for Lovable export; recording audio at full volume.");
-                    // --- END AUDIO ROUTING FIX ---
 
                     if (dest.stream.getAudioTracks().length > 0) {
                         stream.addTrack(dest.stream.getAudioTracks()[0]);
@@ -3480,7 +3517,6 @@
                     clearInterval(this.recordInterval);
                     if (Player.playing) Player.togglePlay();
 
-                    // Restore audio routing
                     if (Player.gainNode && Player.actx) {
                         try {
                             Player.gainNode.gain.value = this._originalGain || 1;
@@ -3539,6 +3575,7 @@
                 }
             },
 
+            // ==================== render (WASM MP4) – unchanged ====================
             async render() {
                 const res = document.getElementById('exportRes').value;
                 const filename = document.getElementById('exportFilename').value || 'Forge_Export';
